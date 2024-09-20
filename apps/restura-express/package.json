@@ -1,0 +1,20 @@
+{
+	"name": "restura-express",
+	"version": "1.0.0",
+	"description": "Test application using express and Restura",
+	"type": "module",
+	"main": "dist/app.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"dev": "tsc && node ./dist/app.js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@restura/core": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^22.5.5"
+	}
+}

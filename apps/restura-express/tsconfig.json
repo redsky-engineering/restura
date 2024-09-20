@@ -1,0 +1,13 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"module": "ESNext",
+		"target": "es2017",
+		"types": ["node"],
+		"outDir": "./dist",
+		"allowSyntheticDefaultImports": true,
+		"sourceMap": true
+	},
+	"include": ["src/**/*"],
+	"exclude": ["dist", "build", "node_modules"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "restura",
+  "version": "0.0.0",
+  "description": "Base mono-repo for Restura project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.2"
+  }
+}
