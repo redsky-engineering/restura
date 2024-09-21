@@ -1,18 +1,27 @@
 {
 	"name": "@restura/internal",
-	"version": "0.0.0",
+	"version": "0.1.0-alpha.1",
 	"description": "Internal utilities for Restura",
 	"main": "./dist/index.js",
 	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.ts",
+	"repository": "https://github.com/redsky-engineering/restura",
+	"author": "Joshua Hintze",
+	"license": "MIT",
+	"keywords": [
+		"restura",
+		"restura internal",
+		"low code api",
+		"sql generator"
+	],
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"build": "tsup ./src/index.ts"
 	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
 	"devDependencies": {
 		"tsup": "^8.3.0"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }
