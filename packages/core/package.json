@@ -5,17 +5,26 @@
 	"main": "./dist/index.js",
 	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.ts",
+	"repository": "https://github.com/redsky-engineering/restura",
+	"author": "Joshua Hintze",
+	"license": "MIT",
+	"keywords": [
+		"restura",
+		"restura core",
+		"low code api",
+		"sql generator"
+	],
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"build": "tsup ./src/index.ts"
 	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
 	"dependencies": {
 		"@restura/internal": "workspace:*"
 	},
 	"devDependencies": {
 		"tsup": "^8.3.0"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }
