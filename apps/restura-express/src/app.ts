@@ -1,4 +1,4 @@
-import { isEven } from '@restura/core';
+import { init } from '@restura/core';
 
-isEven(2); // true
-isEven(3); // false
+const config = await init();
+console.log(config);

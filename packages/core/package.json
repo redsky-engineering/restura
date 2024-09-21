@@ -7,7 +7,6 @@
 	"author": "Joshua Hintze",
 	"license": "MIT",
 	"files": ["dist/**"],
-	"type": "module",
 	"main": "./dist/index.js",
 	"exports": {
 		"import": "./dist/index.mjs",

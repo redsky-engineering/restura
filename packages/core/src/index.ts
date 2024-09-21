@@ -1,6 +1,5 @@
-import { log } from '@restura/internal';
+import { loadConfigFile } from '@restura/internal';
 
-export function isEven(value: number): boolean {
-	log('isEven called');
-	return value % 2 === 0;
+export async function init(): Promise<object> {
+	return await loadConfigFile();
 }

@@ -6,13 +6,14 @@
 	"repository": "https://github.com/redsky-engineering/restura",
 	"author": "Joshua Hintze",
 	"license": "MIT",
-	"files": ["dist/**"],
-	"type": "module",
+	"files": [
+		"dist/**"
+	],
 	"main": "./dist/index.js",
 	"exports": {
 		"import": "./dist/index.mjs",
 		"require": "./dist/index.js"
-	  },
+	},
 	"keywords": [
 		"restura",
 		"restura internal",
@@ -28,5 +29,8 @@
 	},
 	"publishConfig": {
 		"access": "public"
+	},
+	"dependencies": {
+		"json5": "^2.2.3"
 	}
 }
