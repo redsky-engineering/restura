@@ -29,6 +29,7 @@
     "*.ts": "eslint"
   },
   "dependencies": {
+    "autobind-decorator": "^2.4.0",
     "globals": "^15.9.0"
   }
 }

@@ -1,6 +1,2 @@
-import { loadConfigFile } from '@restura/internal';
-
-export async function init(): Promise<object> {
-	console.log('Loading config files...');
-	return await loadConfigFile();
-}
+export * from './logger/logger';
+export * from './restura/restura';

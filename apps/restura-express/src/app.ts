@@ -1,4 +1,7 @@
-import { init } from '@restura/core';
+import { logger, restura } from '@restura/core';
+import express from 'express';
 
-const config = await init();
-console.log(config);
+const app = express();
+restura.init(app);
+
+logger.info('Post Init');
