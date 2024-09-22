@@ -3,8 +3,11 @@
   "version": "0.0.0",
   "description": "Base mono-repo for Restura project",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Need to run all sub project tests\"",
+    "test": "nx run-many -t=test",
+    "lint": "nx run-many -t=lint",
+    "build": "nx run-many -t=build",
     "prepare": "husky"
   },
   "keywords": [],
@@ -12,14 +15,20 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^22.5.5",
+    "eslint": "^9.11.0",
+    "eslint-config-prettier": "^9.1.0",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
     "nx": "19.8.0",
     "prettier": "^3.3.3",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.6.0"
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write",
-    "*.ts": "eslint --fix"
+    "*.ts": "eslint"
+  },
+  "dependencies": {
+    "globals": "^15.9.0"
   }
 }
