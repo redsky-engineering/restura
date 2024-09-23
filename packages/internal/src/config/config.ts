@@ -4,18 +4,22 @@ import * as path from 'path';
 import { ZodSchema } from 'zod';
 
 export class Config {
-	private configData: unknown | null = null;
+	private configData: { [key: string]: unknown } | null = null;
 
 	public get config() {
 		return this.configData;
 	}
 
-	public validate<T>(schema: ZodSchema<T>): T {
+	public validate<T>(domain: string, schema: ZodSchema<T>): T {
 		if (!this.configData) {
 			this.load();
 		}
 
-		return schema.parse(this.configData);
+		if (!this.configData || typeof this.configData !== 'object' || !(domain in this.configData)) {
+			throw new Error(`Config ${domain} not found`);
+		}
+
+		return schema.parse(this.configData[domain]);
 	}
 
 	private load() {
