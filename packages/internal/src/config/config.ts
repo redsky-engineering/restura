@@ -16,7 +16,8 @@ export class Config {
 		}
 
 		if (!this.configData || typeof this.configData !== 'object' || !(domain in this.configData)) {
-			throw new Error(`Config ${domain} not found`);
+			console.error(`Config \"${domain}\" not found`);
+			throw new Error(`Invalid Restura Configuration`);
 		}
 
 		const result = schema.safeParse(this.configData[domain]);
@@ -26,7 +27,8 @@ export class Config {
 				.map((e) => `Path: ${e.path.join('.')}, Message: ${e.message}`)
 				.join('; ');
 
-			throw new Error(`Validation failed for config ${domain}: ${errorDetails}`);
+			console.error(`Validation failed for config \"${domain}\": ${errorDetails}`);
+			throw new Error(`Invalid Restura Configuration`);
 		}
 
 		return result.data;

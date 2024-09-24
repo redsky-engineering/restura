@@ -1,14 +1,10 @@
 import { config } from '@restura/internal';
 import winston from 'winston';
-import { z } from 'zod';
 // We use the logform module instead of bundled winston.format because then we can enable stack errors in the console output
 import { format } from 'logform';
+import { loggerConfigSchema } from '../config.schemas.js';
 
-const loggerSchema = z.object({
-	level: z.enum(['info', 'warn', 'error', 'debug']).default('info')
-});
-
-const loggerConfig = config.validate('logger', loggerSchema);
+const loggerConfig = config.validate('logger', loggerConfigSchema);
 
 const consoleFormat = format.combine(
 	format.timestamp({

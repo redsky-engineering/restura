@@ -1,6 +1,9 @@
+import { config } from '@restura/internal';
 import { boundMethod } from 'autobind-decorator';
 import * as express from 'express';
+import { resturaConfigSchema, type ResturaConfigSchema } from '../config.schemas.js';
 import { logger } from '../logger/logger.js';
+import type { ResturaSchema } from './restura.types.js';
 
 class ResturaEngine {
 	private resturaRouter!: express.Router;
@@ -12,9 +15,12 @@ class ResturaEngine {
 		DELETE: []
 	};
 	private expressApp!: express.Application;
-	private schema!: Restura.Schema;
+	private schema!: ResturaSchema;
+	private resturaConfig!: ResturaConfigSchema;
 
 	async init(app: express.Application): Promise<void> {
+		this.resturaConfig = config.validate('restura', resturaConfigSchema);
+
 		// Middleware
 		app.use('/restura', this.resturaAuthentication);
 		// app.use('/restura', schemaValidator as unknown as express.RequestHandler);
@@ -27,7 +33,7 @@ class ResturaEngine {
 
 		this.expressApp = app;
 
-		await this.reloadEndpoints();
+		// await this.reloadEndpoints();
 
 		logger.info('Restura Engine Initialized');
 	}
@@ -49,9 +55,8 @@ class ResturaEngine {
 
 	@boundMethod
 	private resturaAuthentication(req: express.Request, res: express.Response, next: express.NextFunction) {
-		next();
-		//if (req.headers['x-auth-token'] !== config.application.resturaAuthToken) res.status(401).send('Unauthorized');
-		//else next();
+		if (req.headers['x-auth-token'] !== this.resturaConfig.authToken) res.status(401).send('Unauthorized');
+		else next();
 	}
 }
 
