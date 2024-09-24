@@ -3,15 +3,12 @@ import winston from 'winston';
 import { z } from 'zod';
 // We use the logform module instead of bundled winston.format because then we can enable stack errors in the console output
 import { format } from 'logform';
-// import DatadogWinston from 'datadog-winston';
-// import os from 'os';
 
 const loggerSchema = z.object({
-	level: z.enum(['info', 'warn', 'error', 'debug']).default('info'),
-	prettyPrint: z.boolean().default(true)
+	level: z.enum(['info', 'warn', 'error', 'debug']).default('info')
 });
 
-const loggerConfig = config.validate(loggerSchema);
+const loggerConfig = config.validate('logger', loggerSchema);
 
 const consoleFormat = format.combine(
 	format.timestamp({
@@ -26,7 +23,6 @@ const consoleFormat = format.combine(
 );
 
 const logger = winston.createLogger({
-	// level: config.application.logLevel || 'debug',
 	level: loggerConfig.level,
 	format: format.combine(
 		format.timestamp({
@@ -47,18 +43,5 @@ const logger = winston.createLogger({
 		new winston.transports.Console({ format: consoleFormat })
 	]
 });
-
-// if (config.datadogApiKey) {
-// 	logger.add(
-// 		new DatadogWinston({
-// 			apiKey: config.datadogApiKey,
-// 			hostname: os.hostname(),
-// 			service: 'redsky-rest',
-// 			ddsource: 'nodejs', // Must be nodejs
-// 			ddtags:
-// 				process.env.NODE_APP_INSTANCE != undefined ? `instance:${process.env.NODE_APP_INSTANCE}` : 'instance:0'
-// 		})
-// 	);
-// }
 
 export { logger };

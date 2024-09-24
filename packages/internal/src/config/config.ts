@@ -19,7 +19,17 @@ export class Config {
 			throw new Error(`Config ${domain} not found`);
 		}
 
-		return schema.parse(this.configData[domain]);
+		const result = schema.safeParse(this.configData[domain]);
+
+		if (!result.success) {
+			const errorDetails = result.error.errors
+				.map((e) => `Path: ${e.path.join('.')}, Message: ${e.message}`)
+				.join('; ');
+
+			throw new Error(`Validation failed for config ${domain}: ${errorDetails}`);
+		}
+
+		return result.data;
 	}
 
 	private load() {

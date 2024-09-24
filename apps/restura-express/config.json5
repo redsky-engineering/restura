@@ -7,7 +7,6 @@
 	},
 	// The @restura/logger configuration
 	logger: {
-		level: 'info',
-		prettyPrint: true
+		level: 'info'
 	}
 }
