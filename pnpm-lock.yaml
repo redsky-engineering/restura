@@ -56,6 +56,9 @@ importers:
 
     packages/core:
         dependencies:
+            '@redskytech/core-utils':
+                specifier: ^1.1.1
+                version: 1.1.1
             '@restura/internal':
                 specifier: workspace:*
                 version: link:../internal
@@ -582,6 +585,12 @@ packages:
                 integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==
             }
         engines: { node: '>=14' }
+
+    '@redskytech/core-utils@1.1.1':
+        resolution:
+            {
+                integrity: sha512-NfhyW2LkCE+3XP+0yguaFQ5et7SlOWrlKkWlrJ/1okSjW8mnRZSGsl79QsANQRfQmiY9xF7OUS2Y6vqES8Y18g==
+            }
 
     '@rollup/rollup-android-arm-eabi@4.22.2':
         resolution:
@@ -2284,6 +2293,12 @@ packages:
             }
         engines: { node: '>=10' }
 
+    lodash.clonedeep@4.5.0:
+        resolution:
+            {
+                integrity: sha512-H5ZhCF25riFd9uB5UCkVKo61m3S/xZk1x4wA6yp/L3RFP6Z/eHH1ymQcGLo7J3GMPfm0V/7m1tryHuGVxpqEBQ==
+            }
+
     lodash.merge@4.6.2:
         resolution:
             {
@@ -3652,6 +3667,10 @@ snapshots:
     '@pkgjs/parseargs@0.11.0':
         optional: true
 
+    '@redskytech/core-utils@1.1.1':
+        dependencies:
+            lodash.clonedeep: 4.5.0
+
     '@rollup/rollup-android-arm-eabi@4.22.2':
         optional: true
 
@@ -4637,6 +4656,8 @@ snapshots:
     locate-path@6.0.0:
         dependencies:
             p-locate: 5.0.0
+
+    lodash.clonedeep@4.5.0: {}
 
     lodash.merge@4.6.2: {}
 

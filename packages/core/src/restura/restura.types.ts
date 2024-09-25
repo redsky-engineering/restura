@@ -6,7 +6,7 @@ export interface ResturaSchema {
 	customTypes: string;
 }
 
-interface TableData {
+export interface TableData {
 	name: string;
 	columns: ColumnData[];
 	indexes: IndexData[];
@@ -15,14 +15,14 @@ interface TableData {
 	roles: string[];
 }
 
-interface EndpointData {
+export interface EndpointData {
 	name: string;
 	description: string;
 	baseUrl: string;
 	routes: RouteData[];
 }
 
-interface ColumnData {
+export interface ColumnData {
 	name: string;
 	type:
 		| MariaDbColumnNumericTypes
@@ -42,7 +42,7 @@ interface ColumnData {
 	length?: number;
 }
 
-type PostgresColumnNumericTypes =
+export type PostgresColumnNumericTypes =
 	| 'SMALLINT' // 2 bytes, -32,768 to 32,767
 	| 'INTEGER' // 4 bytes, -2,147,483,648 to 2,147,483,647
 	| 'BIGINT' // 8 bytes, -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807
@@ -53,20 +53,20 @@ type PostgresColumnNumericTypes =
 	| 'SERIAL' // auto-incrementing integer
 	| 'BIGSERIAL'; // auto-incrementing big integer
 
-type PostgresColumnStringTypes =
+export type PostgresColumnStringTypes =
 	| 'CHAR' // fixed-length, blank-padded
 	| 'VARCHAR' // variable-length with limit
 	| 'TEXT' // variable-length without limit
 	| 'BYTEA'; // binary data
 
-type PostgresColumnDateTypes =
+export type PostgresColumnDateTypes =
 	| 'DATE' // calendar date (year, month, day)
 	| 'TIMESTAMP' // both date and time (without time zone)
 	| 'TIMESTAMPTZ' // both date and time (with time zone)
 	| 'TIME' // time of day (without time zone)
 	| 'INTERVAL'; // time span
 
-type MariaDbColumnNumericTypes =
+export type MariaDbColumnNumericTypes =
 	| 'BOOLEAN' //	1-byte	A synonym for "TINYINT(1)". Supported from version 1.2.0 onwards.
 	| 'TINYINT' //	1-byte	A very small integer. Numeric value with scale 0. Signed: -126 to +127. Unsigned: 0 to 253.
 	| 'SMALLINT' //	2-bytes	A small integer. Signed: -32,766 to 32,767. Unsigned: 0 to 65,533.
@@ -77,7 +77,7 @@ type MariaDbColumnNumericTypes =
 	| 'FLOAT' //	4 bytes	Stored in 32-bit IEEE-754 floating point format. As such, the number of significant digits is about 6and the range of values is approximately +/- 1e38.The MySQL extension to specify precision and scale is not supported.
 	| 'DOUBLE'; //	8 bytes	Stored in 64-bit IEEE-754 floating point format. As such, the number of significant digits is about 15 and the range of values is approximately +/-1e308. The MySQL extension to specify precision and scale is not supported. “REAL” is a synonym for “DOUBLE”.
 
-type MariaDbColumnStringTypes =
+export type MariaDbColumnStringTypes =
 	| 'CHAR' //	1, 2, 4, or 8 bytes	Holds letters and special characters of fixed length. Max length is 255. Default and minimum size is 1 byte.
 	| 'VARCHAR' //	1, 2, 4, or 8 bytes or 8-byte token	Holds letters, numbers, and special characters of variable length. Max length = 8000 bytes or characters and minimum length = 1 byte or character.
 	| 'TINYTEXT' //	255 bytes	Holds a small amount of letters, numbers, and special characters of variable length. Supported from version 1.1.0 onwards.
@@ -91,15 +91,15 @@ type MariaDbColumnStringTypes =
 	| 'LONGBLOB' // 1.96 GB	Holds a large amount of binary data of variable length. Supported from version 1.1.0 onwards.
 	| 'ENUM';
 
-type MariaDbColumnDateTypes =
+export type MariaDbColumnDateTypes =
 	| 'DATE' //	4-bytes	Date has year, month, and day. The internal representation of a date is a string of 4 bytes. The first 2 bytes represent the year, .5 bytes the month, and .75 bytes the day in the following format: YYYY-MM-DD. Supported range is 1000-01-01 to 9999-12-31.
 	| 'DATETIME' //	8-bytes	A date and time combination. Supported range is 1000-01-01 00:00:00 to 9999-12-31 23:59:59. From version 1.2.0 microseconds are also supported.
 	| 'TIME' //	8-bytes	Holds hour, minute, second and optionally microseconds for time. Supported range is '-838:59:59.999999' to '838:59:59.999999'. Supported from version 1.2.0 onwards.
 	| 'TIMESTAMP'; //	4-bytes	Values are stored as the number of seconds since 1970-01-01 00:00:00 UTC, and optionally microseconds. The max value is currently 2038-01-19 03:14:07 UTC. Supported starting with MariaDB ColumnStore 1.4.2.
 
-type ForeignKeyActions = 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION' | 'SET DEFAULT';
+export type ForeignKeyActions = 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION' | 'SET DEFAULT';
 
-interface IndexData {
+export interface IndexData {
 	name: string; // name = ${table}_${columnName0}_${columnName1}_..._${columnNameN}_(unique)_index (unique is optional)
 	columns: string[];
 	isUnique: boolean;
@@ -108,7 +108,7 @@ interface IndexData {
 	indexType?: 'BTREE' | 'HASH' | 'GIN' | 'GIST';
 }
 
-interface ForeignKeyData {
+export interface ForeignKeyData {
 	name: string; // name = ${table}_${refTable}_${refColumn}_fk
 	column: string;
 	refTable: string;
@@ -117,23 +117,23 @@ interface ForeignKeyData {
 	onUpdate: ForeignKeyActions;
 }
 
-interface CheckConstraintData {
+export interface CheckConstraintData {
 	name: string;
 	check: string;
 }
 
-interface ValidatorData {
+export interface ValidatorData {
 	type: 'TYPE_CHECK' | 'MIN' | 'MAX' | 'ONE_OF';
 	value: number[] | string[] | string | number;
 }
 
-interface RequestData {
+export interface RequestData {
 	name: string;
 	required: boolean;
 	validator: ValidatorData[];
 }
 
-interface JoinData {
+export interface JoinData {
 	table: string;
 	localColumnName?: string;
 	foreignColumnName?: string;
@@ -142,7 +142,7 @@ interface JoinData {
 	alias?: string; // Alias should follow format "localColumnName_table". This allows us to properly look up the types
 }
 
-interface ResponseData {
+export interface ResponseData {
 	name: string;
 	selector?: string;
 	subquery?: {
@@ -155,7 +155,7 @@ interface ResponseData {
 	};
 }
 
-interface WhereData {
+export interface WhereData {
 	tableName?: string;
 	columnName?: string;
 	operator?: '=' | '<' | '>' | '<=' | '>=' | '!=' | 'LIKE' | 'IN' | 'NOT IN' | 'STARTS WITH' | 'ENDS WITH';
@@ -164,18 +164,18 @@ interface WhereData {
 	conjunction?: 'AND' | 'OR';
 }
 
-interface OrderByData {
+export interface OrderByData {
 	tableName: string;
 	columnName: string;
 	order: 'ASC' | 'DESC';
 }
 
-interface GroupByData {
+export interface GroupByData {
 	tableName: string;
 	columnName: string;
 }
 
-interface RouteDataBase {
+export interface RouteDataBase {
 	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	name: string;
 	description: string;
@@ -183,12 +183,12 @@ interface RouteDataBase {
 	roles: string[];
 }
 
-interface AssignData {
+export interface AssignData {
 	name: string;
 	value: string;
 }
 
-interface StandardRouteData extends RouteDataBase {
+export interface StandardRouteData extends RouteDataBase {
 	type: 'ONE' | 'ARRAY' | 'PAGED';
 	table: string;
 	joins: JoinData[];
@@ -235,14 +235,14 @@ export interface LoginDetails {
 }
 
 // The `string` type is to handle for enums
-type ValidatorString = 'boolean' | 'string' | 'number' | 'object' | 'any';
+export type ValidatorString = 'boolean' | 'string' | 'number' | 'object' | 'any';
 
-interface ResponseType {
+export interface ResponseType {
 	isOptional?: boolean;
 	isArray?: boolean;
 	validator: ValidatorString | ResponseTypeMap | string[];
 }
 
-interface ResponseTypeMap {
+export interface ResponseTypeMap {
 	[property: string]: ResponseType;
 }
