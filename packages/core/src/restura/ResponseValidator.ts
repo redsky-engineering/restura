@@ -1,4 +1,5 @@
 import { RsError } from './errors.js';
+import { SqlUtils } from './SqlUtils.js';
 import type {
 	CustomRouteData,
 	ResponseData,
@@ -9,8 +10,7 @@ import type {
 	StandardRouteData,
 	TableData,
 	ValidatorString
-} from './restura.types.js';
-import { SqlUtils } from './SqlUtils.js';
+} from './types/restura.types.js';
 
 export default class ResponseValidator {
 	private readonly rootMap: ResponseTypeMap;

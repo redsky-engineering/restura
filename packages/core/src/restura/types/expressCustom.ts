@@ -1,6 +1,7 @@
 import * as express from 'express';
 import { IncomingHttpHeaders } from 'http2';
-import type { ErrorCode, HtmlStatusCodes } from './errors.js';
+import type { ErrorCode, HtmlStatusCodes } from '../errors.js';
+import type { RsPagedResponseData } from './restura.types.js';
 
 // Headers are always passed up as strings and are always lower cased by NodeJs Express
 export interface RsHeaders extends IncomingHttpHeaders {
@@ -20,6 +21,7 @@ export interface RsResponse<T = unknown> extends express.Response {
 	sendData: (data: T, statusCode?: number) => void;
 	sendNoWrap: (data: T, statusCode?: number) => void;
 	sendError: (err: ErrorCode, msg: string, htmlStatusCode?: HtmlStatusCodes, stack?: string) => void;
+	sendPaginated: (pagedData: RsPagedResponseData<T>, statusCode?: number) => void;
 	_contentLength?: number;
 }
 

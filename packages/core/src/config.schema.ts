@@ -6,6 +6,9 @@ export const loggerConfigSchema = z.object({
 export type LoggerConfigSchema = z.infer<typeof loggerConfigSchema>;
 
 export const resturaConfigSchema = z.object({
-	authToken: z.string().min(1, 'Missing Restura Auth Token')
+	authToken: z.string().min(1, 'Missing Restura Auth Token'),
+	sendErrorStackTrace: z.boolean().default(false),
+	schemaFilePath: z.string().default(process.cwd() + '/restura.schema.json'),
+	generatedTypesPath: z.string().default(process.cwd() + '/src/@types')
 });
 export type ResturaConfigSchema = z.infer<typeof resturaConfigSchema>;
