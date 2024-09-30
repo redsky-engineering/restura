@@ -1,3 +1,5 @@
+import type { RsRequest } from './expressCustom.js';
+
 export interface SchemaChangeValue {
 	name: string;
 	changeType: 'NEW' | 'MODIFIED' | 'DELETED';
@@ -60,3 +62,14 @@ export interface PageQuery {
 	sortOrder?: StandardOrderTypes;
 	filter?: string;
 }
+
+export interface RoleWithOptionalUserDetails {
+	role: string;
+	[key: string]: string | number | boolean | object | null; // Other keys with any JSON-compatible value type
+}
+
+export type AuthenticateHandler = (
+	req: RsRequest<unknown>,
+	onValid: (userDetails: RoleWithOptionalUserDetails) => void,
+	onReject: (errorMessage: string) => void
+) => Promise<void>;

@@ -10,9 +10,15 @@ export interface RsHeaders extends IncomingHttpHeaders {
 
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 
-export interface RsRequest<T = unknown> extends Omit<express.Request, 'useragent'> {
+export interface RequesterDetails {
+	role?: string;
+	host: string;
+	ipAddress: string;
+}
+
+export interface RsRequest<T = unknown> extends express.Request {
+	requesterDetails: RequesterDetails;
 	data: T;
-	internalResource: string;
 }
 
 export type DynamicObject = { [key: string]: unknown };

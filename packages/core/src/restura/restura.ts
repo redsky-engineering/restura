@@ -19,6 +19,8 @@ import { schemaValidation } from './middleware/schemaValidation.js';
 import modelGenerator from './modelGenerator.js';
 import { isSchemaValid, type CustomRouteData, type ResturaSchema, type RouteData } from './restura.schema.js';
 import type { RsRequest, RsResponse } from './types/expressCustom.js';
+import type { AuthenticateHandler } from './types/restura.types.js';
+import { authenticateUser } from './middleware/authenticateUser.js';
 
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
@@ -35,10 +37,18 @@ class ResturaEngine {
 	private expressApp!: express.Application;
 	private schema!: ResturaSchema;
 	private responseValidator!: ResponseValidator;
+	private authenticationHandler!: AuthenticateHandler;
 	// private customTypeValidation!: ValidationDictionary;
 
-	async init(app: express.Application): Promise<void> {
+	/**
+	 * Initializes the Restura engine with the provided Express application.
+	 *
+	 * @param app - The Express application instance to initialize with Restura.
+	 * @returns A promise that resolves when the initialization is complete.
+	 */
+	async init(app: express.Application, authenticationHandler: AuthenticateHandler): Promise<void> {
 		this.resturaConfig = config.validate('restura', resturaConfigSchema) as ResturaConfigSchema;
+		this.authenticationHandler = authenticationHandler;
 
 		// Middleware and general setup
 		app.use(compression());
@@ -49,6 +59,7 @@ class ResturaEngine {
 		app.disable('x-powered-by');
 
 		app.use('/', addApiResponseFunctions as unknown as express.RequestHandler);
+		app.use('/api/', authenticateUser as unknown as express.RequestHandler);
 		app.use('/restura', this.resturaAuthentication);
 
 		// Routes specific to Restura
@@ -68,15 +79,31 @@ class ResturaEngine {
 		this.expressApp = app;
 
 		await this.reloadEndpoints();
+		this.validateGeneratedTypesFolder();
 
 		logger.info('Restura Engine Initialized');
 	}
 
+	/**
+	 * Determines if a given endpoint is public based on the HTTP method and full URL. This
+	 * is determined on whether the endpoint in the schema has no roles assigned to it.
+	 *
+	 * @param method - The HTTP method (e.g., 'GET', 'POST', 'PUT', 'PATCH', 'DELETE').
+	 * @param fullUrl - The full URL of the endpoint.
+	 * @returns A boolean indicating whether the endpoint is public.
+	 */
 	isEndpointPublic(method: string, fullUrl: string): boolean {
 		if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return false;
 		return this.publicEndpoints[method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'].includes(fullUrl);
 	}
 
+	/**
+	 * Checks if an endpoint exists for a given HTTP method and full URL.
+	 *
+	 * @param method - The HTTP method to check (e.g., 'GET', 'POST', 'PUT', 'PATCH', 'DELETE').
+	 * @param fullUrl - The full URL of the endpoint to check.
+	 * @returns `true` if the endpoint exists, otherwise `false`.
+	 */
 	doesEndpointExist(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', fullUrl: string): boolean {
 		return this.schema.endpoints.some((endpoint) => {
 			if (!fullUrl.startsWith(endpoint.baseUrl)) return false;
@@ -87,6 +114,13 @@ class ResturaEngine {
 		});
 	}
 
+	/**
+	 * Generates an API from the provided schema and writes it to the specified output file.
+	 *
+	 * @param outputFile - The path to the file where the generated API will be written.
+	 * @param providedSchema - The schema from which the API will be generated.
+	 * @returns A promise that resolves when the API has been successfully generated and written to the output file.
+	 */
 	async generateApiFromSchema(outputFile: string, providedSchema: ResturaSchema): Promise<void> {
 		fs.writeFileSync(
 			outputFile,
@@ -94,6 +128,13 @@ class ResturaEngine {
 		);
 	}
 
+	/**
+	 * Generates a model from the provided schema and writes it to the specified output file.
+	 *
+	 * @param outputFile - The path to the file where the generated model will be written.
+	 * @param providedSchema - The schema from which the model will be generated.
+	 * @returns A promise that resolves when the model has been successfully written to the output file.
+	 */
 	async generateModelFromSchema(outputFile: string, providedSchema: ResturaSchema): Promise<void> {
 		fs.writeFileSync(
 			outputFile,
@@ -101,6 +142,12 @@ class ResturaEngine {
 		);
 	}
 
+	/**
+	 * Retrieves the latest file system schema for Restura.
+	 *
+	 * @returns {Promise<ResturaSchema>} A promise that resolves to the latest Restura schema.
+	 * @throws {Error} If the schema file is missing or the schema is not valid.
+	 */
 	async getLatestFileSystemSchema(): Promise<ResturaSchema> {
 		if (!fs.existsSync(this.resturaConfig.schemaFilePath)) {
 			logger.error(`Missing restura schema file, expected path: ${this.resturaConfig.schemaFilePath}`);
@@ -117,15 +164,24 @@ class ResturaEngine {
 		return schema;
 	}
 
+	/**
+	 * Asynchronously generates and retrieves hashes for the provided schema and related generated files.
+	 *
+	 * @param providedSchema - The schema for which hashes need to be generated.
+	 * @returns A promise that resolves to an object containing:
+	 * - `schemaHash`: The hash of the provided schema.
+	 * - `apiCreatedSchemaHash`: The hash extracted from the generated `api.d.ts` file.
+	 * - `modelCreatedSchemaHash`: The hash extracted from the generated `models.d.ts` file.
+	 */
 	async getHashes(providedSchema: ResturaSchema): Promise<{
 		schemaHash: string;
 		apiCreatedSchemaHash: string;
 		modelCreatedSchemaHash: string;
 	}> {
 		const schemaHash = await this.generateHashForSchema(providedSchema);
-		const apiFile = fs.readFileSync(path.join(__dirname, '../../../../../src/@types/api.d.ts'));
+		const apiFile = fs.readFileSync(path.join(this.resturaConfig.generatedTypesPath, 'api.d.ts'));
 		const apiCreatedSchemaHash = apiFile.toString().match(/\((.*)\)/)?.[1] ?? '';
-		const modelFile = fs.readFileSync(path.join(__dirname, '../../../../../src/@types/models.d.ts'));
+		const modelFile = fs.readFileSync(path.join(this.resturaConfig.generatedTypesPath, 'models.d.ts'));
 		const modelCreatedSchemaHash = modelFile.toString().match(/\((.*)\)/)?.[1] ?? '';
 		return {
 			schemaHash,
@@ -164,6 +220,37 @@ class ResturaEngine {
 		this.responseValidator = new ResponseValidator(this.schema);
 
 		logger.info(`Restura loaded (${routeCount}) endpoint${routeCount > 1 ? 's' : ''}`);
+	}
+
+	private async validateGeneratedTypesFolder() {
+		if (!fs.existsSync(this.resturaConfig.generatedTypesPath)) {
+			fs.mkdirSync(this.resturaConfig.generatedTypesPath, { recursive: true });
+		}
+
+		const hasApiFile = fs.existsSync(path.join(this.resturaConfig.generatedTypesPath, 'api.d.ts'));
+		const hasModelsFile = fs.existsSync(path.join(this.resturaConfig.generatedTypesPath, 'models.d.ts'));
+
+		if (!hasApiFile) {
+			await this.generateApiFromSchema(path.join(this.resturaConfig.generatedTypesPath, 'api.d.ts'), this.schema);
+		}
+		if (!hasModelsFile) {
+			await this.generateModelFromSchema(
+				path.join(this.resturaConfig.generatedTypesPath, 'models.d.ts'),
+				this.schema
+			);
+		}
+
+		// Now get the hashes for the schema and the generated files and regenerate if needed
+		const hashes = await this.getHashes(this.schema);
+		if (hashes.schemaHash !== hashes.apiCreatedSchemaHash) {
+			await this.generateApiFromSchema(path.join(this.resturaConfig.generatedTypesPath, 'api.d.ts'), this.schema);
+		}
+		if (hashes.schemaHash !== hashes.modelCreatedSchemaHash) {
+			await this.generateModelFromSchema(
+				path.join(this.resturaConfig.generatedTypesPath, 'models.d.ts'),
+				this.schema
+			);
+		}
 	}
 
 	@boundMethod
@@ -256,7 +343,7 @@ class ResturaEngine {
 			const routeData = this.getRouteData(req.method, req.baseUrl, req.path);
 
 			// Validate the user has access to the endpoint
-			// this.validateAuthorization(req, routeData);
+			this.validateAuthorization(req, routeData);
 
 			// Check for file uploads
 			// await this.getMulterFilesIfAny(req, res, routeData);
@@ -361,12 +448,12 @@ class ResturaEngine {
 		};
 	}
 
-	// private validateAuthorization(req: RsRequest<unknown>, routeData: RouteData) {
-	// 	const role = req.requesterDetails.role;
-	// 	if (routeData.roles.length === 0 || !role) return;
-	// 	if (!routeData.roles.includes(role))
-	// 		throw new RsError('UNAUTHORIZED', 'Not authorized to access this endpoint');
-	// }
+	private validateAuthorization(req: RsRequest<unknown>, routeData: RouteData) {
+		const role = req.requesterDetails.role;
+		if (routeData.roles.length === 0 || !role) return;
+		if (!routeData.roles.includes(role))
+			throw new RsError('UNAUTHORIZED', 'Not authorized to access this endpoint');
+	}
 
 	private getRouteData(method: string, baseUrl: string, path: string): RouteData {
 		const endpoint = this.schema.endpoints.find((item) => {
