@@ -9,6 +9,7 @@ dist-ssr
 .cache
 server/dist
 public/dist
+.idea
 
 .nx/cache
 .nx/workspace-data
