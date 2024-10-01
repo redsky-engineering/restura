@@ -1,8 +1,7 @@
 import validateRequestParams, { ValidationDictionary } from './validateRequestParams';
 import { DynamicObject, RsRequest } from './types/expressCustom';
 import { RouteData } from './restura.schema';
-//https://github.com/redsky-engineering/core-utils/blob/master/tests/NumberUtils.spec.ts
-test('validateRequestParams', () => {
+describe('validateRequestParams', () => {
 	const sampleRouteData: RouteData = {
 		type: 'ONE',
 		method: 'GET',
@@ -141,21 +140,25 @@ test('validateRequestParams', () => {
 			$schema: 'http://json-schema.org/draft-07/schema#'
 		}
 	} as ValidationDictionary;
-	try {
-		validateRequestParams(
-			{
-				query: { a: '123' },
-				method: 'GET'
-			} as unknown as RsRequest<DynamicObject>,
-			sampleRouteData,
-			sampleValidationSchema
-		);
-	} catch (e: { err: string; msg: string }) {
-		expect(e.err).toBe('BAD_REQUEST');
-		expect(e.msg).toBe('Request param (a) is not allowed');
-	}
 
-	// test('0 null undefined', () => {
+	it('should fail if unknown params are passed', () => {
+		try {
+			validateRequestParams(
+				{
+					query: { a: '123' },
+					method: 'GET'
+				} as unknown as RsRequest<DynamicObject>,
+				sampleRouteData,
+				sampleValidationSchema
+			);
+			// eslint-disable-next-line
+		} catch (e: any) {
+			expect(e?.err).toBe('BAD_REQUEST');
+			expect(e?.msg).toBe('Request param (a) is not allowed');
+		}
+	});
+
+	// it('0 null undefined', () => {
 	//
 	// })
 });

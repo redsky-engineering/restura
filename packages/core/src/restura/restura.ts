@@ -349,7 +349,7 @@ class ResturaEngine {
 			// await this.getMulterFilesIfAny(req, res, routeData);
 
 			// Validate the request and assign to req.data
-			// validateRequestParams(req as RsRequest<DynamicObject>, routeData, tempSchema);
+			// validateRequestParams(req as RsRequest<DynamicObject>, routeData, this.customTypeValidation);
 
 			// Check for custom logic
 			// if (this.isCustomRoute(routeData)) {
