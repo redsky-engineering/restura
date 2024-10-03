@@ -158,6 +158,8 @@ describe('validateRequestParams', () => {
 		}
 	});
 
+	xit('should pass if request is correct', () => {});
+
 	// it('0 null undefined', () => {
 	//
 	// })

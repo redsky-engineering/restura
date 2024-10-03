@@ -2,19 +2,23 @@
 	"name": "restura-express",
 	"version": "1.0.0",
 	"description": "Test application using express and Restura",
-	"type": "module",
 	"main": "dist/app.js",
 	"scripts": {
 		"test": "echo \"Todo: add tests\"",
 		"dev": "pnpm -w build && tsc && node ./dist/app.js",
+		"devTs": "pnpm -w build && ts-node ./src/app.ts",
 		"lint": "eslint src"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"@restura/core": "workspace:*",
-		"@types/express": "^4.17.21",
 		"express": "^4.21.0"
+	},
+	"devDependencies": {
+        "@restura/core": "workspace:*",
+        "@types/express": "^4.17.21",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.6.2"
 	}
 }

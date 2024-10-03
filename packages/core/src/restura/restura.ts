@@ -18,9 +18,11 @@ import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
 import { schemaValidation } from './middleware/schemaValidation.js';
 import modelGenerator from './modelGenerator.js';
 import { isSchemaValid, type CustomRouteData, type ResturaSchema, type RouteData } from './restura.schema.js';
-import type { RsRequest, RsResponse } from './types/expressCustom.js';
+import type { DynamicObject, RsRequest, RsResponse } from './types/expressCustom.js';
 import type { AuthenticateHandler } from './types/restura.types.js';
 import { authenticateUser } from './middleware/authenticateUser.js';
+import validateRequestParams, { ValidationDictionary } from './validateRequestParams';
+import customTypeValidationGenerator from './customTypeValidationGenerator';
 
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
@@ -38,7 +40,7 @@ class ResturaEngine {
 	private schema!: ResturaSchema;
 	private responseValidator!: ResponseValidator;
 	private authenticationHandler!: AuthenticateHandler;
-	// private customTypeValidation!: ValidationDictionary;
+	private customTypeValidation!: ValidationDictionary;
 
 	/**
 	 * Initializes the Restura engine with the provided Express application.
@@ -192,7 +194,7 @@ class ResturaEngine {
 
 	private async reloadEndpoints() {
 		this.schema = await this.getLatestFileSystemSchema();
-		// this.customTypeValidation = customTypeValidationGenerator(this.schema);
+		this.customTypeValidation = customTypeValidationGenerator(this.schema);
 		this.resturaRouter = express.Router();
 		this.resetPublicEndpoints();
 
@@ -349,7 +351,7 @@ class ResturaEngine {
 			// await this.getMulterFilesIfAny(req, res, routeData);
 
 			// Validate the request and assign to req.data
-			// validateRequestParams(req as RsRequest<DynamicObject>, routeData, this.customTypeValidation);
+			validateRequestParams(req as RsRequest<DynamicObject>, routeData, this.customTypeValidation);
 
 			// Check for custom logic
 			// if (this.isCustomRoute(routeData)) {
