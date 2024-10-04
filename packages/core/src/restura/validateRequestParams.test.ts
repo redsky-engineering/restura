@@ -1,6 +1,7 @@
-import validateRequestParams, { ValidationDictionary } from './validateRequestParams';
+import validateRequestParams, { performTypeCheck, ValidationDictionary } from './validateRequestParams';
 import { DynamicObject, RsRequest } from './types/expressCustom';
 import { RouteData } from './restura.schema';
+
 describe('validateRequestParams', () => {
 	const sampleRouteData: RouteData = {
 		type: 'ONE',
@@ -158,7 +159,135 @@ describe('validateRequestParams', () => {
 		}
 	});
 
-	xit('should pass if request is correct', () => {});
+	it('should pass if type is correct(number)', () => {
+		const response = performTypeCheck(
+			2,
+			{
+				type: 'TYPE_CHECK',
+				value: 'number'
+			},
+			'id'
+		);
+		expect(response).toBe(undefined);
+	});
+	it('should pass if type is correct(string)', () => {
+		const response = performTypeCheck(
+			'stringasdf',
+			{
+				type: 'TYPE_CHECK',
+				value: 'string'
+			},
+			'id'
+		);
+		expect(response).toBe(undefined);
+	});
+	it('should pass if type is correct(boolean)', () => {
+		const response = performTypeCheck(
+			true,
+			{
+				type: 'TYPE_CHECK',
+				value: 'boolean'
+			},
+			'id'
+		);
+		expect(response).toBe(undefined);
+	});
+
+	it('should pass if type is correct(number[])', () => {
+		const response = performTypeCheck(
+			[2, 1],
+			{
+				type: 'TYPE_CHECK',
+				value: 'number[]'
+			},
+			'id'
+		);
+		expect(response).toBe(undefined);
+	});
+	it('should pass if type is correct(string[])', () => {
+		const response = performTypeCheck(
+			['stringasdf', '1'],
+			{
+				type: 'TYPE_CHECK',
+				value: 'string[]'
+			},
+			'id'
+		);
+		expect(response).toBe(undefined);
+	});
+	it('should fail if type is incorrect(string[])', () => {
+		try {
+			performTypeCheck(
+				['stringasdf', '1', 1],
+				{
+					type: 'TYPE_CHECK',
+					value: 'string[]'
+				},
+				'id'
+			);
+			// eslint-disable-next-line
+		} catch (e: any) {
+			expect(e.msg).toBe(`Request param (id) with value (['stringasdf', '1', 1]) is not of type (string[])`);
+		}
+	});
+	it('should pass if type is correct(any[])', () => {
+		const response = performTypeCheck(
+			['stringasdf', '1', 1],
+			{
+				type: 'TYPE_CHECK',
+				value: 'any[]'
+			},
+			'id'
+		);
+		expect(response).toBe(undefined);
+	});
+
+	it('should fail if type is incorrect (number)', () => {
+		try {
+			performTypeCheck(
+				'2',
+				{
+					type: 'TYPE_CHECK',
+					value: 'number'
+				},
+				'id'
+			);
+			// eslint-disable-next-line
+		} catch (e: any) {
+			expect(e?.msg).toBe(`Request param (id) with value ('2') is not of type (number)`);
+		}
+	});
+
+	it('should fail if type is incorrect (object)', () => {
+		try {
+			performTypeCheck(
+				'2',
+				{
+					type: 'TYPE_CHECK',
+					value: 'object'
+				},
+				'id'
+			);
+			// eslint-disable-next-line
+		} catch (e: any) {
+			expect(e?.msg).toBe(`Request param (id) with value ('2') is not of type (object)`);
+		}
+	});
+	it('should fail if type is incorrect (boolean)', () => {
+		try {
+			performTypeCheck(
+				2,
+				{
+					type: 'TYPE_CHECK',
+					value: 'boolean'
+				},
+				'id'
+			);
+			// eslint-disable-next-line
+		} catch (e: any) {
+			expect(e?.msg).toBe('Request param (id) with value (2) is not of type (boolean)');
+		}
+	});
 
 	// it('0 null undefined', () => {
 	//

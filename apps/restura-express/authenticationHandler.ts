@@ -9,6 +9,7 @@ const authenticationHandler = async (
 	console.log(req.method);
 	console.log(typeof onValid);
 	console.log(typeof onReject);
-	return;
+	onValid({ role: 'admin' });
+	return Promise.resolve();
 };
 export default authenticationHandler;

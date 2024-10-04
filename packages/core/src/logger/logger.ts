@@ -2,7 +2,7 @@ import { config } from '@restura/internal';
 import winston from 'winston';
 // We use the logform module instead of bundled winston.format because then we can enable stack errors in the console output
 import { format } from 'logform';
-import { loggerConfigSchema } from '../config.schema.js';
+import { loggerConfigSchema } from '../config.schema';
 
 const loggerConfig = config.validate('logger', loggerConfigSchema);
 

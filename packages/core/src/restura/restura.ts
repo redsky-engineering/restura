@@ -61,7 +61,7 @@ class ResturaEngine {
 		app.disable('x-powered-by');
 
 		app.use('/', addApiResponseFunctions as unknown as express.RequestHandler);
-		app.use('/api/', authenticateUser as unknown as express.RequestHandler);
+		app.use('/api/', authenticateUser(this.authenticationHandler) as unknown as express.RequestHandler);
 		app.use('/restura', this.resturaAuthentication);
 
 		// Routes specific to Restura
@@ -81,7 +81,7 @@ class ResturaEngine {
 		this.expressApp = app;
 
 		await this.reloadEndpoints();
-		this.validateGeneratedTypesFolder();
+		this.validateGeneratedTypesFolder().catch(logger.error);
 
 		logger.info('Restura Engine Initialized');
 	}
@@ -366,8 +366,8 @@ class ResturaEngine {
 			// this.responseValidator.validateResponseParams(data, req.baseUrl, routeData);
 
 			// Send response
-			// if (routeData.type === 'PAGED') res.sendNoWrap(data as T);
-			// else res.sendData(data as T);
+			if (routeData.type === 'PAGED') res.sendNoWrap({} as T);
+			else res.sendData({} as T);
 		} catch (e) {
 			next(e);
 		}

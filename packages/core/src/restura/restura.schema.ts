@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { logger } from '../logger/logger.js';
+import { logger } from '../logger/logger';
+import { validatorDataSchema } from './types/validation.types';
 
 // Zod schemas with strict mode
 const orderBySchema = z
@@ -57,15 +58,6 @@ const joinDataSchema = z
 	.strict();
 
 export type JoinData = z.infer<typeof joinDataSchema>;
-
-const validatorDataSchema = z
-	.object({
-		type: z.enum(['TYPE_CHECK', 'MIN', 'MAX', 'ONE_OF']),
-		value: z.union([z.string(), z.array(z.string()), z.number(), z.array(z.number())])
-	})
-	.strict();
-
-export type ValidatorData = z.infer<typeof validatorDataSchema>;
 
 const requestDataSchema = z
 	.object({
