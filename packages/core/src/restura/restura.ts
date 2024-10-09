@@ -370,14 +370,13 @@ class ResturaEngine {
 			// Run SQL query
 			const psqlEngine = new PsqlEngine(this.psqlConnectionPool);
 			const data = await psqlEngine.runQueryForRoute(req as RsRequest<DynamicObject>, routeData, this.schema);
-			console.log(data); // remove later (no-unused-var)
 
 			// Validate the response
 			// this.responseValidator.validateResponseParams(data, req.baseUrl, routeData);
 
 			// Send response
-			if (routeData.type === 'PAGED') res.sendNoWrap({} as T);
-			else res.sendData({} as T);
+			if (routeData.type === 'PAGED') res.sendNoWrap(data as T);
+			else res.sendData(data as T);
 		} catch (e) {
 			next(e);
 		}
