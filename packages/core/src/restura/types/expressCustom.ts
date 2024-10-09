@@ -14,6 +14,7 @@ export interface RequesterDetails {
 	role?: string;
 	host: string;
 	ipAddress: string;
+	userId?: string | number;
 }
 
 export interface RsRequest<T = unknown> extends express.Request {

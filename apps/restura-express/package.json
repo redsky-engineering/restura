@@ -7,17 +7,20 @@
 		"test": "echo \"Todo: add tests\"",
 		"dev": "pnpm -w build && tsc && node ./dist/app.js",
 		"devTs": "pnpm -w build && ts-node ./src/app.ts",
-		"lint": "eslint src"
+		"lint": "eslint src",
+		"startDevDockerDb": "docker-compose -f docker-compose.local.yaml up -d"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"express": "^4.21.0"
+		"express": "^4.21.0",
+		"pg": "^8.13.0"
 	},
 	"devDependencies": {
-        "@restura/core": "workspace:*",
-        "@types/express": "^4.17.21",
+		"@restura/core": "workspace:*",
+		"@types/express": "^4.17.21",
+		"@types/pg": "^8.11.10",
 		"ts-node": "^10.9.2",
 		"typescript": "^5.6.2"
 	}
