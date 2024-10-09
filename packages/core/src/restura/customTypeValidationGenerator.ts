@@ -4,7 +4,7 @@ import path, { resolve } from 'path';
 import { Definition } from 'typescript-json-schema';
 import tmp from 'tmp';
 import * as process from 'process';
-import { ResturaSchema } from './restura.schema';
+import { ResturaSchema } from './restura.schema.js';
 
 export interface ValidationDictionary {
 	[Key: string]: Definition;

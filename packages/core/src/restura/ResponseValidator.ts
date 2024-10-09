@@ -11,7 +11,7 @@ import type {
 	TableData,
 	ValidatorString
 } from './types/restura.types.js';
-import { SqlUtils } from './sql/SqlUtils';
+import { SqlUtils } from './sql/SqlUtils.js';
 
 export default class ResponseValidator {
 	private readonly rootMap: ResponseTypeMap;
