@@ -10,6 +10,7 @@ dist-ssr
 server/dist
 public/dist
 .idea
+packages/core/coverage
 
 .nx/cache
 .nx/workspace-data

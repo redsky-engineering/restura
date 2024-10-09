@@ -6,6 +6,7 @@ import { RequestData, RouteData } from './restura.schema';
 import { RsError } from './errors';
 import { z } from 'zod';
 import { ValidatorData, ValidatorDataSchemeValue, validatorDataSchemeValue } from './types/validation.types';
+import addQuotesToStrings from './utils/addQuotesToStrings';
 
 export interface ValidationDictionary {
 	[Key: string]: Definition;
@@ -108,18 +109,6 @@ function expectValidType(type: ValidatorDataSchemeValue, requestValue: unknown) 
 	}
 	if (type === 'object') {
 		return z.object({}).strict().parse(requestValue);
-	}
-}
-
-function addQuotesToStrings(variable: unknown) {
-	if (typeof variable === 'string') {
-		return `'${variable}'`; // Add quotes around strings
-	} else if (Array.isArray(variable)) {
-		// For arrays, iterate through each element and handle accordingly
-		const arrayWithQuotes = variable.map((item) => (typeof item === 'string' ? `'${item}'` : item));
-		return `[${arrayWithQuotes.join(', ')}]`;
-	} else {
-		return variable; // Print other types as
 	}
 }
 

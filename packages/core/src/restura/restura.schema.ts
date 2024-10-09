@@ -29,7 +29,7 @@ const whereDataSchema = z
 		operator: z
 			.enum(['=', '<', '>', '<=', '>=', '!=', 'LIKE', 'IN', 'NOT IN', 'STARTS WITH', 'ENDS WITH'])
 			.optional(),
-		value: z.string().optional(),
+		value: z.string().or(z.number()).optional(),
 		custom: z.string().optional(),
 		conjunction: z.enum(['AND', 'OR']).optional()
 	})
@@ -122,6 +122,9 @@ const customRouteSchema = routeDataBaseSchema
 		responseType: z.union([z.string(), z.enum(['string', 'number', 'boolean'])]),
 		requestType: z.string().optional(),
 		request: z.array(requestDataSchema).optional(),
+		table: z.undefined(),
+		joins: z.undefined(),
+		assignments: z.undefined(),
 		fileUploadType: z.enum(['SINGLE', 'MULTIPLE']).optional()
 	})
 	.strict();

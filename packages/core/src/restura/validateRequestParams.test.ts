@@ -152,7 +152,6 @@ describe('validateRequestParams', () => {
 				sampleRouteData,
 				sampleValidationSchema
 			);
-			// eslint-disable-next-line
 		} catch (e: any) {
 			expect(e?.err).toBe('BAD_REQUEST');
 			expect(e?.msg).toBe('Request param (a) is not allowed');
@@ -225,7 +224,6 @@ describe('validateRequestParams', () => {
 				},
 				'id'
 			);
-			// eslint-disable-next-line
 		} catch (e: any) {
 			expect(e.msg).toBe(`Request param (id) with value (['stringasdf', '1', 1]) is not of type (string[])`);
 		}
@@ -252,7 +250,6 @@ describe('validateRequestParams', () => {
 				},
 				'id'
 			);
-			// eslint-disable-next-line
 		} catch (e: any) {
 			expect(e?.msg).toBe(`Request param (id) with value ('2') is not of type (number)`);
 		}
@@ -268,7 +265,6 @@ describe('validateRequestParams', () => {
 				},
 				'id'
 			);
-			// eslint-disable-next-line
 		} catch (e: any) {
 			expect(e?.msg).toBe(`Request param (id) with value ('2') is not of type (object)`);
 		}
@@ -283,7 +279,6 @@ describe('validateRequestParams', () => {
 				},
 				'id'
 			);
-			// eslint-disable-next-line
 		} catch (e: any) {
 			expect(e?.msg).toBe('Request param (id) with value (2) is not of type (boolean)');
 		}

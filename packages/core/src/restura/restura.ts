@@ -23,6 +23,8 @@ import type { AuthenticateHandler } from './types/restura.types.js';
 import { authenticateUser } from './middleware/authenticateUser.js';
 import validateRequestParams, { ValidationDictionary } from './validateRequestParams';
 import customTypeValidationGenerator from './customTypeValidationGenerator';
+import PsqlEngine from './sql/PsqlEngine';
+import { Pool } from 'pg';
 
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
@@ -41,6 +43,7 @@ class ResturaEngine {
 	private responseValidator!: ResponseValidator;
 	private authenticationHandler!: AuthenticateHandler;
 	private customTypeValidation!: ValidationDictionary;
+	private psqlConnectionPool!: Pool;
 
 	/**
 	 * Initializes the Restura engine with the provided Express application.
@@ -48,7 +51,12 @@ class ResturaEngine {
 	 * @param app - The Express application instance to initialize with Restura.
 	 * @returns A promise that resolves when the initialization is complete.
 	 */
-	async init(app: express.Application, authenticationHandler: AuthenticateHandler): Promise<void> {
+	async init(
+		app: express.Application,
+		authenticationHandler: AuthenticateHandler,
+		psqlConnectionPool: Pool
+	): Promise<void> {
+		this.psqlConnectionPool = psqlConnectionPool;
 		this.resturaConfig = config.validate('restura', resturaConfigSchema) as ResturaConfigSchema;
 		this.authenticationHandler = authenticationHandler;
 
@@ -360,7 +368,9 @@ class ResturaEngine {
 			// }
 
 			// Run SQL query
-			// const data = await sqlEngine.runQueryForRoute(req as RsRequest<DynamicObject>, routeData, this.schema);
+			const psqlEngine = new PsqlEngine(this.psqlConnectionPool);
+			const data = await psqlEngine.runQueryForRoute(req as RsRequest<DynamicObject>, routeData, this.schema);
+			console.log(data); // remove later (no-unused-var)
 
 			// Validate the response
 			// this.responseValidator.validateResponseParams(data, req.baseUrl, routeData);

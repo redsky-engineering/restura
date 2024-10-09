@@ -1,8 +1,8 @@
 import { ObjectUtils, StringUtils } from '@redskytech/core-utils';
 import prettier from 'prettier';
-import ResponseValidator from './ResponseValidator.js';
+import ResponseValidator from './ResponseValidator';
 import type { EndpointData, ResponseData, ResturaSchema, RouteData, TableData } from './restura.schema.js';
-import { SqlUtils } from './SqlUtils.js';
+import { SqlUtils } from './sql/SqlUtils';
 
 type TreeData = RouteData | EndpointData;
 
