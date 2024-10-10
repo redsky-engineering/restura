@@ -41,7 +41,8 @@ export default function validateRequestParams(
 	}
 
 	// Make sure all passed in params are defined in the schema
-	Object.keys(req.data).forEach((requestParamName) => {
+	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+	Object.keys(req.data as any[]).forEach((requestParamName) => {
 		const requestParam = routeData.request!.find((param) => param.name === requestParamName);
 		if (!requestParam) {
 			throw new RsError('BAD_REQUEST', `Request param (${requestParamName}) is not allowed`);

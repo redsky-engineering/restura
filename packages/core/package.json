@@ -21,7 +21,7 @@
 		"sql generator"
 	],
 	"scripts": {
-		"test": "echo \"Todo: add tests\"",
+		"test": "jest",
 		"build": "tsup ./src/index.ts",
 		"lint": "eslint src"
 	},

@@ -15,7 +15,7 @@ import { ObjectUtils } from '@redskytech/core-utils';
 import { SqlUtils } from './SqlUtils';
 import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils';
 import { PageQuery } from '../types/restura.types';
-import PsqlPool from './PsqlPool';
+import { PsqlPool } from './PsqlPool';
 
 export default class PsqlEngine extends SqlEngine {
 	constructor(private psqlConnectionPool: PsqlPool) {
@@ -261,7 +261,7 @@ export default class PsqlEngine extends SqlEngine {
 			DESC: 'DESC'
 		};
 		const data = req.data as PageQuery;
-		if (routeData.type === 'PAGED' && 'sortBy' in data && 'sortOrder' in data) {
+		if (routeData.type === 'PAGED' && 'sortBy' in data) {
 			const sortOrder = orderOptions[data.sortOrder] || 'ASC';
 			orderBy = `ORDER BY ${escapeColumnName(data.sortBy)} ${sortOrder}\n`;
 		} else if (routeData.orderBy) {

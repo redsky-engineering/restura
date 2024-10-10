@@ -227,7 +227,7 @@ describe('validateRequestParams', () => {
 			);
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
-			expect(e.msg).toBe(`Request param (id) with value (['stringasdf', '1', 1]) is not of type (string[])`);
+			expect(e.msg).toBe(`Request param (id) with value ('stringasdf','1',1) is not of type (string[])`);
 		}
 	});
 	it('should pass if type is correct(any[])', () => {
