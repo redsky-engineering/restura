@@ -478,7 +478,8 @@ const sampleSchema: ResturaSchema = {
 							selector: 'user.firstName'
 						},
 						{ name: 'lastName', selector: 'user.lastName' },
-						{ name: 'email', selector: 'user.email' }
+						{ name: 'email', selector: 'user.email' },
+						{ name: 'permissionLogin', selector: 'user.permissionLogin' }
 					],
 					assignments: [],
 					where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
@@ -552,6 +553,11 @@ const patchUserRouteData: RouteData = {
 			name: 'password',
 			required: false,
 			validator: [{ type: 'TYPE_CHECK', value: 'string' }]
+		},
+		{
+			name: 'permissionLogin',
+			required: false,
+			validator: [{ type: 'TYPE_CHECK', value: 'boolean' }]
 		}
 	],
 	joins: [],
@@ -559,7 +565,8 @@ const patchUserRouteData: RouteData = {
 		{ name: 'id', selector: 'user.id' },
 		{ name: 'firstName', selector: 'user.firstName' },
 		{ name: 'lastName', selector: 'user.lastName' },
-		{ name: 'email', selector: 'user.email' }
+		{ name: 'email', selector: 'user.email' },
+		{ name: 'permissionLogin', selector: 'user.permissionLogin' }
 	],
 	assignments: [],
 	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
@@ -627,14 +634,18 @@ describe('PsqlEngine executeUpdateRequest', () => {
 				ipAddress: '1.1.1.1',
 				userId: 1
 			},
-			body: { id: 1, firstName: 'Billy' }
+			body: { id: 1, firstName: 'Billy', permissionLogin: false }
 		} as unknown as RsRequest;
 		const response = await psqlEngine['executeUpdateRequest'](updateRequest, patchUserRouteData, sampleSchema);
 		expect(response?.id).to.equal(1);
 		expect(response?.firstName).to.equal('Billy');
 		expect(response?.lastName).to.equal('Burton');
+		expect(response?.permissionLogin).to.equal(false);
 		expect(response?.email).to.equal('tanner@plvr.com');
-		const resetUserRequest = { ...updateRequest, body: { id: 1, firstName: 'Tanner' } } as unknown as RsRequest;
+		const resetUserRequest = {
+			...updateRequest,
+			body: { id: 1, firstName: 'Tanner', permissionLogin: true }
+		} as unknown as RsRequest;
 		await psqlEngine['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
 	});
 });

@@ -199,7 +199,7 @@ export default class PsqlEngine extends SqlEngine {
 		// );
 		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
 		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause);
-		await this.psqlConnectionPool.runQuery(query, [...sqlParams]);
+		await this.psqlConnectionPool.queryOne(query, [...sqlParams]);
 		return this.executeGetRequest(req, routeData, schema) as unknown as DynamicObject;
 	}
 
