@@ -13,11 +13,11 @@ export interface ValidationDictionary {
 }
 
 export default function validateRequestParams(
-	req: RsRequest<DynamicObject>,
+	req: RsRequest<unknown>,
 	routeData: RouteData,
 	validationSchema: ValidationDictionary
 ) {
-	const requestData = getRequestData(req as RsRequest<DynamicObject>);
+	const requestData = getRequestData(req as RsRequest<unknown>);
 	req.data = requestData;
 
 	if (routeData.request === undefined) {
@@ -174,7 +174,7 @@ function isValueNumber(value: unknown): value is number {
 	return !isNaN(Number(value));
 }
 
-export function getRequestData(req: RsRequest<DynamicObject>): DynamicObject {
+export function getRequestData(req: RsRequest<unknown>): DynamicObject {
 	let body = '';
 	if (req.method === 'GET' || req.method === 'DELETE') {
 		body = 'query';

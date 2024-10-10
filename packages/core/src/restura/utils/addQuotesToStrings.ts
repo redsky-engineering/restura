@@ -1,3 +1,4 @@
+// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 export default function addQuotesToStrings(variable: any): any {
 	if (typeof variable === 'string') {
 		return `'${variable}'`; // Add quotes around strings

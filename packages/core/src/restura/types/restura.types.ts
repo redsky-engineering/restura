@@ -56,11 +56,13 @@ export interface RsPagedResponseData<T> extends RsResponseData<T> {
 }
 
 export interface PageQuery {
-	page?: number;
-	perPage?: number;
-	sortBy?: string;
-	sortOrder?: StandardOrderTypes;
+	page: number;
+	perPage: number;
+	sortBy: string;
+	sortOrder: StandardOrderTypes;
 	filter?: string;
+	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+	[key: string]: any; // Other keys with any JSON-compatible value type
 }
 
 export interface RoleWithOptionalUserDetails {

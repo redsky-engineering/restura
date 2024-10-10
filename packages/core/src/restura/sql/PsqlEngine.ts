@@ -1,6 +1,5 @@
 import SqlEngine from './SqlEngine';
-import { Pool, QueryConfigValues } from 'pg';
-import { RsRequest } from '../types/expressCustom';
+import { DynamicObject, RsRequest } from '../types/expressCustom';
 import {
 	CustomRouteData,
 	JoinData,
@@ -14,17 +13,12 @@ import { RsError } from '../errors';
 import filterSqlParser from './filterSqlParser';
 import { ObjectUtils } from '@redskytech/core-utils';
 import { SqlUtils } from './SqlUtils';
-import {
-	AnyObject,
-	escapeColumnName,
-	insertObjectQuery,
-	questionMarksToOrderedParams,
-	SQL,
-	updateObjectQuery
-} from './PsqlUtils';
+import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils';
+import { PageQuery } from '../types/restura.types';
+import PsqlPool from './PsqlPool';
 
 export default class PsqlEngine extends SqlEngine {
-	constructor(private psqlConnectionPool: Pool) {
+	constructor(private psqlConnectionPool: PsqlPool) {
 		super();
 	}
 
@@ -39,7 +33,7 @@ export default class PsqlEngine extends SqlEngine {
 	}
 
 	protected createNestedSelect(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		schema: ResturaSchema,
 		item: ResponseData,
 		routeData: StandardRouteData,
@@ -51,18 +45,18 @@ export default class PsqlEngine extends SqlEngine {
 	}
 
 	protected async executeCreateRequest(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
 		schema: ResturaSchema
-	): Promise<any> {
+	): Promise<DynamicObject> {
 		const sqlParams: string[] = [];
-		const parameterObj: AnyObject = {};
+		const parameterObj: DynamicObject = {};
 		(routeData.assignments || []).forEach((assignment) => {
 			parameterObj[assignment.name] = this.replaceParamKeywords(assignment.value, routeData, req, sqlParams);
 		});
 
-		const query = insertObjectQuery(routeData.table, { ...req.data, ...parameterObj });
-		const createdItem = await this.queryOne(query, sqlParams);
+		const query = insertObjectQuery(routeData.table, { ...(req.data as DynamicObject), ...parameterObj });
+		const createdItem = await this.psqlConnectionPool.queryOne(query, sqlParams);
 		const insertId = createdItem?.id;
 		const whereData: WhereData[] = [
 			{
@@ -73,14 +67,15 @@ export default class PsqlEngine extends SqlEngine {
 			}
 		];
 		req.data = { id: insertId };
-		return this.executeGetRequest(req, { ...routeData, where: whereData }, schema);
+		return this.executeGetRequest(req, { ...routeData, where: whereData }, schema) as Promise<DynamicObject>;
 	}
 
 	protected async executeGetRequest(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
 		schema: ResturaSchema
-	): Promise<any> {
+		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+	): Promise<DynamicObject | any[]> {
 		const DEFAULT_PAGED_PAGE_NUMBER = 0;
 		const DEFAULT_PAGED_PER_PAGE_NUMBER = 25;
 		const sqlParams: string[] = [];
@@ -116,24 +111,34 @@ export default class PsqlEngine extends SqlEngine {
 			userRole,
 			sqlParams
 		);
+
 		sqlStatement += this.generateWhereClause(req, routeData.where, routeData, sqlParams);
+
 		let groupByOrderByStatement = this.generateGroupBy(routeData);
 		groupByOrderByStatement += this.generateOrderBy(req, routeData);
+
 		if (routeData.type === 'ONE') {
-			return this.queryOne(`${selectStatement}${sqlStatement}${groupByOrderByStatement};`, sqlParams);
+			return this.psqlConnectionPool.queryOne(
+				`${selectStatement}${sqlStatement}${groupByOrderByStatement};`,
+				sqlParams
+			);
 		} else if (routeData.type === 'ARRAY') {
 			// Array
-			return this.runQuery(`${selectStatement}${sqlStatement}${groupByOrderByStatement};`, sqlParams);
+			return this.psqlConnectionPool.runQuery(
+				`${selectStatement}${sqlStatement}${groupByOrderByStatement};`,
+				sqlParams
+			);
 		} else if (routeData.type === 'PAGED') {
+			const data = req.data as PageQuery;
 			// The COUNT() does not work with group by and order by, so we need to catch that case and act accordingly
-			const pageResults = await this.runQuery(
+			const pageResults = await this.psqlConnectionPool.runQuery(
 				`${selectStatement}${sqlStatement}${groupByOrderByStatement} LIMIT ? OFFSET ?;SELECT COUNT(${
 					routeData.groupBy ? `DISTINCT ${routeData.groupBy.tableName}.${routeData.groupBy.columnName}` : '*'
 				}) AS total\n${sqlStatement};`,
 				[
 					...sqlParams,
-					req.data.perPage || DEFAULT_PAGED_PER_PAGE_NUMBER,
-					(req.data.page - 1) * req.data.perPage || DEFAULT_PAGED_PAGE_NUMBER,
+					data.perPage || DEFAULT_PAGED_PER_PAGE_NUMBER,
+					(data.page - 1) * data.perPage || DEFAULT_PAGED_PAGE_NUMBER,
 					...sqlParams
 				]
 			);
@@ -147,43 +152,11 @@ export default class PsqlEngine extends SqlEngine {
 		}
 	}
 
-	async queryOne(query: string, options: object | Array<any>) {
-		const formattedQuery = questionMarksToOrderedParams(query);
-		try {
-			const response = await this.psqlConnectionPool.query(formattedQuery, options as QueryConfigValues<any>);
-			return response.rows[0];
-		} catch (e: unknown) {
-			const error = e as any;
-			console.error(error, query, options);
-			if (error?.routine === '_bt_check_unique') {
-				throw new RsError('DUPLICATE', error.message);
-			}
-			throw new RsError('DATABASE_ERROR', `${error.message}`);
-		}
-	}
-
-	async runQuery(query: string, options: object | Array<any>) {
-		const formattedQuery = questionMarksToOrderedParams(query);
-		const queryUpdated = query.replace(/[\t\n]/g, ' ');
-		console.log(queryUpdated, options);
-		try {
-			const response = await this.psqlConnectionPool.query(formattedQuery, options as QueryConfigValues<any>);
-			return response.rows;
-		} catch (e: unknown) {
-			const error = e as any;
-			console.error(error, query, options);
-			if (error?.routine === '_bt_check_unique') {
-				throw new RsError('DUPLICATE', error.message);
-			}
-			throw new RsError('DATABASE_ERROR', `${error.message}`);
-		}
-	}
-
 	protected async executeUpdateRequest(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
 		schema: ResturaSchema
-	): Promise<any> {
+	): Promise<DynamicObject> {
 		const sqlParams: string[] = [];
 		// eslint-disable-next-line
 		const { id, ...bodyNoId } = req.body;
@@ -210,9 +183,7 @@ export default class PsqlEngine extends SqlEngine {
 
 			const assignmentWithPrefix = escapeColumnName(`${routeData.table}.${assignment.name}`);
 
-			if (SqlUtils.convertDatabaseTypeToTypescript(column.type!) === 'boolean')
-				bodyNoId[assignmentWithPrefix] = assignment.value.toLowerCase() === 'false' ? 0 : 1;
-			else if (SqlUtils.convertDatabaseTypeToTypescript(column.type!) === 'number')
+			if (SqlUtils.convertDatabaseTypeToTypescript(column.type!) === 'number')
 				bodyNoId[assignmentWithPrefix] = Number(assignment.value);
 			else bodyNoId[assignmentWithPrefix] = assignment.value;
 		}
@@ -228,15 +199,15 @@ export default class PsqlEngine extends SqlEngine {
 		// );
 		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
 		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause);
-		await this.runQuery(query, [...sqlParams]);
-		return this.executeGetRequest(req, routeData, schema);
+		await this.psqlConnectionPool.runQuery(query, [...sqlParams]);
+		return this.executeGetRequest(req, routeData, schema) as unknown as DynamicObject;
 	}
 
 	protected async executeDeleteRequest(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
 		schema: ResturaSchema
-	): Promise<any> {
+	): Promise<boolean> {
 		const sqlParams: string[] = [];
 
 		const joinStatement = this.generateJoinStatements(
@@ -253,31 +224,12 @@ export default class PsqlEngine extends SqlEngine {
                            FROM "${routeData.table}" ${joinStatement}`;
 		deleteStatement += this.generateWhereClause(req, routeData.where, routeData, sqlParams);
 		deleteStatement += ';';
-		await this.runQuery(deleteStatement, sqlParams);
+		await this.psqlConnectionPool.runQuery(deleteStatement, sqlParams);
 		return true;
-	}
-
-	protected doesRoleHavePermissionToColumn(
-		role: string | undefined,
-		schema: ResturaSchema,
-		item: ResponseData,
-		joins: JoinData[]
-	): boolean {
-		console.log(role, schema, item, joins);
-		return true;
-	}
-
-	protected doesRoleHavePermissionToTable(
-		userRole: string | undefined,
-		schema: ResturaSchema,
-		tableName: string
-	): boolean {
-		console.log(userRole, schema, tableName);
-		return false;
 	}
 
 	protected generateJoinStatements(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		joins: JoinData[],
 		baseTable: string,
 		routeData: StandardRouteData | CustomRouteData,
@@ -302,15 +254,16 @@ export default class PsqlEngine extends SqlEngine {
 		return groupBy;
 	}
 
-	protected generateOrderBy(req: RsRequest<any>, routeData: StandardRouteData): string {
+	protected generateOrderBy(req: RsRequest<unknown>, routeData: StandardRouteData): string {
 		let orderBy = '';
 		const orderOptions: { [key: string]: string } = {
 			ASC: 'ASC',
 			DESC: 'DESC'
 		};
-		if (routeData.type === 'PAGED' && 'sortBy' in req.data) {
-			const sortOrder = orderOptions[req.data.sortOrder] || 'ASC';
-			orderBy = `ORDER BY ${escapeColumnName(req.data.sortBy)} ${sortOrder}\n`;
+		const data = req.data as PageQuery;
+		if (routeData.type === 'PAGED' && 'sortBy' in data && 'sortOrder' in data) {
+			const sortOrder = orderOptions[data.sortOrder] || 'ASC';
+			orderBy = `ORDER BY ${escapeColumnName(data.sortBy)} ${sortOrder}\n`;
 		} else if (routeData.orderBy) {
 			const sortOrder = orderOptions[routeData.orderBy.order] || 'ASC';
 			orderBy = `ORDER BY ${escapeColumnName(routeData.orderBy.tableName)}.${escapeColumnName(routeData.orderBy.columnName)} ${sortOrder}\n`;
@@ -319,7 +272,7 @@ export default class PsqlEngine extends SqlEngine {
 	}
 
 	protected generateWhereClause(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		where: WhereData[],
 		routeData: StandardRouteData | CustomRouteData,
 		sqlParams: string[]
@@ -353,21 +306,22 @@ export default class PsqlEngine extends SqlEngine {
 				operator = 'LIKE';
 				sqlParams[sqlParams.length - 1] = `%${sqlParams[sqlParams.length - 1]}`;
 			}
-			//todo: find item.type to know if single quotes should be added or not.
+
 			const replacedValue = this.replaceParamKeywords(item.value, routeData, req, sqlParams);
 			const escapedValue = SQL`${replacedValue}`;
 			whereClause += `\t${item.conjunction || ''} "${item.tableName}"."${item.columnName}" ${operator} ${
 				['IN', 'NOT IN'].includes(operator) ? `(${escapedValue})` : escapedValue
 			}\n`;
 		});
-		if (routeData.type === 'PAGED' && !!req.data.filter) {
-			let statement = req.data.filter.replace(/\$[a-zA-Z][a-zA-Z0-9_]+/g, (value: string) => {
+		const data = req.data as PageQuery;
+		if (routeData.type === 'PAGED' && !!data?.filter) {
+			let statement = data.filter.replace(/\$[a-zA-Z][a-zA-Z0-9_]+/g, (value: string) => {
 				const requestParam = routeData.request!.find((item) => {
 					return item.name === value.replace('$', '');
 				});
 				if (!requestParam)
 					throw new RsError('SCHEMA_ERROR', `Invalid route keyword in route ${routeData.name}`);
-				return req.data[requestParam.name];
+				return data[requestParam.name];
 			});
 
 			statement = statement.replace(/#[a-zA-Z][a-zA-Z0-9_]+/g, (value: string) => {
@@ -376,7 +330,7 @@ export default class PsqlEngine extends SqlEngine {
 				});
 				if (!requestParam)
 					throw new RsError('SCHEMA_ERROR', `Invalid route keyword in route ${routeData.name}`);
-				return req.data[requestParam.name];
+				return data[requestParam.name];
 			});
 
 			statement = filterSqlParser.parse(statement);

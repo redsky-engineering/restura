@@ -1,7 +1,8 @@
 import PsqlEngine from './PsqlEngine';
-import { Pool, types } from 'pg';
-import { RsRequest } from '../types/expressCustom';
+import { types } from 'pg';
+import { DynamicObject, RsRequest } from '../types/expressCustom';
 import { ResturaSchema, RouteData, WhereData } from '../restura.schema';
+import { PsqlPool } from './PsqlPool';
 
 const sampleSchema: ResturaSchema = {
 	database: [
@@ -567,10 +568,10 @@ const basicRequest: RsRequest = {
 		role: 'admin',
 		host: 'google.com',
 		ipAddress: '1.1.1.1',
-		userId: '1'
+		userId: 1
 	},
 	data: { id: 1 }
-} as RsRequest;
+} as unknown as RsRequest;
 
 const setupPgReturnTypes = () => {
 	// OID for timestamptz in Postgres
@@ -587,7 +588,7 @@ const setupPgReturnTypes = () => {
 };
 
 const getTestConnectionPool = () => {
-	const psqlPool = new Pool({
+	const psqlPool = new PsqlPool({
 		host: 'localhost',
 		port: 5488,
 		user: 'postgres',
@@ -604,7 +605,11 @@ const getTestConnectionPool = () => {
 describe('PsqlEngine executeGetRequest', () => {
 	const psqlEngine = new PsqlEngine(getTestConnectionPool());
 	it('should executeGetRequest', async () => {
-		const response = await psqlEngine['executeGetRequest'](basicRequest, patchUserRouteData, sampleSchema);
+		const response = (await psqlEngine['executeGetRequest'](
+			basicRequest,
+			patchUserRouteData,
+			sampleSchema
+		)) as DynamicObject;
 		expect(response?.id).toBe(1);
 		expect(response?.firstName).toBe('Tanner');
 		expect(response?.lastName).toBe('Burton');
@@ -619,16 +624,16 @@ describe('PsqlEngine executeUpdateRequest', () => {
 				role: 'admin',
 				host: 'google.com',
 				ipAddress: '1.1.1.1',
-				userId: '1'
+				userId: 1
 			},
 			body: { id: 1, firstName: 'Billy' }
-		} as RsRequest;
+		} as unknown as RsRequest;
 		const response = await psqlEngine['executeUpdateRequest'](updateRequest, patchUserRouteData, sampleSchema);
 		expect(response?.id).toBe(1);
 		expect(response?.firstName).toBe('Billy');
 		expect(response?.lastName).toBe('Burton');
 		expect(response?.email).toBe('tanner@plvr.com');
-		const resetUserRequest = { ...updateRequest, body: { id: 1, firstName: 'Tanner' } } as RsRequest;
+		const resetUserRequest = { ...updateRequest, body: { id: 1, firstName: 'Tanner' } } as unknown as RsRequest;
 		await psqlEngine['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
 	});
 });
@@ -644,7 +649,7 @@ describe('PsqlEngine executeCreateRequest', () => {
 				userId: 1
 			},
 			data: { firstName: 'Billy', lastName: 'Bob', companyId: 1, password: 'asdfa', email, role: 'user' }
-		} as RsRequest;
+		} as unknown as RsRequest;
 		const response = await psqlEngine['executeCreateRequest'](createRequest, patchUserRouteData, sampleSchema);
 		expect(response?.firstName).toBe('Billy');
 		expect(response?.lastName).toBe('Bob');
@@ -658,7 +663,7 @@ describe('PsqlEngine executeCreateRequest', () => {
 		// 		userId:1,
 		// 	},
 		// 	query: {userId:response.id}
-		// } as RsRequest;
+		// } as unknown as RsRequest;
 		// const deleteResponse = await psqlEngine['executeDeleteRequest'](deleteRequest, patchUserRouteData, sampleSchema);
 		// console.log(deleteResponse.id);
 	});
@@ -672,22 +677,26 @@ describe('PsqlEngine executeCreateRequest', () => {
 				userId: 1
 			},
 			data: { firstName: 'Billy', lastName: 'Bob', companyId: 1, password: 'asdfa', email, role: 'user' }
-		} as RsRequest;
-		await psqlEngine['executeCreateRequest']({ ...createRequest } as RsRequest, patchUserRouteData, sampleSchema);
+		} as unknown as RsRequest;
+		await psqlEngine['executeCreateRequest'](
+			{ ...createRequest } as unknown as RsRequest,
+			patchUserRouteData,
+			sampleSchema
+		);
 		try {
 			await psqlEngine['executeCreateRequest'](
-				{ ...createRequest } as RsRequest,
+				{ ...createRequest } as unknown as RsRequest,
 				patchUserRouteData,
 				sampleSchema
 			);
-		} catch (e: unknown) {
-			const error = e as any;
-			expect(error.err).toBe('DUPLICATE');
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+		} catch (e: any) {
+			expect(e.err).toBe('DUPLICATE');
 		}
 	});
 });
 describe('PsqlEngine generateGroupBy', () => {
-	const psqlEngine = new PsqlEngine({} as Pool);
+	const psqlEngine = new PsqlEngine({} as PsqlPool);
 	it('should format the GROUP BY', () => {
 		const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
 		routeData.groupBy = {
@@ -711,7 +720,7 @@ describe('PsqlEngine generateGroupBy', () => {
 });
 
 describe('PsqlEngine generateOrderBy', () => {
-	const psqlEngine = new PsqlEngine({} as Pool);
+	const psqlEngine = new PsqlEngine({} as PsqlPool);
 	it('should format the ORDER BY', () => {
 		const orderBy = psqlEngine['generateOrderBy'](basicRequest, patchUserRouteData);
 		expect(trimRedundantWhitespace(orderBy)).toBe(`ORDER BY "user"."lastName" DESC`);
@@ -745,7 +754,7 @@ describe('PsqlEngine generateOrderBy', () => {
 });
 
 describe('PsqlEngine generateWhereClause', () => {
-	const psqlEngine = new PsqlEngine({} as Pool);
+	const psqlEngine = new PsqlEngine({} as PsqlPool);
 
 	xit('should format the where clause for STARTS WITH', () => {
 		const whereData: WhereData[] = [

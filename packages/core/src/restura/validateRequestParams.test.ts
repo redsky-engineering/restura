@@ -1,5 +1,5 @@
 import validateRequestParams, { performTypeCheck, ValidationDictionary } from './validateRequestParams';
-import { DynamicObject, RsRequest } from './types/expressCustom';
+import { RsRequest } from './types/expressCustom';
 import { RouteData } from './restura.schema';
 
 describe('validateRequestParams', () => {
@@ -148,10 +148,11 @@ describe('validateRequestParams', () => {
 				{
 					query: { a: '123' },
 					method: 'GET'
-				} as unknown as RsRequest<DynamicObject>,
+				} as unknown as RsRequest<unknown>,
 				sampleRouteData,
 				sampleValidationSchema
 			);
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
 			expect(e?.err).toBe('BAD_REQUEST');
 			expect(e?.msg).toBe('Request param (a) is not allowed');
@@ -224,6 +225,7 @@ describe('validateRequestParams', () => {
 				},
 				'id'
 			);
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
 			expect(e.msg).toBe(`Request param (id) with value (['stringasdf', '1', 1]) is not of type (string[])`);
 		}
@@ -250,6 +252,7 @@ describe('validateRequestParams', () => {
 				},
 				'id'
 			);
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
 			expect(e?.msg).toBe(`Request param (id) with value ('2') is not of type (number)`);
 		}
@@ -265,6 +268,7 @@ describe('validateRequestParams', () => {
 				},
 				'id'
 			);
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
 			expect(e?.msg).toBe(`Request param (id) with value ('2') is not of type (object)`);
 		}
@@ -279,6 +283,7 @@ describe('validateRequestParams', () => {
 				},
 				'id'
 			);
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
 			expect(e?.msg).toBe('Request param (id) with value (2) is not of type (boolean)');
 		}

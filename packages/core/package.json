@@ -33,7 +33,6 @@
 		"compression": "^1.7.4",
 		"cookie-parser": "^1.4.6",
 		"cors": "^2.8.5",
-		"dbdiff": "^0.5.3",
 		"express": "^4.21.0",
 		"jsonschema": "^1.4.1",
 		"logform": "^2.6.1",

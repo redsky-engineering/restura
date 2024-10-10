@@ -1,35 +1,19 @@
 import { ObjectUtils } from '@redskytech/core-utils';
 import { RsError } from '../errors';
 import { JoinData, ResponseData, ResturaSchema, StandardRouteData, TableData, WhereData } from '../restura.schema';
-import { RsRequest } from '../types/expressCustom';
+import { DynamicObject, RsRequest } from '../types/expressCustom';
 import { SqlUtils } from './SqlUtils';
+import SqlEngine from './SqlEngine';
 
 function dbNow() {
 	return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
-class MySqlEngine {
+class MySqlEngine extends SqlEngine {
 	async createDatabaseFromSchema(schema: ResturaSchema, connection: CustomPool): Promise<string> {
 		const sqlFullStatement = this.generateDatabaseSchemaFromSchema(schema);
 		await connection.runQuery(sqlFullStatement, []);
 		return sqlFullStatement;
-	}
-
-	async runQueryForRoute(req: RsRequest<any>, routeData: StandardRouteData, schema: ResturaSchema): Promise<any> {
-		if (!this.doesRoleHavePermissionToTable(req.requesterDetails.role, schema, routeData.table))
-			throw new RsError('UNAUTHORIZED', 'You do not have permission to access this table');
-
-		switch (routeData.method) {
-			case 'POST':
-				return this.executeCreateRequest(req, routeData, schema);
-			case 'GET':
-				return this.executeGetRequest(req, routeData, schema);
-			case 'PUT':
-			case 'PATCH':
-				return this.executeUpdateRequest(req, routeData, schema);
-			case 'DELETE':
-				return this.executeDeleteRequest(req, routeData, schema);
-		}
 	}
 
 	generateDatabaseSchemaFromSchema(schema: ResturaSchema): string {
@@ -148,7 +132,7 @@ class MySqlEngine {
 	// }
 
 	private createNestedSelect(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		schema: ResturaSchema,
 		item: ResponseData,
 		routeData: StandardRouteData,
@@ -208,10 +192,10 @@ class MySqlEngine {
 	}
 
 	private async executeCreateRequest(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
 		schema: ResturaSchema
-	): Promise<any> {
+	): Promise<DynamicObject> {
 		const sqlParams: string[] = [];
 		let parameterString = '';
 		parameterString = (routeData.assignments || [])
@@ -241,10 +225,10 @@ class MySqlEngine {
 	}
 
 	private async executeGetRequest(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
 		schema: ResturaSchema
-	): Promise<any> {
+	): Promise<DynamicObject> {
 		const DEFAULT_PAGED_PAGE_NUMBER = 0;
 		const DEFAULT_PAGED_PER_PAGE_NUMBER = 25;
 		const sqlParams: string[] = [];
@@ -321,10 +305,10 @@ class MySqlEngine {
 	}
 
 	private async executeUpdateRequest(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
 		schema: ResturaSchema
-	): Promise<any> {
+	): Promise<DynamicObject> {
 		const sqlParams: string[] = [];
 		// eslint-disable-next-line
 		const { id, ...bodyNoId } = req.body;
@@ -377,10 +361,10 @@ class MySqlEngine {
 	}
 
 	private async executeDeleteRequest(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
 		schema: ResturaSchema
-	): Promise<any> {
+	): Promise<boolean> {
 		const sqlParams: string[] = [];
 
 		const joinStatement = this.generateJoinStatements(
@@ -403,7 +387,7 @@ class MySqlEngine {
 	}
 
 	private generateJoinStatements(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		joins: JoinData[],
 		baseTable: string,
 		routeData: StandardRouteData,
@@ -440,13 +424,13 @@ class MySqlEngine {
 		return '';
 	}
 
-	protected abstract generateOrderBy(req: RsRequest<any>, routeData: StandardRouteData): string {
+	protected abstract generateOrderBy(req: RsRequest<unknown>, routeData: StandardRouteData): string {
 		console.log(req, routeData);
 		return '';
 	}
 
 	protected abstract generateWhereClause(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		where: WhereData[],
 		routeData: StandardRouteData,
 		sqlParams: string[]

@@ -1,6 +1,5 @@
 import format from 'pg-format';
-
-export type AnyObject = { [key: string]: any };
+import { DynamicObject } from '../types/expressCustom';
 
 export function escapeColumnName(columnName: string | undefined): string {
 	// consider using an existing library
@@ -14,7 +13,7 @@ export function questionMarksToOrderedParams(query: string) {
 	return query.replace(/'\?'/g, () => `$${count++}`);
 }
 
-export function insertObjectQuery(table: string, obj: AnyObject): string {
+export function insertObjectQuery(table: string, obj: DynamicObject): string {
 	const keys = Object.keys(obj);
 	const params = Object.values(obj);
 
@@ -27,27 +26,24 @@ export function insertObjectQuery(table: string, obj: AnyObject): string {
 	return query;
 }
 
-export function updateObjectQuery(table: string, obj: AnyObject, whereStatement: string): string {
-	// Map the keys into column assignments: 'column1 = $1, column2 = $2, ...'
-	// const setClause = keys.map((key, i) => `${escapeColumnName(key)} = $${i + 1}`).join(', ');
+export function updateObjectQuery(table: string, obj: DynamicObject, whereStatement: string): string {
 	const setArray = [];
 	for (const i in obj) {
 		setArray.push(`${escapeColumnName(i)} = ` + SQL`${obj[i]}`);
 	}
 
-	// Build the SQL query
-	const query = `UPDATE ${escapeColumnName(table)}
+	return `UPDATE ${escapeColumnName(table)}
                  SET ${setArray.join(', ')} ${whereStatement}
                  RETURNING *`;
-	return query;
 }
 
 function isValueNumber(value: unknown): value is number {
 	return !isNaN(Number(value));
 }
-
+// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 export function SQL(strings: any, ...values: any) {
 	let query = strings[0];
+	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 	values.forEach((value: any, index: number) => {
 		if (isValueNumber(value)) {
 			query += value;

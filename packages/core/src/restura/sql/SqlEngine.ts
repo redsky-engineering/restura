@@ -1,6 +1,5 @@
 import { RsError } from '../errors';
 import {
-	CustomRouteData,
 	JoinData,
 	ResponseData,
 	ResturaSchema,
@@ -9,55 +8,39 @@ import {
 	TableData,
 	WhereData
 } from '../restura.schema';
-import { RsRequest } from '../types/expressCustom';
+import { DynamicObject, RsRequest } from '../types/expressCustom';
 import { ObjectUtils } from '@redskytech/core-utils';
 
 export default abstract class SqlEngine {
 	async runQueryForRoute(
-		req: RsRequest<any>,
-		routeData: StandardRouteData | CustomRouteData,
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
 		schema: ResturaSchema
-	): Promise<any> {
-		console.log(req, routeData, schema);
+		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+	): Promise<DynamicObject | any[] | boolean> {
+		if (!this.doesRoleHavePermissionToTable(req.requesterDetails.role, schema, routeData.table))
+			throw new RsError('UNAUTHORIZED', 'You do not have permission to access this table');
+
+		switch (routeData.method) {
+			case 'POST':
+				return this.executeCreateRequest(req, routeData, schema);
+			case 'GET':
+				return this.executeGetRequest(req, routeData, schema);
+			case 'PUT':
+			case 'PATCH':
+				return this.executeUpdateRequest(req, routeData, schema);
+			case 'DELETE':
+				return this.executeDeleteRequest(req, routeData, schema);
+		}
+	}
+	protected getTableSchema(schema: ResturaSchema, tableName: string): TableData {
+		const tableSchema = schema.database.find((item) => item.name === tableName);
+		if (!tableSchema) throw new RsError('SCHEMA_ERROR', `Table ${tableName} not found in schema`);
+		return tableSchema;
 	}
 
-	abstract generateDatabaseSchemaFromSchema(schema: ResturaSchema): string;
-	abstract diffDatabaseToSchema(schema: ResturaSchema): Promise<string>;
-
-	protected abstract createNestedSelect(
-		req: RsRequest<any>,
-		schema: ResturaSchema,
-		item: ResponseData,
-		routeData: StandardRouteData,
-		userRole: string | undefined,
-		sqlParams: string[]
-	): string;
-
-	protected abstract executeCreateRequest(
-		req: RsRequest<any>,
-		routeData: StandardRouteData,
-		schema: ResturaSchema
-	): Promise<any>;
-
-	protected abstract executeGetRequest(
-		req: RsRequest<any>,
-		routeData: StandardRouteData,
-		schema: ResturaSchema
-	): Promise<any>;
-	protected abstract executeUpdateRequest(
-		req: RsRequest<any>,
-		routeData: StandardRouteData,
-		schema: ResturaSchema
-	): Promise<any>;
-
-	protected abstract executeDeleteRequest(
-		req: RsRequest<any>,
-		routeData: StandardRouteData,
-		schema: ResturaSchema
-	): Promise<any>;
-
 	protected doesRoleHavePermissionToColumn(
-		role: string | undefined,
+		role: string | undefined | null,
 		schema: ResturaSchema,
 		item: ResponseData,
 		joins: JoinData[]
@@ -110,7 +93,7 @@ export default abstract class SqlEngine {
 	}
 
 	protected abstract generateJoinStatements(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		joins: JoinData[],
 		baseTable: string,
 		routeData: StandardRouteData,
@@ -119,18 +102,12 @@ export default abstract class SqlEngine {
 		sqlParams: string[]
 	): string;
 
-	protected getTableSchema(schema: ResturaSchema, tableName: string): TableData {
-		const tableSchema = schema.database.find((item) => item.name === tableName);
-		if (!tableSchema) throw new RsError('SCHEMA_ERROR', `Table ${tableName} not found in schema`);
-		return tableSchema;
-	}
-
 	protected abstract generateGroupBy(routeData: StandardRouteData): string;
 
-	protected abstract generateOrderBy(req: RsRequest<any>, routeData: StandardRouteData): string;
+	protected abstract generateOrderBy(req: RsRequest<unknown>, routeData: StandardRouteData): string;
 
 	protected abstract generateWhereClause(
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		where: WhereData[],
 		routeData: StandardRouteData,
 		sqlParams: string[]
@@ -139,7 +116,7 @@ export default abstract class SqlEngine {
 	protected replaceParamKeywords(
 		value: string | number,
 		routeData: RouteData,
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		sqlParams: string[]
 	): string | number {
 		let returnValue = value;
@@ -151,11 +128,12 @@ export default abstract class SqlEngine {
 	protected replaceLocalParamKeywords(
 		value: string | number,
 		routeData: RouteData,
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		sqlParams: string[]
 	): string | number {
 		if (!routeData.request) return value;
-
+		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+		const data = req.data as DynamicObject<any>;
 		if (typeof value === 'string') {
 			// Match any value that starts with a $
 			value.match(/\$[a-zA-Z][a-zA-Z0-9_]+/g)?.forEach((param) => {
@@ -164,7 +142,7 @@ export default abstract class SqlEngine {
 				});
 				if (!requestParam)
 					throw new RsError('SCHEMA_ERROR', `Invalid route keyword in route ${routeData.name}`);
-				sqlParams.push(req.data[requestParam.name]); // pass by reference
+				sqlParams.push(data[requestParam.name]); // pass by reference
 			});
 			return value.replace(new RegExp(/\$[a-zA-Z][a-zA-Z0-9_]+/g), '?');
 		}
@@ -174,13 +152,14 @@ export default abstract class SqlEngine {
 	protected replaceGlobalParamKeywords(
 		value: string | number,
 		routeData: RouteData,
-		req: RsRequest<any>,
+		req: RsRequest<unknown>,
 		sqlParams: string[]
 	): string | number {
 		if (typeof value === 'string') {
 			// Match any value that starts with a #
 			value.match(/#[a-zA-Z][a-zA-Z0-9_]+/g)?.forEach((param) => {
 				param = param.replace('#', '');
+				// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 				const globalParamValue = (req.requesterDetails as any)[param];
 				if (!globalParamValue)
 					throw new RsError('SCHEMA_ERROR', `Invalid global keyword clause in route ${routeData.name}`);
@@ -190,4 +169,40 @@ export default abstract class SqlEngine {
 		}
 		return value;
 	}
+
+	abstract generateDatabaseSchemaFromSchema(schema: ResturaSchema): string;
+	abstract diffDatabaseToSchema(schema: ResturaSchema): Promise<string>;
+
+	protected abstract createNestedSelect(
+		req: RsRequest<unknown>,
+		schema: ResturaSchema,
+		item: ResponseData,
+		routeData: StandardRouteData,
+		userRole: string | undefined,
+		sqlParams: string[]
+	): string;
+
+	protected abstract executeCreateRequest(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		schema: ResturaSchema
+	): Promise<DynamicObject>;
+
+	protected abstract executeGetRequest(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		schema: ResturaSchema
+	) // eslint-disable-next-line  @typescript-eslint/no-explicit-any
+	: Promise<DynamicObject | any[]>;
+	protected abstract executeUpdateRequest(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		schema: ResturaSchema
+	): Promise<DynamicObject>;
+
+	protected abstract executeDeleteRequest(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		schema: ResturaSchema
+	): Promise<boolean>;
 }
