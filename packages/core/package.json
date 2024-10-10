@@ -21,7 +21,7 @@
 		"sql generator"
 	],
 	"scripts": {
-		"test": "jest",
+		"test": "mocha --loader tsx 'src/**/*.test.ts'",
 		"build": "tsup ./src/index.ts",
 		"lint": "eslint src"
 	},
@@ -58,5 +58,10 @@
 	},
 	"publishConfig": {
 		"access": "public"
-	}
+	},
+    "mocha": {
+        "node-option": [
+           "import=tsx"
+        ]
+    }
 }

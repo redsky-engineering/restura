@@ -1,6 +1,7 @@
 import validateRequestParams, { performTypeCheck, ValidationDictionary } from './validateRequestParams';
 import { RsRequest } from './types/expressCustom';
 import { RouteData } from './restura.schema';
+import { expect } from 'chai';
 
 describe('validateRequestParams', () => {
 	const sampleRouteData: RouteData = {
@@ -154,8 +155,8 @@ describe('validateRequestParams', () => {
 			);
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
-			expect(e?.err).toBe('BAD_REQUEST');
-			expect(e?.msg).toBe('Request param (a) is not allowed');
+			expect(e?.err).to.equal('BAD_REQUEST');
+			expect(e?.msg).to.equal('Request param (a) is not allowed');
 		}
 	});
 
@@ -168,7 +169,7 @@ describe('validateRequestParams', () => {
 			},
 			'id'
 		);
-		expect(response).toBe(undefined);
+		expect(response).to.equal(undefined);
 	});
 	it('should pass if type is correct(string)', () => {
 		const response = performTypeCheck(
@@ -179,7 +180,7 @@ describe('validateRequestParams', () => {
 			},
 			'id'
 		);
-		expect(response).toBe(undefined);
+		expect(response).to.equal(undefined);
 	});
 	it('should pass if type is correct(boolean)', () => {
 		const response = performTypeCheck(
@@ -190,7 +191,7 @@ describe('validateRequestParams', () => {
 			},
 			'id'
 		);
-		expect(response).toBe(undefined);
+		expect(response).to.equal(undefined);
 	});
 
 	it('should pass if type is correct(number[])', () => {
@@ -202,7 +203,7 @@ describe('validateRequestParams', () => {
 			},
 			'id'
 		);
-		expect(response).toBe(undefined);
+		expect(response).to.equal(undefined);
 	});
 	it('should pass if type is correct(string[])', () => {
 		const response = performTypeCheck(
@@ -213,7 +214,7 @@ describe('validateRequestParams', () => {
 			},
 			'id'
 		);
-		expect(response).toBe(undefined);
+		expect(response).to.equal(undefined);
 	});
 	it('should fail if type is incorrect(string[])', () => {
 		try {
@@ -227,7 +228,7 @@ describe('validateRequestParams', () => {
 			);
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
-			expect(e.msg).toBe(`Request param (id) with value ('stringasdf','1',1) is not of type (string[])`);
+			expect(e.msg).to.equal(`Request param (id) with value ('stringasdf','1',1) is not of type (string[])`);
 		}
 	});
 	it('should pass if type is correct(any[])', () => {
@@ -239,7 +240,7 @@ describe('validateRequestParams', () => {
 			},
 			'id'
 		);
-		expect(response).toBe(undefined);
+		expect(response).to.equal(undefined);
 	});
 
 	it('should fail if type is incorrect (number)', () => {
@@ -254,7 +255,7 @@ describe('validateRequestParams', () => {
 			);
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
-			expect(e?.msg).toBe(`Request param (id) with value ('2') is not of type (number)`);
+			expect(e?.msg).to.equal(`Request param (id) with value ('2') is not of type (number)`);
 		}
 	});
 
@@ -270,7 +271,7 @@ describe('validateRequestParams', () => {
 			);
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
-			expect(e?.msg).toBe(`Request param (id) with value ('2') is not of type (object)`);
+			expect(e?.msg).to.equal(`Request param (id) with value ('2') is not of type (object)`);
 		}
 	});
 	it('should fail if type is incorrect (boolean)', () => {
@@ -285,7 +286,7 @@ describe('validateRequestParams', () => {
 			);
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
-			expect(e?.msg).toBe('Request param (id) with value (2) is not of type (boolean)');
+			expect(e?.msg).to.equal('Request param (id) with value (2) is not of type (boolean)');
 		}
 	});
 

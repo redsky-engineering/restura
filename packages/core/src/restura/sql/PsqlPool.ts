@@ -1,6 +1,6 @@
 import { Pool, PoolConfig, QueryConfigValues } from 'pg';
-import { questionMarksToOrderedParams } from './PsqlUtils';
-import { RsError } from '../errors';
+import { questionMarksToOrderedParams } from './PsqlUtils.js';
+import { RsError } from '../errors.js';
 
 export class PsqlPool {
 	public pool: Pool;

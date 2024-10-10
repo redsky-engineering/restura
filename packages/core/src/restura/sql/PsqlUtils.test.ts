@@ -1,4 +1,5 @@
 import { insertObjectQuery, questionMarksToOrderedParams, SQL, updateObjectQuery } from './PsqlUtils';
+import { expect } from 'chai';
 
 describe('PsqlUtils', () => {
 	it('should convert an object to an insert statement', () => {
@@ -6,7 +7,7 @@ describe('PsqlUtils', () => {
 		const expectedQuery = `INSERT INTO "USER" ("id", "firstName", "isActive")
                            VALUES (1, 'bob', true)
                            RETURNING *`;
-		expect(trimRedundantWhitespace(query)).toBe(trimRedundantWhitespace(expectedQuery));
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
 	it('should convert an object to an update statement', () => {
 		const query = updateObjectQuery('USER', { firstName: 'bob', isActive: true }, 'WHERE "id" = 1');
@@ -15,7 +16,7 @@ describe('PsqlUtils', () => {
                                "isActive"  = true
                            WHERE "id" = 1
                            RETURNING *`;
-		expect(trimRedundantWhitespace(query)).toBe(trimRedundantWhitespace(expectedQuery));
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
 	it('should format a query and escape user input', () => {
 		const firstName = 'bob';
@@ -31,7 +32,7 @@ describe('PsqlUtils', () => {
                                "isActive"  = true
                            WHERE "id" = 1
                            RETURNING *`;
-		expect(trimRedundantWhitespace(query)).toBe(trimRedundantWhitespace(expectedQuery));
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
 	it('should format a query and prevent sql injection', () => {
 		const firstName = "'; drop db;";
@@ -47,7 +48,7 @@ describe('PsqlUtils', () => {
                                "isActive"  = true
                            WHERE "id" = 1
                            RETURNING *`;
-		expect(trimRedundantWhitespace(query)).toBe(trimRedundantWhitespace(expectedQuery));
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
 	it('should replace ? with numbered params', () => {
 		const query = questionMarksToOrderedParams(`UPDATE "USER"
@@ -60,7 +61,7 @@ describe('PsqlUtils', () => {
                                "isActive"  =$2
                            WHERE "id" = $3
                            RETURNING *`;
-		expect(trimRedundantWhitespace(query)).toBe(trimRedundantWhitespace(expectedQuery));
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
 });
 const trimRedundantWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
