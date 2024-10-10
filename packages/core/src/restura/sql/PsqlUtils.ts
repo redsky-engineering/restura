@@ -1,5 +1,5 @@
 import format from 'pg-format';
-import { DynamicObject } from '../types/expressCustom';
+import { DynamicObject } from '../types/expressCustom.js';
 
 export function escapeColumnName(columnName: string | undefined): string {
 	// consider using an existing library

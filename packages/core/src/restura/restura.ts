@@ -23,15 +23,15 @@ import {
 	type ResturaSchema,
 	type RouteData,
 	StandardRouteData
-} from './restura.schema';
+} from './restura.schema.js';
 import type { RsRequest, RsResponse } from './types/expressCustom.js';
 import type { AuthenticateHandler } from './types/restura.types.js';
 import { authenticateUser } from './middleware/authenticateUser.js';
-import validateRequestParams, { ValidationDictionary } from './validateRequestParams';
-import customTypeValidationGenerator from './customTypeValidationGenerator';
-import PsqlEngine from './sql/PsqlEngine';
+import validateRequestParams, { ValidationDictionary } from './validateRequestParams.js';
+import customTypeValidationGenerator from './customTypeValidationGenerator.js';
+import PsqlEngine from './sql/PsqlEngine.js';
 import { types } from 'pg';
-import { PsqlPool } from './sql/PsqlPool';
+import { PsqlPool } from './sql/PsqlPool.js';
 
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config

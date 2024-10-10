@@ -1,5 +1,5 @@
-import { RsRequest } from '@restura/core/src/restura/types/expressCustom';
-import { RoleWithOptionalUserDetails } from '@restura/core/src/restura/types/restura.types';
+import { RsRequest } from '@restura/core/src/restura/types/expressCustom.js';
+import { RoleWithOptionalUserDetails } from '@restura/core/src/restura/types/restura.types.js';
 
 const authenticationHandler = async (
 	req: RsRequest<unknown>,

@@ -1,4 +1,4 @@
-import { insertObjectQuery, questionMarksToOrderedParams, SQL, updateObjectQuery } from './PsqlUtils';
+import { insertObjectQuery, questionMarksToOrderedParams, SQL, updateObjectQuery } from './PsqlUtils.js';
 import { expect } from 'chai';
 
 describe('PsqlUtils', () => {

@@ -1,8 +1,8 @@
-import PsqlEngine from './PsqlEngine';
+import PsqlEngine from './PsqlEngine.js';
 import { types } from 'pg';
-import { DynamicObject, RsRequest } from '../types/expressCustom';
-import { ResturaSchema, RouteData, WhereData } from '../restura.schema';
-import { PsqlPool } from './PsqlPool';
+import { DynamicObject, RsRequest } from '../types/expressCustom.js';
+import { ResturaSchema, RouteData, WhereData } from '../restura.schema.js';
+import { PsqlPool } from './PsqlPool.js';
 import { expect } from 'chai';
 
 const sampleSchema: ResturaSchema = {

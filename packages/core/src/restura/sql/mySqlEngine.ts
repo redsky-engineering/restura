@@ -1,7 +1,7 @@
 import { ObjectUtils } from '@redskytech/core-utils';
 import { RsError } from '../errors';
-import { JoinData, ResponseData, ResturaSchema, StandardRouteData, TableData, WhereData } from '../restura.schema';
-import { DynamicObject, RsRequest } from '../types/expressCustom';
+import { JoinData, ResponseData, ResturaSchema, StandardRouteData, TableData, WhereData } from '../restura.schema.js';
+import { DynamicObject, RsRequest } from '../types/expressCustom.js';
 import { SqlUtils } from './SqlUtils';
 import SqlEngine from './SqlEngine';
 

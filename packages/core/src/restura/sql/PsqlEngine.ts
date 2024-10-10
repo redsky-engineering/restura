@@ -1,5 +1,5 @@
 import SqlEngine from './SqlEngine';
-import { DynamicObject, RsRequest } from '../types/expressCustom';
+import { DynamicObject, RsRequest } from '../types/expressCustom.js';
 import {
 	CustomRouteData,
 	JoinData,
@@ -8,14 +8,14 @@ import {
 	StandardRouteData,
 	TableData,
 	WhereData
-} from '../restura.schema';
+} from '../restura.schema.js';
 import { RsError } from '../errors';
 import filterSqlParser from './filterSqlParser';
 import { ObjectUtils } from '@redskytech/core-utils';
 import { SqlUtils } from './SqlUtils';
-import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils';
-import { PageQuery } from '../types/restura.types';
-import { PsqlPool } from './PsqlPool';
+import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
+import { PageQuery } from '../types/restura.types.js';
+import { PsqlPool } from './PsqlPool.js';
 
 export default class PsqlEngine extends SqlEngine {
 	constructor(private psqlConnectionPool: PsqlPool) {

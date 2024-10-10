@@ -7,8 +7,8 @@ import {
 	StandardRouteData,
 	TableData,
 	WhereData
-} from '../restura.schema';
-import { DynamicObject, RsRequest } from '../types/expressCustom';
+} from '../restura.schema.js';
+import { DynamicObject, RsRequest } from '../types/expressCustom.js';
 import { ObjectUtils } from '@redskytech/core-utils';
 
 export default abstract class SqlEngine {
@@ -191,9 +191,8 @@ export default abstract class SqlEngine {
 	protected abstract executeGetRequest(
 		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
-		schema: ResturaSchema
-	) // eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	: Promise<DynamicObject | any[]>;
+		schema: ResturaSchema // eslint-disable-next-line  @typescript-eslint/no-explicit-any
+	): Promise<DynamicObject | any[]>;
 	protected abstract executeUpdateRequest(
 		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
