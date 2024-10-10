@@ -14,6 +14,8 @@ export interface RequesterDetails {
 	role?: string;
 	host: string;
 	ipAddress: string;
+	// userId?: string | number;
+	[key: string]: string | number | undefined | null | boolean;
 }
 
 export interface RsRequest<T = unknown> extends express.Request {
@@ -21,7 +23,7 @@ export interface RsRequest<T = unknown> extends express.Request {
 	data: T;
 }
 
-export type DynamicObject = { [key: string]: unknown };
+export type DynamicObject<T = unknown> = { [key: string]: T };
 
 export interface RsResponse<T = unknown> extends express.Response {
 	sendData: (data: T, statusCode?: number) => void;

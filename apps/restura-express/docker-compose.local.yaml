@@ -1,0 +1,7 @@
+services:
+    restura-pg:
+        image: postgres:16.1
+        environment:
+            - POSTGRES_PASSWORD=postgres
+        ports:
+            - 5488:5432

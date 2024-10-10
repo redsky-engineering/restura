@@ -17,10 +17,21 @@ import { RsError } from './errors.js';
 import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
 import { schemaValidation } from './middleware/schemaValidation.js';
 import modelGenerator from './modelGenerator.js';
-import { isSchemaValid, type CustomRouteData, type ResturaSchema, type RouteData } from './restura.schema.js';
+import {
+	isSchemaValid,
+	type CustomRouteData,
+	type ResturaSchema,
+	type RouteData,
+	StandardRouteData
+} from './restura.schema.js';
 import type { RsRequest, RsResponse } from './types/expressCustom.js';
 import type { AuthenticateHandler } from './types/restura.types.js';
 import { authenticateUser } from './middleware/authenticateUser.js';
+import validateRequestParams, { ValidationDictionary } from './validateRequestParams.js';
+import customTypeValidationGenerator from './customTypeValidationGenerator.js';
+import PsqlEngine from './sql/PsqlEngine.js';
+import { types } from 'pg';
+import { PsqlPool } from './sql/PsqlPool.js';
 
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
@@ -38,7 +49,9 @@ class ResturaEngine {
 	private schema!: ResturaSchema;
 	private responseValidator!: ResponseValidator;
 	private authenticationHandler!: AuthenticateHandler;
-	// private customTypeValidation!: ValidationDictionary;
+	private customTypeValidation!: ValidationDictionary;
+	private psqlConnectionPool!: PsqlPool;
+	private psqlEngine!: PsqlEngine;
 
 	/**
 	 * Initializes the Restura engine with the provided Express application.
@@ -46,7 +59,14 @@ class ResturaEngine {
 	 * @param app - The Express application instance to initialize with Restura.
 	 * @returns A promise that resolves when the initialization is complete.
 	 */
-	async init(app: express.Application, authenticationHandler: AuthenticateHandler): Promise<void> {
+	async init(
+		app: express.Application,
+		authenticationHandler: AuthenticateHandler,
+		psqlConnectionPool: PsqlPool
+	): Promise<void> {
+		this.psqlConnectionPool = psqlConnectionPool;
+		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool);
+		setupPgReturnTypes();
 		this.resturaConfig = config.validate('restura', resturaConfigSchema) as ResturaConfigSchema;
 		this.authenticationHandler = authenticationHandler;
 
@@ -59,7 +79,7 @@ class ResturaEngine {
 		app.disable('x-powered-by');
 
 		app.use('/', addApiResponseFunctions as unknown as express.RequestHandler);
-		app.use('/api/', authenticateUser as unknown as express.RequestHandler);
+		app.use('/api/', authenticateUser(this.authenticationHandler) as unknown as express.RequestHandler);
 		app.use('/restura', this.resturaAuthentication);
 
 		// Routes specific to Restura
@@ -79,7 +99,7 @@ class ResturaEngine {
 		this.expressApp = app;
 
 		await this.reloadEndpoints();
-		this.validateGeneratedTypesFolder();
+		await this.validateGeneratedTypesFolder();
 
 		logger.info('Restura Engine Initialized');
 	}
@@ -192,7 +212,7 @@ class ResturaEngine {
 
 	private async reloadEndpoints() {
 		this.schema = await this.getLatestFileSystemSchema();
-		// this.customTypeValidation = customTypeValidationGenerator(this.schema);
+		this.customTypeValidation = customTypeValidationGenerator(this.schema);
 		this.resturaRouter = express.Router();
 		this.resetPublicEndpoints();
 
@@ -349,7 +369,7 @@ class ResturaEngine {
 			// await this.getMulterFilesIfAny(req, res, routeData);
 
 			// Validate the request and assign to req.data
-			// validateRequestParams(req as RsRequest<DynamicObject>, routeData, this.customTypeValidation);
+			validateRequestParams(req as RsRequest<unknown>, routeData, this.customTypeValidation);
 
 			// Check for custom logic
 			// if (this.isCustomRoute(routeData)) {
@@ -358,14 +378,18 @@ class ResturaEngine {
 			// }
 
 			// Run SQL query
-			// const data = await sqlEngine.runQueryForRoute(req as RsRequest<DynamicObject>, routeData, this.schema);
+			const data = await this.psqlEngine.runQueryForRoute(
+				req as RsRequest<unknown>,
+				routeData as StandardRouteData,
+				this.schema
+			);
 
 			// Validate the response
 			// this.responseValidator.validateResponseParams(data, req.baseUrl, routeData);
 
 			// Send response
-			// if (routeData.type === 'PAGED') res.sendNoWrap(data as T);
-			// else res.sendData(data as T);
+			if (routeData.type === 'PAGED') res.sendNoWrap(data as T);
+			else res.sendData(data as T);
 		} catch (e) {
 			next(e);
 		}
@@ -467,6 +491,20 @@ class ResturaEngine {
 		return route;
 	}
 }
+const setupPgReturnTypes = () => {
+	// OID for timestamptz in Postgres
+	const TIMESTAMPTZ_OID = 1184;
+	// Set a custom parser for timestamptz to return an ISO string
+	types.setTypeParser(TIMESTAMPTZ_OID, (val) => {
+		return val === null ? null : new Date(val).toISOString();
+	});
+	const BIGINT_OID = 20;
+	// Set a custom parser for BIGINT to return a JavaScript Number
+	types.setTypeParser(BIGINT_OID, (val) => {
+		return val === null ? null : Number(val);
+	});
+};
+setupPgReturnTypes();
 
 const restura = new ResturaEngine();
-export { restura };
+export { restura, PsqlPool };

@@ -1,4 +1,4 @@
-import type { ValidatorString } from './types/restura.types.js';
+import { ValidatorString } from '../types/restura.types.js';
 
 class SqlUtils {
 	static convertDatabaseTypeToTypescript(type: string): ValidatorString | string;

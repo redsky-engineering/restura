@@ -1,6 +1,8 @@
-import validateRequestParams, { ValidationDictionary } from './validateRequestParams';
-import { DynamicObject, RsRequest } from './types/expressCustom';
-import { RouteData } from './restura.schema';
+import validateRequestParams, { performTypeCheck, ValidationDictionary } from './validateRequestParams.js';
+import { RsRequest } from './types/expressCustom.js';
+import { RouteData } from './restura.schema.js';
+import { expect } from 'chai';
+
 describe('validateRequestParams', () => {
 	const sampleRouteData: RouteData = {
 		type: 'ONE',
@@ -147,14 +149,144 @@ describe('validateRequestParams', () => {
 				{
 					query: { a: '123' },
 					method: 'GET'
-				} as unknown as RsRequest<DynamicObject>,
+				} as unknown as RsRequest<unknown>,
 				sampleRouteData,
 				sampleValidationSchema
 			);
-			// eslint-disable-next-line
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (e: any) {
-			expect(e?.err).toBe('BAD_REQUEST');
-			expect(e?.msg).toBe('Request param (a) is not allowed');
+			expect(e?.err).to.equal('BAD_REQUEST');
+			expect(e?.msg).to.equal('Request param (a) is not allowed');
+		}
+	});
+
+	it('should pass if type is correct(number)', () => {
+		const response = performTypeCheck(
+			2,
+			{
+				type: 'TYPE_CHECK',
+				value: 'number'
+			},
+			'id'
+		);
+		expect(response).to.equal(undefined);
+	});
+	it('should pass if type is correct(string)', () => {
+		const response = performTypeCheck(
+			'stringasdf',
+			{
+				type: 'TYPE_CHECK',
+				value: 'string'
+			},
+			'id'
+		);
+		expect(response).to.equal(undefined);
+	});
+	it('should pass if type is correct(boolean)', () => {
+		const response = performTypeCheck(
+			true,
+			{
+				type: 'TYPE_CHECK',
+				value: 'boolean'
+			},
+			'id'
+		);
+		expect(response).to.equal(undefined);
+	});
+
+	it('should pass if type is correct(number[])', () => {
+		const response = performTypeCheck(
+			[2, 1],
+			{
+				type: 'TYPE_CHECK',
+				value: 'number[]'
+			},
+			'id'
+		);
+		expect(response).to.equal(undefined);
+	});
+	it('should pass if type is correct(string[])', () => {
+		const response = performTypeCheck(
+			['stringasdf', '1'],
+			{
+				type: 'TYPE_CHECK',
+				value: 'string[]'
+			},
+			'id'
+		);
+		expect(response).to.equal(undefined);
+	});
+	it('should fail if type is incorrect(string[])', () => {
+		try {
+			performTypeCheck(
+				['stringasdf', '1', 1],
+				{
+					type: 'TYPE_CHECK',
+					value: 'string[]'
+				},
+				'id'
+			);
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+		} catch (e: any) {
+			expect(e.msg).to.equal(`Request param (id) with value ('stringasdf','1',1) is not of type (string[])`);
+		}
+	});
+	it('should pass if type is correct(any[])', () => {
+		const response = performTypeCheck(
+			['stringasdf', '1', 1],
+			{
+				type: 'TYPE_CHECK',
+				value: 'any[]'
+			},
+			'id'
+		);
+		expect(response).to.equal(undefined);
+	});
+
+	it('should fail if type is incorrect (number)', () => {
+		try {
+			performTypeCheck(
+				'2',
+				{
+					type: 'TYPE_CHECK',
+					value: 'number'
+				},
+				'id'
+			);
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+		} catch (e: any) {
+			expect(e?.msg).to.equal(`Request param (id) with value ('2') is not of type (number)`);
+		}
+	});
+
+	it('should fail if type is incorrect (object)', () => {
+		try {
+			performTypeCheck(
+				'2',
+				{
+					type: 'TYPE_CHECK',
+					value: 'object'
+				},
+				'id'
+			);
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+		} catch (e: any) {
+			expect(e?.msg).to.equal(`Request param (id) with value ('2') is not of type (object)`);
+		}
+	});
+	it('should fail if type is incorrect (boolean)', () => {
+		try {
+			performTypeCheck(
+				2,
+				{
+					type: 'TYPE_CHECK',
+					value: 'boolean'
+				},
+				'id'
+			);
+			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+		} catch (e: any) {
+			expect(e?.msg).to.equal('Request param (id) with value (2) is not of type (boolean)');
 		}
 	});
 

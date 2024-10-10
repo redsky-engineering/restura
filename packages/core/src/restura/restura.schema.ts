@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { logger } from '../logger/logger.js';
+import { logger } from '../logger/logger';
+import { validatorDataSchema } from './types/validation.types';
 
 // Zod schemas with strict mode
 const orderBySchema = z
@@ -28,7 +29,7 @@ const whereDataSchema = z
 		operator: z
 			.enum(['=', '<', '>', '<=', '>=', '!=', 'LIKE', 'IN', 'NOT IN', 'STARTS WITH', 'ENDS WITH'])
 			.optional(),
-		value: z.string().optional(),
+		value: z.string().or(z.number()).optional(),
 		custom: z.string().optional(),
 		conjunction: z.enum(['AND', 'OR']).optional()
 	})
@@ -57,15 +58,6 @@ const joinDataSchema = z
 	.strict();
 
 export type JoinData = z.infer<typeof joinDataSchema>;
-
-const validatorDataSchema = z
-	.object({
-		type: z.enum(['TYPE_CHECK', 'MIN', 'MAX', 'ONE_OF']),
-		value: z.union([z.string(), z.array(z.string()), z.number(), z.array(z.number())])
-	})
-	.strict();
-
-export type ValidatorData = z.infer<typeof validatorDataSchema>;
 
 const requestDataSchema = z
 	.object({
@@ -130,6 +122,9 @@ const customRouteSchema = routeDataBaseSchema
 		responseType: z.union([z.string(), z.enum(['string', 'number', 'boolean'])]),
 		requestType: z.string().optional(),
 		request: z.array(requestDataSchema).optional(),
+		table: z.undefined(),
+		joins: z.undefined(),
+		assignments: z.undefined(),
 		fileUploadType: z.enum(['SINGLE', 'MULTIPLE']).optional()
 	})
 	.strict();
