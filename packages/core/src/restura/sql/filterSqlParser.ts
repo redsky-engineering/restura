@@ -41,7 +41,7 @@ value = "value:" value:text { return value; }
 `;
 
 const filterSqlParser = peg.generate(filterSqlGrammar, {
-	format: 'commonjs',
-	dependencies: { mysql: 'mysql' }
+	format: 'commonjs'
+	// dependencies: { mysql: 'mysql' } // todo: figure out a better way to escape values depending on the database type
 } as ParserBuildOptions);
 export default filterSqlParser;
