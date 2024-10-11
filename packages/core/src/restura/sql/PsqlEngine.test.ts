@@ -610,6 +610,20 @@ const getTestConnectionPool = () => {
 	return psqlPool;
 };
 
+describe('PsqlEngine createNestedSelect', () => {
+	xit('should call createNestedSelect', () => {
+		const psqlEngine = new PsqlEngine({} as PsqlPool);
+		// const responseData:ResponseData = {
+		// 	name: 'name',
+		// 	selector: 'company',
+		// 	subquery: {
+		// 		  table: 'company'
+		// 	}
+		// }
+		psqlEngine['createNestedSelect'](basicRequest, sampleSchema, item, patchUserRouteData, 'admin', []);
+	});
+});
+
 describe('PsqlEngine executeGetRequest', () => {
 	const psqlEngine = new PsqlEngine(getTestConnectionPool());
 	it('should executeGetRequest', async () => {

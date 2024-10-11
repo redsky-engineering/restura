@@ -10,12 +10,12 @@ import {
 	WhereData
 } from '../restura.schema.js';
 import { RsError } from '../errors';
-import filterSqlParser from './filterSqlParser';
 import { ObjectUtils } from '@redskytech/core-utils';
 import { SqlUtils } from './SqlUtils';
 import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
 import { PageQuery } from '../types/restura.types.js';
 import { PsqlPool } from './PsqlPool.js';
+import filterPsqlParser from './filterPsqlParser.js';
 
 export default class PsqlEngine extends SqlEngine {
 	constructor(private psqlConnectionPool: PsqlPool) {
@@ -333,7 +333,7 @@ export default class PsqlEngine extends SqlEngine {
 				return data[requestParam.name];
 			});
 
-			statement = filterSqlParser.parse(statement);
+			statement = filterPsqlParser.parse(statement);
 			if (whereClause.startsWith('WHERE')) {
 				whereClause += ` AND (${statement})\n`;
 			} else {
