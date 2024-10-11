@@ -1,7 +1,15 @@
 import PsqlEngine from './PsqlEngine.js';
 import { types } from 'pg';
 import { DynamicObject, RsRequest } from '../types/expressCustom.js';
-import { ResturaSchema, RouteData, WhereData } from '../restura.schema.js';
+import {
+	CustomRouteData,
+	JoinData,
+	ResponseData,
+	ResturaSchema,
+	RouteData,
+	StandardRouteData,
+	WhereData
+} from '../restura.schema.js';
 import { PsqlPool } from './PsqlPool.js';
 import { expect } from 'chai';
 
@@ -31,6 +39,34 @@ const sampleSchema: ResturaSchema = {
 					type: 'VARCHAR',
 					length: 255,
 					isNullable: true
+				}
+			],
+			checkConstraints: [],
+			foreignKeys: [],
+			indexes: [{ name: 'PRIMARY', columns: ['id'], isUnique: true, isPrimaryKey: true, order: 'ASC' }],
+			roles: []
+		},
+		{
+			name: 'order',
+			columns: [
+				{
+					name: 'id',
+					hasAutoIncrement: true,
+					isNullable: false,
+					roles: ['admin', 'user'],
+					type: 'BIGINT'
+				},
+				{
+					name: 'amountCents',
+					isNullable: false,
+					roles: ['admin', 'user'],
+					type: 'BIGINT'
+				},
+				{
+					roles: ['admin', 'user'],
+					name: 'userId',
+					type: 'BIGINT',
+					isNullable: false
 				}
 			],
 			checkConstraints: [],
@@ -765,6 +801,75 @@ describe('PsqlEngine generateOrderBy', () => {
 	});
 });
 
+describe('PsqlEngine createNestedSelect', () => {
+	it('should call createNestedSelect', () => {
+		const psqlEngine = new PsqlEngine({} as PsqlPool);
+		const responseData: ResponseData = {
+			name: 'firstName',
+			selector: 'user.firstName',
+			subquery: {
+				table: 'order',
+				properties: [
+					{
+						name: 'id',
+						selector: 'order.id'
+					},
+					{
+						name: 'amountCents',
+						selector: 'order.amountCents'
+					}
+				],
+				joins: [],
+				where: []
+			}
+		};
+		const response = psqlEngine['createNestedSelect'](
+			basicRequest,
+			sampleSchema,
+			responseData,
+			patchUserRouteData,
+			'admin',
+			[]
+		);
+		const expected = `COALESCE(( SELECT JSON_AGG(JSON_BUILD_OBJECT( 'id', "order"."id",'amountCents', "order"."amountCents" )) FROM "order" ), '[]')`;
+		expect(trimRedundantWhitespace(response)).to.equal(expected);
+	});
+});
+
+describe('PsqlEngine generateJoinStatements', () => {
+	const psqlEngine = new PsqlEngine({} as PsqlPool);
+	it('should generateJoinStatements', () => {
+		const joins: JoinData[] = [
+			{
+				table: 'company',
+				localColumnName: 'companyId',
+				foreignColumnName: 'id',
+				type: 'LEFT'
+			},
+			{
+				table: 'order',
+				localColumnName: 'id',
+				foreignColumnName: 'userId',
+				type: 'INNER'
+			}
+		];
+		const baseTable: string = 'user';
+		const routeData: StandardRouteData | CustomRouteData = patchUserRouteData;
+		const schema: ResturaSchema = sampleSchema;
+		const userRole: string | undefined = 'admin';
+		const response = psqlEngine['generateJoinStatements'](
+			basicRequest,
+			joins,
+			baseTable,
+			routeData,
+			schema,
+			userRole
+		);
+		expect(trimRedundantWhitespace(response)).to.equal(
+			'LEFT JOIN "company" ON "user"."companyId" = "company"."id" INNER JOIN "order" ON "user"."id" = "order"."userId"'
+		);
+	});
+});
 describe('PsqlEngine generateWhereClause', () => {
 	const psqlEngine = new PsqlEngine({} as PsqlPool);
 

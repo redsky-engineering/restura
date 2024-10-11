@@ -6,7 +6,6 @@ import {
 	ResponseData,
 	ResturaSchema,
 	StandardRouteData,
-	TableData,
 	WhereData
 } from '../restura.schema.js';
 import { RsError } from '../errors';
@@ -40,8 +39,53 @@ export default class PsqlEngine extends SqlEngine {
 		userRole: string | undefined,
 		sqlParams: string[]
 	): string {
-		console.log(req, schema, item, routeData, userRole, sqlParams);
-		return '';
+		if (!item.subquery) return '';
+		if (
+			!ObjectUtils.isArrayWithData(
+				item.subquery.properties.filter((nestedItem) => {
+					return this.doesRoleHavePermissionToColumn(req.requesterDetails.role, schema, nestedItem, [
+						...routeData.joins,
+						...item.subquery!.joins
+					]);
+				})
+			)
+		) {
+			return "'[]'";
+		}
+
+		return `COALESCE((
+				SELECT JSON_AGG(JSON_BUILD_OBJECT(
+			${item.subquery.properties
+				.map((nestedItem) => {
+					if (
+						!this.doesRoleHavePermissionToColumn(req.requesterDetails.role, schema, nestedItem, [
+							...routeData.joins,
+							...item.subquery!.joins
+						])
+					) {
+						return;
+					}
+					if (nestedItem.subquery) {
+						return `"${nestedItem.name}", ${this.createNestedSelect(
+							// recursion
+							req,
+							schema,
+							nestedItem,
+							routeData,
+							userRole,
+							sqlParams
+						)}`;
+					}
+					return `'${nestedItem.name}', ${escapeColumnName(nestedItem.selector)}`;
+				})
+				.filter(Boolean)
+				.join(',')}
+						)) 
+						FROM
+							"${item.subquery.table}"
+							${this.generateJoinStatements(req, item.subquery.joins, item.subquery.table, routeData, schema, userRole, sqlParams)}
+							${this.generateWhereClause(req, item.subquery.where, routeData, sqlParams)}
+					), '[]')`;
 	}
 
 	protected async executeCreateRequest(
@@ -237,13 +281,22 @@ export default class PsqlEngine extends SqlEngine {
 		userRole: string | undefined,
 		sqlParams: string[]
 	): string {
-		console.log(req, joins, baseTable, routeData, schema, userRole, sqlParams);
-		return '';
-	}
-
-	protected getTableSchema(schema: ResturaSchema, tableName: string): TableData {
-		console.log(schema, tableName);
-		return {} as TableData;
+		let joinStatements = '';
+		joins.forEach((item) => {
+			if (!this.doesRoleHavePermissionToTable(userRole, schema, item.table))
+				throw new RsError('UNAUTHORIZED', 'You do not have permission to access this table');
+			if (item.custom) {
+				const customReplaced = this.replaceParamKeywords(item.custom, routeData, req, sqlParams);
+				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)} ON ${customReplaced}\n`;
+			} else {
+				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)}${
+					item.alias ? `AS "${item.alias}"` : ''
+				} ON "${baseTable}"."${item.localColumnName}" = ${escapeColumnName(item.alias ? item.alias : item.table)}.${escapeColumnName(
+					item.foreignColumnName
+				)}\n`;
+			}
+		});
+		return joinStatements;
 	}
 
 	protected generateGroupBy(routeData: StandardRouteData): string {
