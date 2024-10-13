@@ -16,6 +16,18 @@
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "neverOpen",
 			"outFiles": ["${workspaceFolder}/**/dist/**/*.js", "${workspaceFolder}/**/dist/**/*.mjs"]
+		},
+		{
+			"name": "Debug Core Tests",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "pnpm",
+			"runtimeArgs": ["run", "test"],
+			"cwd": "${workspaceFolder}/packages/core",
+			"sourceMaps": true,
+			"skipFiles": ["<node_internals>/**"],
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
 		}
 	]
 }

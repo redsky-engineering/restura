@@ -1,0 +1,10 @@
+{
+	// The @restura/express configuration
+	restura: {
+		authToken: 'my-secret'
+	},
+	// The @restura/logger configuration
+	logger: {
+		level: 'info'
+	}
+}

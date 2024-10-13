@@ -8,30 +8,31 @@ import { createHash } from 'crypto';
 import * as express from 'express';
 import fs from 'fs';
 import path from 'path';
+import pg from 'pg';
 import * as prettier from 'prettier';
 import { resturaConfigSchema, type ResturaConfigSchema } from '../config.schema.js';
 import { logger } from '../logger/logger.js';
 import ResponseValidator from './ResponseValidator.js';
 import apiGenerator from './apiGenerator.js';
+import customTypeValidationGenerator from './customTypeValidationGenerator.js';
 import { RsError } from './errors.js';
 import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
+import { authenticateUser } from './middleware/authenticateUser.js';
 import { schemaValidation } from './middleware/schemaValidation.js';
 import modelGenerator from './modelGenerator.js';
 import {
 	isSchemaValid,
+	StandardRouteData,
 	type CustomRouteData,
 	type ResturaSchema,
-	type RouteData,
-	StandardRouteData
+	type RouteData
 } from './restura.schema.js';
+import PsqlEngine from './sql/PsqlEngine.js';
+import { PsqlPool } from './sql/PsqlPool.js';
 import type { RsRequest, RsResponse } from './types/expressCustom.js';
 import type { AuthenticateHandler } from './types/restura.types.js';
-import { authenticateUser } from './middleware/authenticateUser.js';
 import validateRequestParams, { ValidationDictionary } from './validateRequestParams.js';
-import customTypeValidationGenerator from './customTypeValidationGenerator.js';
-import PsqlEngine from './sql/PsqlEngine.js';
-import { types } from 'pg';
-import { PsqlPool } from './sql/PsqlPool.js';
+const { types } = pg;
 
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
@@ -507,4 +508,4 @@ const setupPgReturnTypes = () => {
 setupPgReturnTypes();
 
 const restura = new ResturaEngine();
-export { restura, PsqlPool };
+export { PsqlPool, restura };

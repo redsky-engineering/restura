@@ -17,6 +17,8 @@ export default [
 	},
 	{
 		rules: {
+			// Allow empty interfaces
+			'@typescript-eslint/no-empty-object-type': 'off',
 			// Allow unused variables starting with exactly one underscore.
 			'no-unused-vars': 'off',
 			'@typescript-eslint/no-unused-vars': [

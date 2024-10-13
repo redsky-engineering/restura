@@ -73,5 +73,5 @@ export interface RoleWithOptionalUserDetails {
 export type AuthenticateHandler = (
 	req: RsRequest<unknown>,
 	onValid: (userDetails: RoleWithOptionalUserDetails) => void,
-	onReject: (errorMessage: string) => void
+	onReject: (errorMessage: string, htmlStatusCode?: number) => void
 ) => Promise<void>;

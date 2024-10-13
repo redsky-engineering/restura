@@ -1,7 +1,7 @@
 import { logger, restura } from '@restura/core';
 import express from 'express';
-import authenticationHandler from '../authenticationHandler';
-import psqlConnectionPool from './psqlConnectionPool';
+import authenticationHandler from './authenticationHandler.js';
+import psqlConnectionPool from './psqlConnectionPool.js';
 
 const app = express();
 restura.init(app, authenticationHandler, psqlConnectionPool);

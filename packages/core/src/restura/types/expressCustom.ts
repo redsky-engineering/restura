@@ -15,7 +15,7 @@ export interface RequesterDetails {
 	host: string;
 	ipAddress: string;
 	// userId?: string | number;
-	[key: string]: string | number | undefined | null | boolean;
+	[key: string]: string | number | undefined | null | boolean | object;
 }
 
 export interface RsRequest<T = unknown> extends express.Request {

@@ -3,12 +3,13 @@
 	"version": "1.0.0",
 	"description": "Test application using express and Restura",
 	"main": "dist/app.js",
+	"type": "module",
 	"scripts": {
 		"test": "echo \"Todo: add tests\"",
 		"dev": "pnpm -w build && tsc && node ./dist/app.js",
 		"devTsx": "pnpm -w build && tsx ./src/app.ts",
 		"lint": "eslint src",
-		"startDevDockerDb": "docker-compose -f docker-compose.local.yaml up -d"
+		"startDevDockerDb": "docker compose -f docker-compose.local.yaml up -d"
 	},
 	"keywords": [],
 	"author": "",
