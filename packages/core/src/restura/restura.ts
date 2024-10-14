@@ -1,4 +1,4 @@
-import { ObjectUtils } from '@redskytech/core-utils';
+import { ObjectUtils, StringUtils } from '@redskytech/core-utils';
 import { config } from '@restura/internal';
 import { boundMethod } from 'autobind-decorator';
 import bodyParser from 'body-parser';
@@ -14,6 +14,7 @@ import { resturaConfigSchema, type ResturaConfigSchema } from '../config.schema.
 import { logger } from '../logger/logger.js';
 import ResponseValidator from './ResponseValidator.js';
 import apiGenerator from './apiGenerator.js';
+import customApiFactory from './customApiFactory.js';
 import customTypeValidationGenerator from './customTypeValidationGenerator.js';
 import { RsError } from './errors.js';
 import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
@@ -65,10 +66,15 @@ class ResturaEngine {
 		authenticationHandler: AuthenticateHandler,
 		psqlConnectionPool: PsqlPool
 	): Promise<void> {
+		// Try to load config first. If it fails, we can't continue.
+		this.resturaConfig = config.validate('restura', resturaConfigSchema) as ResturaConfigSchema;
+
 		this.psqlConnectionPool = psqlConnectionPool;
 		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool);
 		setupPgReturnTypes();
-		this.resturaConfig = config.validate('restura', resturaConfigSchema) as ResturaConfigSchema;
+
+		await customApiFactory.loadApiFiles(this.resturaConfig.customApiFolderPath);
+
 		this.authenticationHandler = authenticationHandler;
 
 		// Middleware and general setup
@@ -373,10 +379,10 @@ class ResturaEngine {
 			validateRequestParams(req as RsRequest<unknown>, routeData, this.customTypeValidation);
 
 			// Check for custom logic
-			// if (this.isCustomRoute(routeData)) {
-			// 	await this.runCustomRouteLogic(req, res, routeData);
-			// 	return;
-			// }
+			if (this.isCustomRoute(routeData)) {
+				await this.runCustomRouteLogic(req, res, routeData);
+				return;
+			}
 
 			// Run SQL query
 			const data = await this.psqlEngine.runQueryForRoute(
@@ -386,7 +392,7 @@ class ResturaEngine {
 			);
 
 			// Validate the response
-			// this.responseValidator.validateResponseParams(data, req.baseUrl, routeData);
+			this.responseValidator.validateResponseParams(data, req.baseUrl, routeData);
 
 			// Send response
 			if (routeData.type === 'PAGED') res.sendNoWrap(data as T);
@@ -401,37 +407,37 @@ class ResturaEngine {
 		return route.type === 'CUSTOM_ONE' || route.type === 'CUSTOM_ARRAY' || route.type === 'CUSTOM_PAGED';
 	}
 
-	// @boundMethod
-	// private async runCustomRouteLogic<T>(req: RsRequest<T>, res: RsResponse<T>, routeData: RouteData) {
-	// 	const version = req.baseUrl.split('/')[2];
-	// 	let domain = routeData.path.split('/')[1];
-	// 	domain = domain.split('-').reduce((acc, value, index) => {
-	// 		if (index === 0) acc = value;
-	// 		else acc += StringUtils.capitalizeFirst(value);
-	// 		return acc;
-	// 	}, '');
-	// 	const customApiName = `${StringUtils.capitalizeFirst(domain)}Api${StringUtils.capitalizeFirst(version)}`;
+	@boundMethod
+	private async runCustomRouteLogic<T>(req: RsRequest<T>, res: RsResponse<T>, routeData: RouteData) {
+		const version = req.baseUrl.split('/')[2];
+		let domain = routeData.path.split('/')[1];
+		domain = domain.split('-').reduce((acc, value, index) => {
+			if (index === 0) acc = value;
+			else acc += StringUtils.capitalizeFirst(value);
+			return acc;
+		}, '');
+		const customApiName = `${StringUtils.capitalizeFirst(domain)}Api${StringUtils.capitalizeFirst(version)}`;
 
-	// 	const customApi = apiFactory.getCustomApi(customApiName);
-	// 	if (!customApi) throw new RsError('NOT_FOUND', `API domain ${domain}-${version} not found`);
+		const customApi = customApiFactory.getCustomApi(customApiName);
+		if (!customApi) throw new RsError('NOT_FOUND', `API domain ${domain}-${version} not found`);
 
-	// 	const functionName = `${routeData.method.toLowerCase()}${routeData.path
-	// 		.replace(new RegExp('-', 'g'), '/')
-	// 		.split('/')
-	// 		.reduce((acc, cur) => {
-	// 			if (cur === '') return acc;
-	// 			return acc + StringUtils.capitalizeFirst(cur);
-	// 		}, '')}`;
+		const functionName = `${routeData.method.toLowerCase()}${routeData.path
+			.replace(new RegExp('-', 'g'), '/')
+			.split('/')
+			.reduce((acc, cur) => {
+				if (cur === '') return acc;
+				return acc + StringUtils.capitalizeFirst(cur);
+			}, '')}`;
 
-	// 	// @ts-expect-error - Here we are dynamically calling the function from a custom class, not sure how to typescript this
-	// 	const customFunction = customApi[functionName] as (
-	// 		req: RsRequest<T>,
-	// 		res: RsResponse<T>,
-	// 		routeData: RouteData
-	// 	) => Promise<void>;
-	// 	if (!customFunction) throw new RsError('NOT_FOUND', `API path ${routeData.path} not implemented`);
-	// 	await customFunction(req, res, routeData);
-	// }
+		// @ts-expect-error - Here we are dynamically calling the function from a custom class, not sure how to typescript this
+		const customFunction = customApi[functionName] as (
+			req: RsRequest<T>,
+			res: RsResponse<T>,
+			routeData: RouteData
+		) => Promise<void>;
+		if (!customFunction) throw new RsError('NOT_FOUND', `API path ${routeData.path} not implemented`);
+		await customFunction(req, res, routeData);
+	}
 
 	private async generateHashForSchema(providedSchema: ResturaSchema): Promise<string> {
 		const schemaPrettyStr = await prettier.format(JSON.stringify(providedSchema), {

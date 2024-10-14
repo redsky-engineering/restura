@@ -1,4 +1,4 @@
-import type { RsRequest } from './expressCustom.js';
+import type { RsRequest, RsResponse } from './expressCustom.js';
 
 export interface SchemaChangeValue {
 	name: string;
@@ -70,8 +70,10 @@ export interface RoleWithOptionalUserDetails {
 	[key: string]: string | number | boolean | object | null; // Other keys with any JSON-compatible value type
 }
 
+export type ValidAuthenticationCallback = (userDetails: RoleWithOptionalUserDetails) => void;
+
 export type AuthenticateHandler = (
 	req: RsRequest<unknown>,
-	onValid: (userDetails: RoleWithOptionalUserDetails) => void,
-	onReject: (errorMessage: string, htmlStatusCode?: number) => void
+	res: RsResponse<unknown>,
+	onValid: ValidAuthenticationCallback
 ) => Promise<void>;
