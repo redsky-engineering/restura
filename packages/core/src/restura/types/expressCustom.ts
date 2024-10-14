@@ -11,10 +11,10 @@ export interface RsHeaders extends IncomingHttpHeaders {
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 
 export interface RequesterDetails {
-	role?: string;
+	role: string; // The role of the user, blank if anonymous
 	host: string;
 	ipAddress: string;
-	// userId?: string | number;
+	userId?: number;
 	[key: string]: string | number | undefined | null | boolean | object;
 }
 

@@ -1,9 +1,10 @@
 import pg from 'pg';
+import format from 'pg-format';
 // See this github issue for why we need to do this https://github.com/brianc/node-postgres/issues/2819
 import { PoolConfig, Pool as PoolType, QueryConfigValues } from 'pg';
+import { logger } from '../../logger/logger.js';
 import { RsError } from '../errors.js';
 import { questionMarksToOrderedParams } from './PsqlUtils.js';
-import { logger } from '../../logger/logger.js';
 const { Pool } = pg;
 
 export class PsqlPool {
@@ -11,7 +12,7 @@ export class PsqlPool {
 	constructor(public poolConfig: PoolConfig) {
 		this.pool = new Pool(poolConfig);
 		// Run a test query to ensure the connection is working
-		this.queryOne('SELECT NOW()', [])
+		this.queryOne('SELECT NOW()', [], 0, true)
 			.then(() => {
 				logger.info('Connected to PostgreSQL database');
 			})
@@ -22,7 +23,8 @@ export class PsqlPool {
 	}
 
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	async queryOne(query: string, options: Array<any>) {
+	async queryOne(query: string, options: Array<any>, initiatorId?: number, isSystemUser: boolean = false) {
+		this.logSqlStatement(query, options, initiatorId, isSystemUser);
 		const formattedQuery = questionMarksToOrderedParams(query);
 		try {
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
@@ -39,7 +41,8 @@ export class PsqlPool {
 	}
 
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	async runQuery(query: string, options: any[]) {
+	async runQuery(query: string, options: any[], initiatorId?: number, isSystemUser: boolean = false) {
+		this.logSqlStatement(query, options, initiatorId, isSystemUser);
 		const formattedQuery = questionMarksToOrderedParams(query);
 		const queryUpdated = query.replace(/[\t\n]/g, ' ');
 		console.log(queryUpdated, options);
@@ -55,5 +58,20 @@ export class PsqlPool {
 			}
 			throw new RsError('DATABASE_ERROR', `${error.message}`);
 		}
+	}
+
+	private logSqlStatement(
+		query: string,
+		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+		options: any,
+		initiatorId?: number,
+		isSystemUser?: boolean,
+		prefix: string = ''
+	) {
+		if (logger.level !== 'silly') return;
+
+		const sqlStatement = format(query, options);
+		const requester = isSystemUser ? 'SYSTEM' : initiatorId?.toString() || 'Anonymous';
+		logger.silly(`${prefix}query by ${requester} : ${sqlStatement}`);
 	}
 }

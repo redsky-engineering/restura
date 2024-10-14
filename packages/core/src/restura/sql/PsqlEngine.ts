@@ -164,7 +164,8 @@ export default class PsqlEngine extends SqlEngine {
 		if (routeData.type === 'ONE') {
 			return this.psqlConnectionPool.queryOne(
 				`${selectStatement}${sqlStatement}${groupByOrderByStatement};`,
-				sqlParams
+				sqlParams,
+				req.requesterDetails.userId
 			);
 		} else if (routeData.type === 'ARRAY') {
 			// Array

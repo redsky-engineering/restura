@@ -65,12 +65,13 @@ export interface PageQuery {
 	[key: string]: any; // Other keys with any JSON-compatible value type
 }
 
-export interface RoleWithOptionalUserDetails {
+export interface AuthenticationUserDetails {
 	role: string;
-	[key: string]: string | number | boolean | object | null; // Other keys with any JSON-compatible value type
+	userId?: number;
+	[key: string]: string | number | boolean | object | null | undefined; // Other keys with any JSON-compatible value type
 }
 
-export type ValidAuthenticationCallback = (userDetails: RoleWithOptionalUserDetails) => void;
+export type ValidAuthenticationCallback = (userDetails: AuthenticationUserDetails) => void;
 
 export type AuthenticateHandler = (
 	req: RsRequest<unknown>,
