@@ -881,7 +881,8 @@ describe('PsqlEngine', function () {
 				baseTable,
 				routeData,
 				schema,
-				userRole
+				userRole,
+				[]
 			);
 			expect(trimRedundantWhitespace(response)).to.equal(
 				'LEFT JOIN "company" ON "user"."companyId" = "company"."id" INNER JOIN "order" ON "user"."id" = "order"."userId"'

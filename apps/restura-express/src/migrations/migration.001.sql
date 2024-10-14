@@ -48,3 +48,16 @@ CREATE INDEX "user_companyId_index"
 
 CREATE INDEX "user_passwordResetGuid_index"
     ON "user" ("passwordResetGuid");
+
+-- Create some test data
+INSERT INTO public.company (id, "createdOn", "modifiedOn", name)
+VALUES (1, '2024-10-13 17:35:45.989731 +00:00', '2024-10-13 17:35:45.989731 +00:00', 'redsky');
+
+
+INSERT INTO public."user" ("createdOn", "modifiedOn", "firstName", "lastName", "companyId", password, email, role,
+                           "permissionLogin", "lastLoginOn", phone, "loginDisabledOn", "passwordResetGuid",
+                           "verifyEmailPin", "verifyEmailPinExpiresOn", "accountStatus", "passwordResetExpiresOn",
+                           "onboardingStatus", "pendingEmail", "testAge")
+VALUES ('2024-10-13 17:57:28.180898 +00:00', '2024-10-13 17:57:28.180898 +00:00', 'Tanner', 'Burton', 1, 'asdfa',
+        'tanner@plvr.com', 'user', true, null, null, null, null, null, null, 'view_only', null, 'verify_email',
+        null, 0);

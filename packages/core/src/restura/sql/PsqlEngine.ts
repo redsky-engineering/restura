@@ -100,7 +100,7 @@ export default class PsqlEngine extends SqlEngine {
 		});
 
 		const query = insertObjectQuery(routeData.table, { ...(req.data as DynamicObject), ...parameterObj });
-		const createdItem = await this.psqlConnectionPool.queryOne(query, sqlParams);
+		const createdItem = await this.psqlConnectionPool.queryOne(query, sqlParams, req.requesterDetails.userId);
 		const insertId = createdItem?.id;
 		const whereData: WhereData[] = [
 			{
@@ -171,7 +171,8 @@ export default class PsqlEngine extends SqlEngine {
 			// Array
 			return this.psqlConnectionPool.runQuery(
 				`${selectStatement}${sqlStatement}${groupByOrderByStatement};`,
-				sqlParams
+				sqlParams,
+				req.requesterDetails.userId
 			);
 		} else if (routeData.type === 'PAGED') {
 			const data = req.data as PageQuery;
@@ -185,7 +186,8 @@ export default class PsqlEngine extends SqlEngine {
 					data.perPage || DEFAULT_PAGED_PER_PAGE_NUMBER,
 					(data.page - 1) * data.perPage || DEFAULT_PAGED_PAGE_NUMBER,
 					...sqlParams
-				]
+				],
+				req.requesterDetails.userId
 			);
 			let total = 0;
 			if (ObjectUtils.isArrayWithData(pageResults)) {
@@ -244,7 +246,7 @@ export default class PsqlEngine extends SqlEngine {
 		// );
 		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
 		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause);
-		await this.psqlConnectionPool.queryOne(query, [...sqlParams]);
+		await this.psqlConnectionPool.queryOne(query, [...sqlParams], req.requesterDetails.userId);
 		return this.executeGetRequest(req, routeData, schema) as unknown as DynamicObject;
 	}
 
@@ -269,7 +271,7 @@ export default class PsqlEngine extends SqlEngine {
                            FROM "${routeData.table}" ${joinStatement}`;
 		deleteStatement += this.generateWhereClause(req, routeData.where, routeData, sqlParams);
 		deleteStatement += ';';
-		await this.psqlConnectionPool.runQuery(deleteStatement, sqlParams);
+		await this.psqlConnectionPool.runQuery(deleteStatement, sqlParams, req.requesterDetails.userId);
 		return true;
 	}
 
