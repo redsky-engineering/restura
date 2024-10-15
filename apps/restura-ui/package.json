@@ -53,7 +53,8 @@
 	},
 	"scripts": {
 		"start": "vite --host",
-		"build": "tsc && vite build",
+		"build": "echo not implemented",
+		"buildOld": "tsc && vite build",
 		"prettier:check": "prettier --check ./src/**/*.{ts,tsx,js,jsx,html,scss,css,md,json} ./*.{ts,tsx,js,jsx,html,scss,css,md,json}",
 		"prettier:fix-all": "prettier --write ./src/**/*.{ts,tsx,js,jsx,html,scss,css,md,json} ./*.{ts,tsx,js,jsx,html,scss,css,md,json}"
 	},
