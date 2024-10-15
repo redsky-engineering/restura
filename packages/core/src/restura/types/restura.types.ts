@@ -1,4 +1,4 @@
-import type { RsRequest, RsResponse } from './expressCustom.js';
+import type { RsRequest, RsResponse } from './customExpress.types.js';
 
 export interface SchemaChangeValue {
 	name: string;
@@ -61,8 +61,7 @@ export interface PageQuery {
 	sortBy: string;
 	sortOrder: StandardOrderTypes;
 	filter?: string;
-	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	[key: string]: any; // Other keys with any JSON-compatible value type
+	[key: string]: string | number | boolean | object | null | undefined; // Other keys with any JSON-compatible value type
 }
 
 export interface AuthenticationUserDetails {

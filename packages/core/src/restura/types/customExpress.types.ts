@@ -10,16 +10,16 @@ export interface RsHeaders extends IncomingHttpHeaders {
 
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 
-export interface RequesterDetails {
+export type RequesterDetails<T extends object = {}> = {
 	role: string; // The role of the user, blank if anonymous
 	host: string;
 	ipAddress: string;
 	userId?: number;
-	[key: string]: string | number | undefined | null | boolean | object;
-}
+	isSystemUser?: boolean;
+} & T;
 
-export interface RsRequest<T = unknown> extends express.Request {
-	requesterDetails: RequesterDetails;
+export interface RsRequest<T = unknown, U extends object = Record<string, never>> extends express.Request {
+	requesterDetails: RequesterDetails<U>;
 	data: T;
 }
 

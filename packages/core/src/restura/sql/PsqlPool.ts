@@ -4,6 +4,7 @@ import format from 'pg-format';
 import { PoolConfig, Pool as PoolType, QueryConfigValues } from 'pg';
 import { logger } from '../../logger/logger.js';
 import { RsError } from '../errors.js';
+import type { RequesterDetails } from '../types/customExpress.types.js';
 import { questionMarksToOrderedParams } from './PsqlUtils.js';
 const { Pool } = pg;
 
@@ -12,7 +13,7 @@ export class PsqlPool {
 	constructor(public poolConfig: PoolConfig) {
 		this.pool = new Pool(poolConfig);
 		// Run a test query to ensure the connection is working
-		this.queryOne('SELECT NOW();', [], 0, true)
+		this.queryOne('SELECT NOW();', [], { isSystemUser: true, role: '', host: 'localhost', ipAddress: '' })
 			.then(() => {
 				logger.info('Connected to PostgreSQL database');
 			})
@@ -23,9 +24,9 @@ export class PsqlPool {
 	}
 
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	async queryOne(query: string, options: any[], initiatorId: number | undefined, isSystemUser: boolean = false) {
+	async queryOne(query: string, options: any[], requesterDetails: RequesterDetails) {
 		const formattedQuery = questionMarksToOrderedParams(query);
-		this.logSqlStatement(formattedQuery, options, initiatorId, isSystemUser);
+		this.logSqlStatement(formattedQuery, options, requesterDetails);
 
 		try {
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
@@ -42,9 +43,9 @@ export class PsqlPool {
 	}
 
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	async runQuery(query: string, options: any[], initiatorId: number | undefined, isSystemUser: boolean = false) {
+	async runQuery(query: string, options: any[], requesterDetails: RequesterDetails) {
 		const formattedQuery = questionMarksToOrderedParams(query);
-		this.logSqlStatement(formattedQuery, options, initiatorId, isSystemUser);
+		this.logSqlStatement(formattedQuery, options, requesterDetails);
 
 		const queryUpdated = query.replace(/[\t\n]/g, ' ');
 		console.log(queryUpdated, options);
@@ -66,8 +67,7 @@ export class PsqlPool {
 		query: string,
 		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		options: any[],
-		initiatorId?: number,
-		isSystemUser?: boolean,
+		requesterDetails: RequesterDetails,
 		prefix: string = ''
 	) {
 		if (logger.level !== 'silly') return;
@@ -80,12 +80,16 @@ export class PsqlPool {
 			let stringIndex = 0;
 			sqlStatement = query.replace(/\$\d+/g, () => {
 				const value = options[stringIndex++];
+				if (typeof value === 'number') return value.toString();
 				return format.literal(value);
 			});
 		}
 
-		let initiator = initiatorId ? `Initiator Id (${initiatorId.toString()})` : 'Anonymous';
-		initiator = isSystemUser ? 'SYSTEM' : initiator;
+		let initiator = 'Anonymous';
+		if ('userId' in requesterDetails && requesterDetails.userId)
+			initiator = `User Id (${requesterDetails.userId.toString()})`;
+		if ('isSystemUser' in requesterDetails && requesterDetails.isSystemUser) initiator = 'SYSTEM';
+
 		logger.silly(`${prefix}query by ${initiator}, Query ->\n ${sqlStatement}`);
 	}
 }

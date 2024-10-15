@@ -1,10 +1,10 @@
 import { ObjectUtils } from '@redskytech/core-utils';
 import jsonschema, { Schema } from 'jsonschema';
-import type { DynamicObject, RsRequest } from './types/expressCustom.js';
 import { Definition } from 'typescript-json-schema';
-import { RequestData, RouteData } from './restura.schema.js';
-import { RsError } from './errors';
 import { z } from 'zod';
+import { RsError } from './errors';
+import { RequestData, RouteData } from './restura.schema.js';
+import type { DynamicObject, RsRequest } from './types/customExpress.types.js';
 import { ValidatorData, ValidatorDataSchemeValue, validatorDataSchemeValue } from './types/validation.types';
 import addQuotesToStrings from './utils/addQuotesToStrings';
 

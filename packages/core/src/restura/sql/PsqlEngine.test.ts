@@ -9,7 +9,7 @@ import {
 	StandardRouteData,
 	WhereData
 } from '../restura.schema.js';
-import { DynamicObject, RsRequest } from '../types/expressCustom.js';
+import { DynamicObject, RsRequest } from '../types/customExpress.types.js';
 import PsqlEngine from './PsqlEngine.js';
 import { PsqlPool } from './PsqlPool.js';
 

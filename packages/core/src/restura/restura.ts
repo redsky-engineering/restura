@@ -30,7 +30,7 @@ import {
 } from './restura.schema.js';
 import PsqlEngine from './sql/PsqlEngine.js';
 import { PsqlPool } from './sql/PsqlPool.js';
-import type { RsRequest, RsResponse } from './types/expressCustom.js';
+import type { RsRequest, RsResponse } from './types/customExpress.types.js';
 import type { AuthenticateHandler } from './types/restura.types.js';
 import validateRequestParams, { ValidationDictionary } from './validateRequestParams.js';
 const { types } = pg;

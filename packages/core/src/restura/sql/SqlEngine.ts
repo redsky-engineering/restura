@@ -9,7 +9,7 @@ import {
 	TableData,
 	WhereData
 } from '../restura.schema.js';
-import { DynamicObject, RsRequest } from '../types/expressCustom.js';
+import { DynamicObject, RsRequest } from '../types/customExpress.types.js';
 
 export default abstract class SqlEngine {
 	async runQueryForRoute(
