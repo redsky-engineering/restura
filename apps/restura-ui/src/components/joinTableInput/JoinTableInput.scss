@@ -1,0 +1,70 @@
+@import 'src/themes/themes';
+
+.rsJoinTableInput {
+	.joinItem + .joinItem {
+		margin-top: 16px;
+	}
+
+	.rsSelect {
+		margin-left: auto;
+		min-width: 135px;
+	}
+
+	.joinItem {
+		display: flex;
+		align-items: center;
+		background: theme-var($neutralBeige800);
+		height: 56px;
+		border-radius: 4px;
+		padding-right: 16px;
+		gap: 8px;
+		position: relative;
+
+		.deleteIcon {
+			color: theme-var($neutralBeige500);
+			cursor: pointer;
+			position: absolute;
+			left: -24px;
+			top: 19px;
+			&:hover {
+				color: theme-var($secondaryOrange500);
+			}
+		}
+
+		.customJoin,
+		.rsAutoComplete {
+			width: 100%;
+			padding-left: 16px;
+		}
+
+		.standardJoin {
+			display: flex;
+			padding: 8px 0 8px 8px;
+			align-items: center;
+
+			.keyword {
+				margin: 8px;
+				padding: 8px;
+				color: theme-var($secondaryOrange500);
+			}
+
+			.rsIcon {
+				color: theme-var($neutralBeige300);
+				&:hover {
+					color: theme-var($secondaryOrange500);
+				}
+			}
+		}
+
+		.tableName {
+			display: flex;
+			align-items: center;
+			padding: 16px;
+			background: theme-var($neutralBeige400);
+			border-radius: 4px 0 0 4px;
+			.rsLabel {
+				color: theme-var($neutralBeige900);
+			}
+		}
+	}
+}

@@ -1,0 +1,30 @@
+@import 'src/themes/themes';
+
+.rsConfirmationPopup {
+	max-width: 352px;
+	position: absolute;
+	background: theme-var($neutralBeige900);
+	box-shadow: 1px 3px 8px -4px rgba(0, 0, 0, 0.3);
+	z-index: 10;
+
+	.header {
+		height: 64px;
+		padding: 16px;
+		border-bottom: 1px solid theme-var($neutralBeige600);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+
+		.rsIcon {
+			cursor: pointer;
+			color: theme-var($neutralBeige600);
+			&:hover {
+				color: theme-var($secondaryOrange500);
+			}
+		}
+	}
+
+	.rsButton {
+		min-width: 125px;
+	}
+}

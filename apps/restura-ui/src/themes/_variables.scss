@@ -1,0 +1,62 @@
+// These variables are mostly for making auto complete better
+
+/* Font Weights */
+$fwThin: 100;
+$fwExtraLight: 200;
+$fwLight: 300;
+$fwRegular: 400;
+$fwMedium: 500;
+$fwSemiBold: 600;
+$fwBold: 700;
+$fwExtraBold: 800;
+$fwBlack: 900;
+$fwExtraBlack: 950;
+
+// Map SCSS theme variables to CSS variables
+$neutralWhite: --neutralWhite;
+$neutralBeige50: --neutralBeige50;
+$neutralBeige100: --neutralBeige100;
+$neutralBeige200: --neutralBeige200;
+$neutralBeige300: --neutralBeige300;
+$neutralBeige400: --neutralBeige400;
+$neutralBeige500: --neutralBeige500;
+$neutralBeige600: --neutralBeige600;
+$neutralBeige700: --neutralBeige700;
+$neutralBeige800: --neutralBeige800;
+$neutralBeige900: --neutralBeige900;
+$neutralBlack: --neutralBlack;
+
+$neutralWhite50: --neutralWhite50;
+
+$primaryRed50: --primaryRed50;
+$primaryRed100: --primaryRed100;
+$primaryRed300: --primaryRed300;
+$primaryRed500: --primaryRed500;
+$primaryRed700: --primaryRed700;
+$primaryRed900: --primaryRed900;
+$primaryRed500_50: --primaryRed500_50;
+
+$secondaryOrange500: --secondaryOrange500;
+
+// Gradients
+$gradient90Deg: --gradient90Deg;
+$gradient90Deg_20: --gradient90Deg_20;
+
+// Burnt Orange
+$burntOrange: --burntOrange;
+
+//Misc
+$success: --success;
+$accentErrorDark: --accentErrorDark;
+$transitionTime: --transitionTime;
+
+//Z-Index
+$mobileStepperZIndex: --mobileStepperZIndex;
+$appBarZIndex: --appBarZIndex;
+$tooltipZIndex: --tooltipZIndex;
+$drawerZIndex: --drawerZIndex;
+$modalZIndex: --modalZIndex;
+$toastZIndex: --toastZIndex;
+
+// Sizes
+$desktopAppBarHeight: 80px;

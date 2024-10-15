@@ -1,0 +1,86 @@
+$errorBackground: #feedec;
+$errorContrast: #750800;
+$successBackground: #d3fccf;
+$successContrast: #0a4a03;
+$infoBackground: #e5f6fd;
+$infoContrast: #014361;
+$warningBackground: #fcf2cf;
+$warningContrast: #725b08;
+
+.App {
+	.Toastify__toast--error {
+		background: $errorBackground;
+	}
+	.Toastify__progress-bar--error {
+		background: $errorContrast;
+	}
+	.Toastify__close-button--error {
+		color: $errorContrast;
+	}
+
+	.rsToastMessage.error {
+		.rsLabel {
+			color: $errorContrast;
+		}
+		.rsIcon {
+			display: none;
+		}
+	}
+
+	.Toastify__toast--success {
+		background: $successBackground;
+	}
+	.Toastify__progress-bar--success {
+		background: $successContrast;
+	}
+	.Toastify__close-button--success {
+		color: $successContrast;
+	}
+
+	.rsToastMessage.success {
+		.rsLabel {
+			color: $successContrast;
+		}
+		.rsIcon {
+			display: none;
+		}
+	}
+
+	.Toastify__toast--info {
+		background: $infoBackground;
+	}
+	.Toastify__progress-bar--info {
+		background: $infoContrast;
+	}
+	.Toastify__close-button--info {
+		color: $infoContrast;
+	}
+
+	.rsToastMessage.info {
+		.rsLabel {
+			color: $infoContrast;
+		}
+		.rsIcon {
+			display: none;
+		}
+	}
+
+	.Toastify__toast--warning {
+		background: $warningBackground;
+	}
+	.Toastify__progress-bar--warning {
+		background: $warningContrast;
+	}
+	.Toastify__close-button--warning {
+		color: $warningContrast;
+	}
+
+	.rsToastMessage.warning {
+		.rsLabel {
+			color: $warningContrast;
+		}
+		.rsIcon {
+			display: none;
+		}
+	}
+}

@@ -1,0 +1,105 @@
+@import 'src/themes/themes';
+
+.App .rsSelect {
+	[class*='container'] {
+		//Use to target container css
+	}
+
+	[class*='control'] {
+		//Use to target Control css
+		border-radius: 4px;
+		background-color: theme-var($neutralBeige800);
+		border: 1px solid theme-var($neutralBeige700);
+		cursor: pointer;
+		height: 40px;
+		&.error {
+			border-color: #f44336;
+		}
+		&:hover {
+			border: 1px solid theme-var($neutralBeige500);
+		}
+		&:focus-within {
+			border-color: theme-var($primaryRed500);
+			box-shadow: unset;
+		}
+	}
+
+	[class*='ValueContainer'] {
+		//Use to target ValueContainer css
+		[class*='singleValue'] {
+			overflow: unset;
+		}
+	}
+
+	[class*='ValueContainer2'] {
+		padding: 0 16px;
+	}
+
+	[class*='singleValue'] {
+		color: theme-var($neutralWhite);
+	}
+
+	[class*='menu'] {
+		//Use to target Menu css
+		z-index: 100;
+		border: 1px solid theme-var($neutralBeige600);
+		box-shadow: unset;
+		background-color: theme-var($neutralBeige800);
+		[class*='NoOptionsMessage'] {
+			color: theme-var($neutralBeige500);
+		}
+	}
+	[class*='option'] {
+		//Use to target Menu css
+		font-size: 16px;
+		line-height: 24px;
+		letter-spacing: -0.32px;
+		font-weight: $fwRegular;
+		cursor: pointer;
+		color: theme-var($neutralBeige500);
+		&[class*='9gakcf-option'] {
+			//Use to target Selected Option
+			background-color: theme-var($neutralBeige600);
+			color: theme-var($neutralWhite);
+		}
+		&[class*='1n7v3ny-option'] {
+			//Use to target the tabbed/Focused Option
+			background-color: theme-var($neutralBeige600);
+			&:hover {
+				background-color: theme-var($neutralBeige800);
+				color: theme-var($neutralWhite);
+			}
+		}
+	}
+
+	[class*='placeholder'] {
+		//Use to target Placeholder css
+		color: theme-var($neutralBeige500);
+		&.error {
+			color: #f44336;
+		}
+	}
+
+	[class*='Input'] {
+		//Use to target Input css
+		color: theme-var($neutralWhite);
+	}
+
+	[class*='IndicatorsContainer'] {
+		//Use to target the container wrapping the separator and chevron
+	}
+
+	[class*='indicatorSeparator'] {
+		//Use to target the separator between the chevron and Select
+	}
+
+	[class*='indicatorContainer'] {
+		//Use to target the chevron css
+	}
+
+	.rsInputErrorMessage {
+		text-align: left;
+
+		color: #f44336;
+	}
+}

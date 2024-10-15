@@ -1,0 +1,75 @@
+@import 'mixins';
+
+// Default theme used throughout
+$defaultTheme: (
+	// Neutral colors
+	$neutralWhite: #fff,
+	$neutralBeige50: #fdfcfc,
+	$neutralBeige100: #fafafa,
+	$neutralBeige200: #f1eeee,
+	$neutralBeige300: #ebe3e3,
+	$neutralBeige400: #dacdcd,
+	$neutralBeige500: #c2acac,
+	$neutralBeige600: #9a7575,
+	$neutralBeige700: #704b4b,
+	$neutralBeige800: #3e2323,
+	$neutralBeige900: #241414,
+	$neutralBlack: #170d0d,
+	$neutralWhite50: rgba(255, 255, 255, 0.5),
+	// Primary colors
+	$primaryRed50: #fef6f6,
+	$primaryRed100: #f9c8c8,
+	$primaryRed300: #ff6666,
+	$primaryRed500: #ff1f1f,
+	$primaryRed700: #8b1d1d,
+	$primaryRed900: #590d0d,
+	$primaryRed500_50: rgba(255, 31, 31, 0.5),
+	// Secondary colors
+	$secondaryOrange500: #ff7c36,
+	// Gradients
+	$gradient90Deg: linear-gradient(90deg, #ff1e1e 0%, #ff7c36 100%),
+	$gradient90Deg_20: linear-gradient(90deg, rgba(255, 30, 30, 0.2) 0%, rgba(255, 124, 54, 0.2) 100%),
+	// Burnt Orange
+	$burntOrange: #ff1e1e,
+	//Misc
+	$success: #5daa60,
+	$accentErrorDark: #221114,
+	$transitionTime: 300ms
+);
+
+// Exports are for use in Javascript
+:export {
+	// Neutral colors
+	neutralWhite: theme-var($neutralWhite);
+	neutralBeige50: theme-var($neutralBeige50);
+	neutralBeige100: theme-var($neutralBeige100);
+	neutralBeige200: theme-var($neutralBeige200);
+	neutralBeige300: theme-var($neutralBeige300);
+	neutralBeige400: theme-var($neutralBeige400);
+	neutralBeige500: theme-var($neutralBeige500);
+	neutralBeige600: theme-var($neutralBeige600);
+	neutralBeige700: theme-var($neutralBeige700);
+	neutralBeige800: theme-var($neutralBeige800);
+	neutralBeige900: theme-var($neutralBeige900);
+	neutralBlack: theme-var($neutralBlack);
+
+	neutralWhite50: theme-var($neutralWhite50);
+
+	// Primary colors
+	primaryRed50: theme-var($primaryRed50);
+	primaryRed100: theme-var($primaryRed100);
+	primaryRed300: theme-var($primaryRed300);
+	primaryRed500: theme-var($primaryRed500);
+	primaryRed700: theme-var($primaryRed700);
+	primaryRed900: theme-var($primaryRed900);
+	primaryRed500_50: theme-var($primaryRed500_50);
+
+	burntOrange: theme-var($burntOrange);
+	secondaryOrange500: theme-var($secondaryOrange500);
+	success: theme-var($success);
+	accentErrorDark: theme-var($accentErrorDark);
+
+	// Gradients
+	gradient90Deg: theme-var($gradient90Deg);
+	gradient90Deg_20: theme-var($gradient90Deg_20);
+}

@@ -1,0 +1,46 @@
+@import 'src/themes/themes';
+
+.rsSchemaPreview {
+	position: fixed;
+	top: 80px;
+	right: 0;
+	z-index: 99;
+	background-color: theme-var($neutralBlack);
+	width: 0;
+	transition:
+		width theme-var($transitionTime) ease-in-out,
+		height theme-var($transitionTime) ease-in-out;
+	//	box-shadow: -7px 9px 15px 0px theme-var($primaryRed700);
+	/* Glow */
+	box-shadow:
+		0px 0px 4px rgba(254, 111, 30, 0.4),
+		0px -5px 76px rgba(254, 30, 30, 0.4);
+	height: calc(100vh - 80px);
+
+	.content {
+		height: calc(100% - 48px);
+		overflow-y: auto;
+	}
+
+	&.open {
+		width: 500px;
+		&.expand {
+			width: 1000px;
+		}
+	}
+
+	.sectionBox {
+		&:not(:last-child) {
+			border-bottom: 1px solid theme-var($neutralBeige700);
+		}
+	}
+
+	.expandShrink {
+		cursor: pointer;
+		color: theme-var($neutralBeige300);
+		padding: 4px;
+		&:hover {
+			color: theme-var($secondaryOrange500);
+		}
+	}
+}

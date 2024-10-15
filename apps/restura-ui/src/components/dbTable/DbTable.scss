@@ -1,0 +1,14 @@
+@import 'src/themes/themes';
+
+.rsDbTable {
+	.rsPaper {
+		padding: 32px;
+	}
+
+	.rsIcon {
+		color: theme-var($neutralWhite);
+		&:hover {
+			color: theme-var($secondaryOrange500);
+		}
+	}
+}

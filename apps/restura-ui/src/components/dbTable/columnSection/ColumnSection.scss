@@ -1,0 +1,30 @@
+@import 'src/themes/themes';
+
+.rsColumnSection {
+	.tableColumnDetailsGrid {
+		display: grid;
+		gap: 0 16px;
+		grid-template-columns: repeat(14, fit-content(400px));
+		position: relative;
+
+		// Background of table header
+		// I know this isn't the ideal way to do this, but it works for now
+		&:before {
+			content: '';
+			position: absolute;
+			left: -32px;
+			right: -32px;
+			top: -8px;
+			z-index: -1;
+			height: 32px;
+			background: theme-var($neutralBeige800);
+		}
+	}
+
+	.rsIcon {
+		color: theme-var($neutralWhite);
+		&:hover {
+			color: theme-var($secondaryOrange500);
+		}
+	}
+}

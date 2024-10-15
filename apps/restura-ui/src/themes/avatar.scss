@@ -1,0 +1,8 @@
+@import 'src/themes/themes';
+
+.App .rsAvatar {
+	background: theme-var($primaryRed100);
+	.nameInitial {
+		color: theme-var($primaryRed900);
+	}
+}

@@ -1,0 +1,12 @@
+@import 'src/themes/themes';
+
+.rsCodeGenSection {
+	padding: 32px;
+
+	.codeGenPreview {
+		padding: 16px;
+		background-color: theme-var($neutralBlack);
+		border-radius: 4px;
+		margin-bottom: 16px;
+	}
+}

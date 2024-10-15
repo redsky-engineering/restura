@@ -1,0 +1,58 @@
+@import 'src/themes/themes';
+
+.rsNestedObjectSelector {
+	width: fit-content;
+	min-width: 350px;
+	max-width: 600px;
+	position: absolute;
+	background: theme-var($neutralBeige900);
+	box-shadow: 1px 3px 8px -4px rgba(0, 0, 0, 0.3);
+	z-index: 10;
+
+	.header {
+		height: 64px;
+		padding: 0 16px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-bottom: 1px solid theme-var($neutralBeige600);
+		gap: 16px;
+
+		.rsIcon {
+			color: theme-var($neutralWhite);
+			&:hover {
+				color: theme-var($secondaryOrange500);
+			}
+		}
+	}
+
+	.keyGrid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr) 35px;
+
+		.tableHeader {
+			color: theme-var($neutralBeige500);
+			padding: 8px 16px;
+			background: theme-var($neutralBeige800);
+			margin-bottom: 8px;
+		}
+
+		.tableRow:hover > * {
+			background-color: theme-var($neutralBeige700);
+		}
+
+		.rsIcon {
+			align-self: center;
+			padding: 4px;
+			color: theme-var($neutralWhite);
+			&:hover {
+				color: theme-var($secondaryOrange500);
+			}
+		}
+
+		.tableItem {
+			align-self: center;
+			padding: 8px 16px;
+		}
+	}
+}

@@ -1,0 +1,49 @@
+@import 'src/themes/themes';
+
+.rsAssignmentInput {
+	.assignmentInput {
+		display: flex;
+		gap: 8px;
+
+		.rsInputText {
+			flex-grow: 1;
+		}
+	}
+
+	.deleteIcon {
+		color: theme-var($neutralBeige500);
+		cursor: pointer;
+		position: absolute;
+		left: -24px;
+		top: 11px;
+		&:hover {
+			color: theme-var($secondaryOrange500);
+		}
+	}
+
+	.assignmentParam + .assignmentParam {
+		margin-top: 16px;
+	}
+
+	.assignmentParam.last {
+		margin-bottom: 32px;
+	}
+
+	.assignmentParam {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+
+		.paramNameRequired {
+			display: grid;
+			align-items: center;
+			gap: 8px;
+			grid-template-columns: 50% 50%;
+
+			position: relative;
+			.rsInputText {
+				flex-grow: 1;
+			}
+		}
+	}
+}

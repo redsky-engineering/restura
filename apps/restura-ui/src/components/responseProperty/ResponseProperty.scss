@@ -1,0 +1,31 @@
+@import 'src/themes/themes';
+
+.rsResponseProperty {
+	height: 56px;
+	padding: 8px 16px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+
+	.responseAlias {
+		cursor: pointer;
+	}
+
+	.icon-delete {
+		color: transparent;
+	}
+
+	/* Neutral/Beige 800 */
+	&:hover {
+		background: theme-var($neutralBeige800);
+
+		.icon-delete {
+			color: theme-var($neutralBeige500);
+
+			&:hover {
+				color: theme-var($secondaryOrange500);
+			}
+		}
+	}
+}

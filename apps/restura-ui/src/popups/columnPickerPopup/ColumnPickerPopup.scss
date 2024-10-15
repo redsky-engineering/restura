@@ -1,0 +1,115 @@
+@import 'src/themes/themes';
+
+.rsColumnPickerPopup {
+	width: 90%;
+	min-width: 385px;
+	max-width: 800px;
+	height: 60vh;
+	position: absolute;
+	background: theme-var($neutralBeige900);
+	border: 1px solid theme-var($neutralBeige700);
+	border-radius: 4px;
+	box-shadow: 1px 3px 8px -4px rgba(0, 0, 0, 0.3);
+	z-index: 10;
+
+	.addAllBtn {
+		display: flex;
+		justify-content: flex-end;
+		align-items: center;
+		height: 32px;
+		gap: 8px;
+		padding: 8px;
+		border-bottom: 1px solid theme-var($neutralBeige800);
+
+		.rsIcon,
+		.rsLabel {
+			color: theme-var($neutralBeige400);
+		}
+		&:hover {
+			background-color: theme-var($neutralBeige800);
+			.rsIcon,
+			.rsLabel {
+				color: theme-var($secondaryOrange500);
+			}
+		}
+	}
+
+	.header {
+		height: 64px;
+		padding: 0 16px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-bottom: 1px solid theme-var($neutralBeige600);
+	}
+
+	.content {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		height: calc(100% - 48px);
+	}
+
+	.filter {
+		margin-bottom: 8px;
+	}
+
+	.customButton {
+		padding-top: 16px;
+		border-right: 1px solid theme-var($primaryRed500_50);
+	}
+
+	.tableList {
+		display: flex;
+		flex-direction: column;
+
+		.tableListItem {
+			padding: 16px 24px 16px 8px;
+			border-radius: 4px 0 0 4px;
+			border-color: theme-var($primaryRed500_50);
+			border-width: 0 1px 0 0;
+			border-style: solid;
+
+			&.isSelected {
+				background: theme-var($neutralBlack);
+				border-width: 1px 0 1px 1px;
+				.rsLabel {
+					color: theme-var($neutralWhite);
+				}
+			}
+			&:not(.isSelected) {
+				cursor: pointer;
+				&:hover .rsLabel {
+					color: theme-var($neutralWhite);
+					font-weight: $fwSemiBold;
+				}
+			}
+		}
+	}
+
+	.columnList {
+		background: theme-var($neutralBlack);
+		border-width: 1px 1px 1px 0;
+		border-style: solid;
+		border-color: theme-var($primaryRed700);
+		border-radius: 0 4px 4px 0;
+		cursor: pointer;
+		overflow-y: auto;
+
+		.columnListItem {
+			padding: 10px 8px;
+
+			&:hover {
+				background: theme-var($neutralBeige800);
+			}
+		}
+	}
+
+	.footer {
+		border-right: 1px solid theme-var($primaryRed500_50);
+		flex-grow: 1;
+	}
+
+	.columnListFooter {
+		flex-grow: 1;
+	}
+}

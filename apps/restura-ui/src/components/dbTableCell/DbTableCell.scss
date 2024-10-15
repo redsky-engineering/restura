@@ -1,0 +1,29 @@
+@import 'src/themes/themes';
+
+.rsDbTableCell {
+	padding: 4px 8px;
+	height: 50px;
+	display: flex;
+	align-items: center;
+
+	& > * {
+		width: 100%;
+	}
+
+	border: 1px solid transparent;
+	cursor: not-allowed;
+	&:hover:not(.disableEdit) {
+		cursor: pointer;
+		border: 1px solid theme-var($primaryRed500);
+	}
+
+	.primaryKeyIndicator {
+		position: absolute;
+		left: -14px;
+		top: 5px;
+	}
+
+	.rsSelect {
+		max-width: 300px;
+	}
+}

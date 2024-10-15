@@ -1,0 +1,57 @@
+@import 'src/themes/themes';
+
+.rsRequestParamInput {
+	.parameterInput {
+		display: flex;
+		gap: 8px;
+
+		.rsInputText {
+			flex-grow: 1;
+		}
+	}
+
+	.circleButton {
+		width: fit-content;
+	}
+
+	.deleteIcon {
+		color: theme-var($neutralBeige500);
+		cursor: pointer;
+		position: absolute;
+		left: -24px;
+		top: 11px;
+		&:hover {
+			color: theme-var($secondaryOrange500);
+		}
+	}
+
+	.paramValidators {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		padding-left: 32px;
+		.rsSelect {
+			width: 175px;
+		}
+		.rsInputText {
+			flex-grow: 1;
+		}
+	}
+
+	.requestParam {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		margin-bottom: 32px;
+
+		.paramNameRequired {
+			position: relative;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			.rsInputText {
+				flex-grow: 1;
+			}
+		}
+	}
+}

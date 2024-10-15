@@ -1,0 +1,43 @@
+@import 'src/themes/themes';
+
+.rsWhereClauseInput {
+	.conjunction + .whereItem,
+	.whereItem + .conjunction {
+		margin-top: 16px;
+	}
+
+	.conjunction {
+		width: 150px;
+	}
+
+	.whereItem {
+		display: flex;
+		align-items: center;
+		background: theme-var($neutralBeige800);
+		height: 56px;
+		border-radius: 4px;
+		padding: 8px 16px;
+		gap: 8px;
+		position: relative;
+
+		.rsInputText,
+		.rsAutoComplete {
+			flex-grow: 1;
+		}
+
+		.rsSelect {
+			min-width: 180px;
+		}
+	}
+
+	.deleteIcon {
+		color: theme-var($neutralBeige500);
+		cursor: pointer;
+		position: absolute;
+		left: -24px;
+		top: 19px;
+		&:hover {
+			color: theme-var($secondaryOrange500);
+		}
+	}
+}

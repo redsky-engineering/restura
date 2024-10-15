@@ -1,0 +1,37 @@
+@import 'src/themes/themes';
+
+.rsMenuItem {
+	height: 48px;
+	padding: 0 8px 0 20px;
+	background-color: theme-var($neutralBeige800);
+	display: flex;
+	align-items: center;
+
+	.rsLabel {
+		color: theme-var($neutralWhite);
+	}
+
+	.rsIcon {
+		color: theme-var($neutralWhite);
+		margin-right: 8px;
+	}
+
+	&.isNested {
+		background-color: theme-var($neutralBeige900);
+		padding-left: 64px;
+	}
+
+	&.isSelected {
+		background-color: theme-var($primaryRed900);
+		box-shadow: inset 3px 0 0 0 theme-var($primaryRed500);
+
+		.rsIcon {
+			color: theme-var($primaryRed500);
+		}
+	}
+
+	transition: filter 300ms;
+	&:hover {
+		filter: brightness(1.2) !important;
+	}
+}
