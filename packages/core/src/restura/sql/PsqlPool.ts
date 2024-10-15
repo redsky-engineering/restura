@@ -31,10 +31,16 @@ export class PsqlPool {
 		try {
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 			const response = await this.pool.query(formattedQuery, options as QueryConfigValues<any>);
+			// There should be one and only one row returned
+			if (response.rows.length === 0) throw new RsError('NOT_FOUND', 'No results found');
+			else if (response.rows.length > 1) throw new RsError('DUPLICATE', 'More than one result found');
+
 			return response.rows[0];
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (error: any) {
 			console.error(error, query, options);
+			if (RsError.isRsError(error)) throw error;
+
 			if (error?.routine === '_bt_check_unique') {
 				throw new RsError('DUPLICATE', error.message);
 			}

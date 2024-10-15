@@ -10,7 +10,7 @@ export function escapeColumnName(columnName: string | undefined): string {
 export function questionMarksToOrderedParams(query: string) {
 	let count = 1;
 
-	return query.replace(/'\?'/g, () => `$${count++}`);
+	return query.replace(/'\?'|\?/g, () => `$${count++}`);
 }
 
 export function insertObjectQuery(table: string, obj: DynamicObject): string {

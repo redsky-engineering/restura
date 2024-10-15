@@ -185,13 +185,9 @@ export function getRequestData(req: RsRequest<unknown>): DynamicObject {
 
 	const bodyData = req[body as keyof typeof req]; // Cast once and store in a variable
 
-	if (bodyData) {
+	if (bodyData && body === 'query') {
+		// When sending data in the query, it is always a string, we need to try to coerce it to correct types
 		for (const attr in bodyData) {
-			if (attr === 'token') {
-				delete bodyData[attr];
-				continue;
-			}
-
 			if (bodyData[attr] instanceof Array) {
 				const attrList = [];
 				for (const value of bodyData[attr]) {

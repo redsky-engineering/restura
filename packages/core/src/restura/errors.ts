@@ -78,6 +78,11 @@ export class RsError {
 	static htmlStatus(code: ErrorCode): number {
 		return htmlStatusMap[code];
 	}
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	static isRsError(error: any): error is RsError {
+		return error instanceof RsError;
+	}
 }
 
 // MAKE SURE TO ADD A NEW ERROR TO BOTH THE LIST AND AN APPROPRIATE HTML CODE
