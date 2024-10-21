@@ -1,18 +1,18 @@
-import * as React from 'react';
-import './RequestParamInput.scss';
 import { Box, Button, Checkbox, Icon, InputText, Label, rsToastify, Select } from '@redskytech/framework/ui';
-import { useRecoilValue } from 'recoil';
-import globalState from '../../state/globalState';
-import serviceFactory from '../../services/serviceFactory';
-import SchemaService from '../../services/schema/SchemaService';
+import * as React from 'react';
 import { useMemo, useState } from 'react';
+import { useRecoilValue } from 'recoil';
+import SchemaService from '../../services/schema/SchemaService';
+import serviceFactory from '../../services/serviceFactory';
+import globalState from '../../state/globalState';
+import './RequestParamInput.scss';
 
 import AceEditor from 'react-ace';
 
+import 'ace-builds/src-min-noconflict/ext-searchbox';
+import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/mode-typescript';
 import 'ace-builds/src-noconflict/theme-terminal';
-import 'ace-builds/src-noconflict/ext-language_tools';
-import 'ace-builds/src-min-noconflict/ext-searchbox';
 import { StringUtils } from '../../utils/utils.js';
 
 interface RequestParamInputProps {
@@ -165,6 +165,7 @@ const RequestParamInput: React.FC<RequestParamInputProps> = (props: RequestParam
 									return (
 										<Box
 											display={'flex'}
+											alignItems="center"
 											gap={8}
 											key={`${validator.type}_${validatorIndex}`}
 											position={'relative'}
@@ -227,6 +228,19 @@ const RequestParamInput: React.FC<RequestParamInputProps> = (props: RequestParam
 													});
 												}}
 											/>
+											{validator.type === 'TYPE_CHECK' && (
+												<Checkbox
+													labelText={'Is Nullable'}
+													look={'containedPrimary'}
+													checked={requestParam.isNullable}
+													onChange={(newValue) => {
+														schemaService.updateRequestParam(paramIndex, {
+															...requestParam,
+															isNullable: newValue.target.checked
+														});
+													}}
+												/>
+											)}
 										</Box>
 									);
 								})}

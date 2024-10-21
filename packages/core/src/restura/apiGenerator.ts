@@ -129,7 +129,7 @@ class ApiTree {
 												break;
 										}
 									}
-									return `'${p.name}'${p.required ? '' : '?'}:${requestType}`;
+									return `'${p.name}'${p.required ? '' : '?'}:${requestType}${p.isNullable ? ' | null' : ''}`;
 								})
 								.join(';\n')}${ObjectUtils.isArrayWithData(route.request) ? ';' : ''}
 		 `;
@@ -160,20 +160,20 @@ class ApiTree {
 
 	getNameAndType(p: ResponseData): string {
 		let responseType = 'any',
-			optional = false,
+			isNullable = false,
 			array = false;
 		if (p.selector) {
-			({ responseType, optional } = this.getTypeFromTable(p.selector, p.name));
+			({ responseType, isNullable } = this.getTypeFromTable(p.selector, p.name));
 		} else if (p.subquery) {
 			responseType = this.getFields(p.subquery.properties);
 			array = true;
 		}
-		return `${p.name}${optional ? '?' : ''}:${responseType}${array ? '[]' : ''}`;
+		return `${p.name}:${responseType}${array ? '[]' : ''}${isNullable ? ' | null' : ''}`;
 	}
 
-	getTypeFromTable(selector: string, name: string): { responseType: string; optional: boolean } {
+	getTypeFromTable(selector: string, name: string): { responseType: string; isNullable: boolean } {
 		const path = selector.split('.');
-		if (path.length === 0 || path.length > 2 || path[0] === '') return { responseType: 'any', optional: false };
+		if (path.length === 0 || path.length > 2 || path[0] === '') return { responseType: 'any', isNullable: false };
 
 		let tableName = path.length == 2 ? path[0] : name;
 		const columnName = path.length == 2 ? path[1] : path[0];
@@ -185,11 +185,11 @@ class ApiTree {
 		}
 
 		const column = table?.columns.find((c) => c.name == columnName);
-		if (!table || !column) return { responseType: 'any', optional: false };
+		if (!table || !column) return { responseType: 'any', isNullable: false };
 
 		return {
 			responseType: SqlUtils.convertDatabaseTypeToTypescript(column.type, column.value),
-			optional: column.roles.length > 0 || column.isNullable
+			isNullable: column.roles.length > 0 || column.isNullable
 		};
 	}
 }

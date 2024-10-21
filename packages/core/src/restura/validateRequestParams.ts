@@ -62,6 +62,8 @@ export default function validateRequestParams(
 }
 
 function validateRequestSingleParam(requestValue: unknown, requestParam: RequestData) {
+	if (requestParam.isNullable && requestValue === null) return;
+
 	requestParam.validator.forEach((validator) => {
 		switch (validator.type) {
 			case 'TYPE_CHECK':
