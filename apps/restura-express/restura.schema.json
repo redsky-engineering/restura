@@ -129,7 +129,8 @@
 						{ "name": "id", "selector": "user.id" },
 						{ "name": "firstName", "selector": "user.firstName" },
 						{ "name": "lastName", "selector": "user.lastName" },
-						{ "name": "email", "selector": "user.email" }
+						{ "name": "email", "selector": "user.email" },
+						{ "name": "phone", "selector": "user.phone" }
 					],
 					"assignments": [],
 					"where": [{ "tableName": "user", "columnName": "id", "operator": "=", "value": "#userId" }]
@@ -441,6 +442,7 @@
 						{
 							"name": "phone",
 							"required": false,
+							"isNullable": true,
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						},
 						{
@@ -454,7 +456,8 @@
 						{ "name": "id", "selector": "user.id" },
 						{ "name": "firstName", "selector": "user.firstName" },
 						{ "name": "lastName", "selector": "user.lastName" },
-						{ "name": "email", "selector": "user.email" }
+						{ "name": "email", "selector": "user.email" },
+						{ "name": "phone", "selector": "user.phone" }
 					],
 					"assignments": [],
 					"where": [{ "tableName": "user", "columnName": "id", "operator": "=", "value": "#userId" }]

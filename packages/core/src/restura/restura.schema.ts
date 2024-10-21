@@ -63,6 +63,7 @@ const requestDataSchema = z
 	.object({
 		name: z.string(),
 		required: z.boolean(),
+		isNullable: z.boolean().optional().default(false),
 		validator: z.array(validatorDataSchema)
 	})
 	.strict();
