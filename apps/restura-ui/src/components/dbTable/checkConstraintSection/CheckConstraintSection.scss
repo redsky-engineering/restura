@@ -1,0 +1,23 @@
+@import 'src/themes/themes';
+
+.rsCheckConstraintSection {
+	.tableCheckConstraintsDetailsGrid {
+		display: grid;
+		gap: 0 16px;
+		grid-template-columns: fit-content(200px) repeat(2, fit-content(350px));
+		position: relative;
+
+		// Background of table header
+		// I know this isn't the ideal way to do this, but it works for now
+		&:before {
+			content: '';
+			position: absolute;
+			left: -32px;
+			right: -32px;
+			top: -8px;
+			z-index: -1;
+			height: 32px;
+			background: theme-var($neutralBeige800);
+		}
+	}
+}

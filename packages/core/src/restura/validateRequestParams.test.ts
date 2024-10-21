@@ -1,7 +1,7 @@
-import validateRequestParams, { performTypeCheck, ValidationDictionary } from './validateRequestParams.js';
-import { RsRequest } from './types/expressCustom.js';
-import { RouteData } from './restura.schema.js';
 import { expect } from 'chai';
+import { RouteData } from './restura.schema.js';
+import { RsRequest } from './types/customExpress.types.js';
+import validateRequestParams, { performTypeCheck, ValidationDictionary } from './validateRequestParams.js';
 
 describe('validateRequestParams', () => {
 	const sampleRouteData: RouteData = {

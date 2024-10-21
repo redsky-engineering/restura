@@ -1,10 +1,10 @@
 import { ObjectUtils } from '@redskytech/core-utils';
 import jsonschema, { Schema } from 'jsonschema';
-import type { DynamicObject, RsRequest } from './types/expressCustom.js';
 import { Definition } from 'typescript-json-schema';
-import { RequestData, RouteData } from './restura.schema.js';
-import { RsError } from './errors';
 import { z } from 'zod';
+import { RsError } from './errors';
+import { RequestData, RouteData } from './restura.schema.js';
+import type { DynamicObject, RsRequest } from './types/customExpress.types.js';
 import { ValidatorData, ValidatorDataSchemeValue, validatorDataSchemeValue } from './types/validation.types';
 import addQuotesToStrings from './utils/addQuotesToStrings';
 
@@ -185,13 +185,9 @@ export function getRequestData(req: RsRequest<unknown>): DynamicObject {
 
 	const bodyData = req[body as keyof typeof req]; // Cast once and store in a variable
 
-	if (bodyData) {
+	if (bodyData && body === 'query') {
+		// When sending data in the query, it is always a string, we need to try to coerce it to correct types
 		for (const attr in bodyData) {
-			if (attr === 'token') {
-				delete bodyData[attr];
-				continue;
-			}
-
 			if (bodyData[attr] instanceof Array) {
 				const attrList = [];
 				for (const value of bodyData[attr]) {

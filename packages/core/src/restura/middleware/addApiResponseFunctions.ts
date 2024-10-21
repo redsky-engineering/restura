@@ -1,7 +1,7 @@
 import { NextFunction } from 'express';
 import { RsError, type ErrorCode, type HtmlStatusCodes } from '../errors.js';
 import { restura } from '../restura.js';
-import type { RsRequest, RsResponse } from '../types/expressCustom.js';
+import type { RsRequest, RsResponse } from '../types/customExpress.types.js';
 import type { RsErrorData, RsPagedResponseData } from '../types/restura.types.js';
 
 export default function addApiResponseFunctions(req: RsRequest<unknown>, res: RsResponse<unknown>, next: NextFunction) {

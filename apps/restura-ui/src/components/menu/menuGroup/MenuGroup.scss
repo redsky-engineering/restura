@@ -1,0 +1,17 @@
+@import 'src/themes/themes';
+
+.rsMenuGroup {
+	background-color: theme-var($neutralBeige900);
+
+	&.isChildSelected {
+		.rsAccordion .header .labelWrapper .rsIcon {
+			color: theme-var($neutralWhite);
+		}
+	}
+
+	.rsAccordion .header {
+		padding: 0 10px 0 20px;
+		height: 50px;
+		align-items: center;
+	}
+}

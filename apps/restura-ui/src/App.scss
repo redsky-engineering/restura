@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('fonts/Poppins/font.scss');
+@import 'themes/reset';
+@import 'themes/avatar';
+@import 'themes/themes';
+@import 'themes/label';
+@import 'themes/button';
+@import 'themes/toast';
+@import 'themes/checkbox';
+@import 'themes/select';
+@import 'themes/inputText';
+@import 'themes/inputTextarea';
+@import 'themes/chip';
+
+// Spread default theme into App class
+:root {
+	@include spread-map($defaultTheme);
+}
+
+// The following is needed to have pages fit 100% and fill all available screen area
+// This is important for pages that might have a background color different than the view
+#root,
+.App {
+	height: 100%;
+}
+
+body {
+	background-color: theme-var($neutralBlack);
+}
+
+.rsView {
+	height: 100%;
+	color: theme-var($neutralBeige900);
+	overflow: visible;
+	background-color: theme-var($neutralBlack);
+
+	.rsPage {
+		height: 100%;
+		min-height: calc(100vh);
+		position: relative;
+		overflow-y: visible;
+		background-color: theme-var($neutralBlack);
+	}
+}
+
+.loggedInView {
+	#admin {
+		height: calc(100% - #{$desktopAppBarHeight});
+		min-height: calc(100vh - #{$desktopAppBarHeight});
+		max-height: calc(100vh - #{$desktopAppBarHeight});
+		overflow: hidden;
+		flex-grow: 1;
+	}
+}

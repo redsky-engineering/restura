@@ -11,6 +11,6 @@
 	},
 	// The @restura/logger configuration
 	logger: {
-		level: 'info'
+		level: 'silly'
 	}
 }

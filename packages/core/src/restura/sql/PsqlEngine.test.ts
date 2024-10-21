@@ -1,6 +1,5 @@
-import PsqlEngine from './PsqlEngine.js';
+import { expect } from 'chai';
 import { types } from 'pg';
-import { DynamicObject, RsRequest } from '../types/expressCustom.js';
 import {
 	CustomRouteData,
 	JoinData,
@@ -10,8 +9,9 @@ import {
 	StandardRouteData,
 	WhereData
 } from '../restura.schema.js';
+import { DynamicObject, RsRequest } from '../types/customExpress.types.js';
+import PsqlEngine from './PsqlEngine.js';
 import { PsqlPool } from './PsqlPool.js';
-import { expect } from 'chai';
 
 const sampleSchema: ResturaSchema = {
 	database: [
@@ -631,464 +631,468 @@ const setupPgReturnTypes = () => {
 	});
 };
 
-const getTestConnectionPool = () => {
-	const psqlPool = new PsqlPool({
-		host: 'localhost',
-		port: 5488,
-		user: 'postgres',
-		database: 'postgres',
-		password: 'postgres',
-		max: 20,
-		idleTimeoutMillis: 30000,
-		connectionTimeoutMillis: 2000
-	});
-	setupPgReturnTypes();
-	return psqlPool;
-};
+const psqlPool = new PsqlPool({
+	host: 'localhost',
+	port: 5488,
+	user: 'postgres',
+	database: 'postgres',
+	password: 'postgres',
+	max: 20,
+	idleTimeoutMillis: 30000,
+	connectionTimeoutMillis: 2000
+});
+setupPgReturnTypes();
 
-describe('PsqlEngine createNestedSelect', () => {
-	xit('should call createNestedSelect', () => {
-		const psqlEngine = new PsqlEngine({} as PsqlPool);
-		// const responseData:ResponseData = {
-		// 	name: 'name',
-		// 	selector: 'company',
-		// 	subquery: {
-		// 		  table: 'company'
-		// 	}
-		// }
-		psqlEngine['createNestedSelect'](basicRequest, sampleSchema, item, patchUserRouteData, 'admin', []);
-	});
-});
+const trimRedundantWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
 
-describe('PsqlEngine executeGetRequest', () => {
-	const psqlEngine = new PsqlEngine(getTestConnectionPool());
-	it('should executeGetRequest', async () => {
-		const response = (await psqlEngine['executeGetRequest'](
-			basicRequest,
-			patchUserRouteData,
-			sampleSchema
-		)) as DynamicObject;
-		expect(response?.id).to.equal(1);
-		expect(response?.firstName).to.equal('Tanner');
-		expect(response?.lastName).to.equal('Burton');
-		expect(response?.email).to.equal('tanner@plvr.com');
+describe('PsqlEngine', function () {
+	after(function () {
+		psqlPool.pool.end();
 	});
-});
-describe('PsqlEngine executeUpdateRequest', () => {
-	const psqlEngine = new PsqlEngine(getTestConnectionPool());
-	it('should executeUpdateRequest', async () => {
-		const updateRequest: RsRequest = {
-			requesterDetails: {
-				role: 'admin',
-				host: 'google.com',
-				ipAddress: '1.1.1.1',
-				userId: 1
-			},
-			body: { id: 1, firstName: 'Billy', permissionLogin: false }
-		} as unknown as RsRequest;
-		const response = await psqlEngine['executeUpdateRequest'](updateRequest, patchUserRouteData, sampleSchema);
-		expect(response?.id).to.equal(1);
-		expect(response?.firstName).to.equal('Billy');
-		expect(response?.lastName).to.equal('Burton');
-		expect(response?.permissionLogin).to.equal(false);
-		expect(response?.email).to.equal('tanner@plvr.com');
-		const resetUserRequest = {
-			...updateRequest,
-			body: { id: 1, firstName: 'Tanner', permissionLogin: true }
-		} as unknown as RsRequest;
-		await psqlEngine['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
+
+	describe('PsqlEngine createNestedSelect', () => {
+		xit('should call createNestedSelect', () => {
+			// const psqlEngine = new PsqlEngine({} as PsqlPool);
+			// const responseData:ResponseData = {
+			// 	name: 'name',
+			// 	selector: 'company',
+			// 	subquery: {
+			// 		  table: 'company'
+			// 	}
+			// }
+			// psqlEngine['createNestedSelect'](basicRequest, sampleSchema, item, patchUserRouteData, 'admin', []);
+		});
 	});
-});
-describe('PsqlEngine executeCreateRequest', () => {
-	const psqlEngine = new PsqlEngine(getTestConnectionPool());
-	it('should executeCreateRequest', async () => {
-		const email = `${Date.now()}@plvr.com`;
-		const createRequest: RsRequest = {
-			requesterDetails: {
-				role: 'admin',
-				host: 'google.com',
-				ipAddress: '1.1.1.1',
-				userId: 1
-			},
-			data: { firstName: 'Billy', lastName: 'Bob', companyId: 1, password: 'asdfa', email, role: 'user' }
-		} as unknown as RsRequest;
-		const response = await psqlEngine['executeCreateRequest'](createRequest, patchUserRouteData, sampleSchema);
-		expect(response?.firstName).to.equal('Billy');
-		expect(response?.lastName).to.equal('Bob');
-		expect(response?.email).to.equal(email);
-		console.log(response.id);
-		// const deleteRequest: RsRequest = {
-		// 	requesterDetails: {
-		// 		role: 'admin',
-		// 		host: 'google.com',
-		// 		ipAddress: '1.1.1.1',
-		// 		userId:1,
-		// 	},
-		// 	query: {userId:response.id}
-		// } as unknown as RsRequest;
-		// const deleteResponse = await psqlEngine['executeDeleteRequest'](deleteRequest, patchUserRouteData, sampleSchema);
-		// console.log(deleteResponse.id);
+
+	describe('PsqlEngine executeGetRequest', () => {
+		const psqlEngine = new PsqlEngine(psqlPool);
+		it('should executeGetRequest', async () => {
+			const response = (await psqlEngine['executeGetRequest'](
+				basicRequest,
+				patchUserRouteData,
+				sampleSchema
+			)) as DynamicObject;
+			expect(response?.id).to.equal(1);
+			expect(response?.firstName).to.equal('Tanner');
+			expect(response?.lastName).to.equal('Burton');
+			expect(response?.email).to.equal('tanner@plvr.com');
+		});
 	});
-	it('should fail executeCreateRequest for duplicates', async () => {
-		const email = `${Date.now()}@plvr.com`;
-		const createRequest: RsRequest = {
-			requesterDetails: {
-				role: 'admin',
-				host: 'google.com',
-				ipAddress: '1.1.1.1',
-				userId: 1
-			},
-			data: { firstName: 'Billy', lastName: 'Bob', companyId: 1, password: 'asdfa', email, role: 'user' }
-		} as unknown as RsRequest;
-		await psqlEngine['executeCreateRequest'](
-			{ ...createRequest } as unknown as RsRequest,
-			patchUserRouteData,
-			sampleSchema
-		);
-		try {
+	describe('PsqlEngine executeUpdateRequest', () => {
+		const psqlEngine = new PsqlEngine(psqlPool);
+		it('should executeUpdateRequest', async () => {
+			const updateRequest: RsRequest = {
+				requesterDetails: {
+					role: 'admin',
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				},
+				body: { id: 1, firstName: 'Billy', permissionLogin: false }
+			} as unknown as RsRequest;
+			const response = await psqlEngine['executeUpdateRequest'](updateRequest, patchUserRouteData, sampleSchema);
+			expect(response?.id).to.equal(1);
+			expect(response?.firstName).to.equal('Billy');
+			expect(response?.lastName).to.equal('Burton');
+			expect(response?.permissionLogin).to.equal(false);
+			expect(response?.email).to.equal('tanner@plvr.com');
+			const resetUserRequest = {
+				...updateRequest,
+				body: { id: 1, firstName: 'Tanner', permissionLogin: true }
+			} as unknown as RsRequest;
+			await psqlEngine['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
+		});
+	});
+	describe('PsqlEngine executeCreateRequest', () => {
+		const psqlEngine = new PsqlEngine(psqlPool);
+		it('should executeCreateRequest', async () => {
+			const email = `${Date.now()}@plvr.com`;
+			const createRequest: RsRequest = {
+				requesterDetails: {
+					role: 'admin',
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				},
+				data: { firstName: 'Billy', lastName: 'Bob', companyId: 1, password: 'asdfa', email, role: 'user' }
+			} as unknown as RsRequest;
+			const response = await psqlEngine['executeCreateRequest'](createRequest, patchUserRouteData, sampleSchema);
+			expect(response?.firstName).to.equal('Billy');
+			expect(response?.lastName).to.equal('Bob');
+			expect(response?.email).to.equal(email);
+			console.log(response.id);
+			// const deleteRequest: RsRequest = {
+			// 	requesterDetails: {
+			// 		role: 'admin',
+			// 		host: 'google.com',
+			// 		ipAddress: '1.1.1.1',
+			// 		userId:1,
+			// 	},
+			// 	query: {userId:response.id}
+			// } as unknown as RsRequest;
+			// const deleteResponse = await psqlEngine['executeDeleteRequest'](deleteRequest, patchUserRouteData, sampleSchema);
+			// console.log(deleteResponse.id);
+		});
+		it('should fail executeCreateRequest for duplicates', async () => {
+			const email = `${Date.now()}@plvr.com`;
+			const createRequest: RsRequest = {
+				requesterDetails: {
+					role: 'admin',
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				},
+				data: { firstName: 'Billy', lastName: 'Bob', companyId: 1, password: 'asdfa', email, role: 'user' }
+			} as unknown as RsRequest;
 			await psqlEngine['executeCreateRequest'](
 				{ ...createRequest } as unknown as RsRequest,
 				patchUserRouteData,
 				sampleSchema
 			);
-			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-		} catch (e: any) {
-			expect(e.err).to.equal('DUPLICATE');
-		}
+			try {
+				await psqlEngine['executeCreateRequest'](
+					{ ...createRequest } as unknown as RsRequest,
+					patchUserRouteData,
+					sampleSchema
+				);
+				// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+			} catch (e: any) {
+				expect(e.err).to.equal('DUPLICATE');
+			}
+		});
 	});
-});
-describe('PsqlEngine generateGroupBy', () => {
-	const psqlEngine = new PsqlEngine({} as PsqlPool);
-	it('should format the GROUP BY', () => {
-		const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
-		routeData.groupBy = {
-			tableName: 'user',
-			columnName: 'firstName'
-		};
-		routeData.type = 'PAGED';
-		const response = psqlEngine['generateGroupBy'](routeData);
-		expect(trimRedundantWhitespace(response)).to.equal(`GROUP BY "user"."firstName"`);
-	});
-	it('should format the GROUP BY and prevent sqlInjection', () => {
-		const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
-		routeData.groupBy = {
-			tableName: 'user',
-			columnName: '; DROP some DB;'
-		};
-		routeData.type = 'PAGED';
-		const response = psqlEngine['generateGroupBy'](routeData);
-		expect(trimRedundantWhitespace(response)).to.equal(`GROUP BY "user"."; DROP some DB;"`);
-	});
-});
-
-describe('PsqlEngine generateOrderBy', () => {
-	const psqlEngine = new PsqlEngine({} as PsqlPool);
-	it('should format the ORDER BY', () => {
-		const orderBy = psqlEngine['generateOrderBy'](basicRequest, patchUserRouteData);
-		expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "user"."lastName" DESC`);
-	});
-	it('should format the ORDER BY when it is passed by the client in (req.data.sortBy)', () => {
-		const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
-		const req = JSON.parse(JSON.stringify(basicRequest));
-		routeData.type = 'PAGED';
-		req.data.sortBy = '"user"."firstName"';
-		const orderBy = psqlEngine['generateOrderBy'](req, routeData);
-		expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "user"."firstName" ASC`);
-	});
-	it('should prevent sortOrder sql injection', () => {
-		const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
-		const req = JSON.parse(JSON.stringify(basicRequest));
-		routeData.type = 'PAGED';
-		req.data.sortBy = '"user"."firstName"';
-		req.data.sortOrder = '; DROP SOME DB;';
-		const orderBy = psqlEngine['generateOrderBy'](req, routeData);
-		expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "user"."firstName" ASC`);
-	});
-	it('should prevent sortBy sql injection', () => {
-		const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
-		const req = JSON.parse(JSON.stringify(basicRequest));
-		routeData.type = 'PAGED';
-		req.data.sortBy = '; DROP SOME DB;';
-		req.data.sortOrder = 'DESC';
-		const orderBy = psqlEngine['generateOrderBy'](req, routeData);
-		expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "; DROP SOME DB;" DESC`);
-	});
-});
-
-describe('PsqlEngine createNestedSelect', () => {
-	it('should call createNestedSelect', () => {
+	describe('PsqlEngine generateGroupBy', () => {
 		const psqlEngine = new PsqlEngine({} as PsqlPool);
-		const responseData: ResponseData = {
-			name: 'firstName',
-			selector: 'user.firstName',
-			subquery: {
-				table: 'order',
-				properties: [
-					{
-						name: 'id',
-						selector: 'order.id'
-					},
-					{
-						name: 'amountCents',
-						selector: 'order.amountCents'
-					}
-				],
-				joins: [],
-				where: []
-			}
-		};
-		const response = psqlEngine['createNestedSelect'](
-			basicRequest,
-			sampleSchema,
-			responseData,
-			patchUserRouteData,
-			'admin',
-			[]
-		);
-		const expected = `COALESCE(( SELECT JSON_AGG(JSON_BUILD_OBJECT( 'id', "order"."id",'amountCents', "order"."amountCents" )) FROM "order" ), '[]')`;
-		expect(trimRedundantWhitespace(response)).to.equal(expected);
+		it('should format the GROUP BY', () => {
+			const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
+			routeData.groupBy = {
+				tableName: 'user',
+				columnName: 'firstName'
+			};
+			routeData.type = 'PAGED';
+			const response = psqlEngine['generateGroupBy'](routeData);
+			expect(trimRedundantWhitespace(response)).to.equal(`GROUP BY "user"."firstName"`);
+		});
+		it('should format the GROUP BY and prevent sqlInjection', () => {
+			const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
+			routeData.groupBy = {
+				tableName: 'user',
+				columnName: '; DROP some DB;'
+			};
+			routeData.type = 'PAGED';
+			const response = psqlEngine['generateGroupBy'](routeData);
+			expect(trimRedundantWhitespace(response)).to.equal(`GROUP BY "user"."; DROP some DB;"`);
+		});
+	});
+
+	describe('PsqlEngine generateOrderBy', () => {
+		const psqlEngine = new PsqlEngine({} as PsqlPool);
+		it('should format the ORDER BY', () => {
+			const orderBy = psqlEngine['generateOrderBy'](basicRequest, patchUserRouteData);
+			expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "user"."lastName" DESC`);
+		});
+		it('should format the ORDER BY when it is passed by the client in (req.data.sortBy)', () => {
+			const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
+			const req = JSON.parse(JSON.stringify(basicRequest));
+			routeData.type = 'PAGED';
+			req.data.sortBy = '"user"."firstName"';
+			const orderBy = psqlEngine['generateOrderBy'](req, routeData);
+			expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "user"."firstName" ASC`);
+		});
+		it('should prevent sortOrder sql injection', () => {
+			const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
+			const req = JSON.parse(JSON.stringify(basicRequest));
+			routeData.type = 'PAGED';
+			req.data.sortBy = '"user"."firstName"';
+			req.data.sortOrder = '; DROP SOME DB;';
+			const orderBy = psqlEngine['generateOrderBy'](req, routeData);
+			expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "user"."firstName" ASC`);
+		});
+		it('should prevent sortBy sql injection', () => {
+			const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
+			const req = JSON.parse(JSON.stringify(basicRequest));
+			routeData.type = 'PAGED';
+			req.data.sortBy = '; DROP SOME DB;';
+			req.data.sortOrder = 'DESC';
+			const orderBy = psqlEngine['generateOrderBy'](req, routeData);
+			expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "; DROP SOME DB;" DESC`);
+		});
+	});
+
+	describe('PsqlEngine createNestedSelect', () => {
+		it('should call createNestedSelect', () => {
+			const psqlEngine = new PsqlEngine({} as PsqlPool);
+			const responseData: ResponseData = {
+				name: 'firstName',
+				selector: 'user.firstName',
+				subquery: {
+					table: 'order',
+					properties: [
+						{
+							name: 'id',
+							selector: 'order.id'
+						},
+						{
+							name: 'amountCents',
+							selector: 'order.amountCents'
+						}
+					],
+					joins: [],
+					where: []
+				}
+			};
+			const response = psqlEngine['createNestedSelect'](
+				basicRequest,
+				sampleSchema,
+				responseData,
+				patchUserRouteData,
+				'admin',
+				[]
+			);
+			const expected = `COALESCE(( SELECT JSON_AGG(JSON_BUILD_OBJECT( 'id', "order"."id",'amountCents', "order"."amountCents" )) FROM "order" ), '[]')`;
+			expect(trimRedundantWhitespace(response)).to.equal(expected);
+		});
+	});
+
+	describe('PsqlEngine generateJoinStatements', () => {
+		const psqlEngine = new PsqlEngine({} as PsqlPool);
+		it('should generateJoinStatements', () => {
+			const joins: JoinData[] = [
+				{
+					table: 'company',
+					localColumnName: 'companyId',
+					foreignColumnName: 'id',
+					type: 'LEFT'
+				},
+				{
+					table: 'order',
+					localColumnName: 'id',
+					foreignColumnName: 'userId',
+					type: 'INNER'
+				}
+			];
+			const baseTable: string = 'user';
+			const routeData: StandardRouteData | CustomRouteData = patchUserRouteData;
+			const schema: ResturaSchema = sampleSchema;
+			const userRole: string | undefined = 'admin';
+			const response = psqlEngine['generateJoinStatements'](
+				basicRequest,
+				joins,
+				baseTable,
+				routeData,
+				schema,
+				userRole,
+				[]
+			);
+			expect(trimRedundantWhitespace(response)).to.equal(
+				'LEFT JOIN "company" ON "user"."companyId" = "company"."id" INNER JOIN "order" ON "user"."id" = "order"."userId"'
+			);
+		});
+	});
+	describe('PsqlEngine generateWhereClause', () => {
+		const psqlEngine = new PsqlEngine({} as PsqlPool);
+
+		xit('should format the where clause for STARTS WITH', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'firstName',
+					operator: 'STARTS WITH', // I don't think this was ever working. the % is being removed
+					value: 'T'
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE 'T%'`);
+		});
+		xit('should format the where clause for ENDS WITH', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'firstName',
+					operator: 'ENDS WITH', // I don't think this was ever working. the % is being removed
+					value: 'T'
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE '%T'`);
+		});
+		xit('should format the where clause for LIKE', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'firstName',
+					operator: 'LIKE', // I don't think this was ever working. the % is being removed
+					value: 'T'
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE '%T%'`);
+		});
+		it('should format the where clause for =', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'firstName',
+					operator: '=',
+					value: 'Tanner'
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" = 'Tanner'`);
+		});
+		it('should format the where clause for >', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: '>',
+					value: 0
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" > 0`);
+		});
+		it('should format the where clause for <', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: '<',
+					value: 0
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" < 0`);
+		});
+		it('should format the where clause for >', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: '>',
+					value: 0
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" > 0`);
+		});
+		it('should format the where clause for >=', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: '>=',
+					value: 0
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" >= 0`);
+		});
+		it('should format the where clause for <=', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: '<=',
+					value: 0
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" <= 0`);
+		});
+		it('should format the where clause for !=', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: '!=',
+					value: 0
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" != 0`);
+		});
+		xit('should format the where clause for IN numbers', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: 'IN',
+					value: [1, 2, 3] as unknown as string // type needs to be updated to support arrays but this is technically working
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" IN (1,2,3)`);
+		});
+		it('should format the where clause for IN strings', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: 'IN',
+					value: ['a', 'b', 'c'] as unknown as string // type needs to be updated to support arrays but this is technically working
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" IN ('a','b','c')`);
+		});
+		it('should format the where clause for NOT IN strings', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: 'NOT IN',
+					value: ['a', 'b', 'c'] as unknown as string // type needs to be updated to support arrays but this is technically working
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" NOT IN ('a','b','c')`);
+		});
+		it('should format the where clause and prevent sql injection', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: '=',
+					value: "';DROP DB;"
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" = ''';DROP DB;'`);
+		});
+		it('should test optional conjunction (AND OR)', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: '!=',
+					value: 0
+				},
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: '=',
+					value: 0,
+					conjunction: 'OR'
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" != 0 OR "user"."id" = 0`);
+		});
 	});
 });
-
-describe('PsqlEngine generateJoinStatements', () => {
-	const psqlEngine = new PsqlEngine({} as PsqlPool);
-	it('should generateJoinStatements', () => {
-		const joins: JoinData[] = [
-			{
-				table: 'company',
-				localColumnName: 'companyId',
-				foreignColumnName: 'id',
-				type: 'LEFT'
-			},
-			{
-				table: 'order',
-				localColumnName: 'id',
-				foreignColumnName: 'userId',
-				type: 'INNER'
-			}
-		];
-		const baseTable: string = 'user';
-		const routeData: StandardRouteData | CustomRouteData = patchUserRouteData;
-		const schema: ResturaSchema = sampleSchema;
-		const userRole: string | undefined = 'admin';
-		const response = psqlEngine['generateJoinStatements'](
-			basicRequest,
-			joins,
-			baseTable,
-			routeData,
-			schema,
-			userRole
-		);
-		expect(trimRedundantWhitespace(response)).to.equal(
-			'LEFT JOIN "company" ON "user"."companyId" = "company"."id" INNER JOIN "order" ON "user"."id" = "order"."userId"'
-		);
-	});
-});
-describe('PsqlEngine generateWhereClause', () => {
-	const psqlEngine = new PsqlEngine({} as PsqlPool);
-
-	xit('should format the where clause for STARTS WITH', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'firstName',
-				operator: 'STARTS WITH', // I don't think this was ever working. the % is being removed
-				value: 'T'
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE 'T%'`);
-	});
-	xit('should format the where clause for ENDS WITH', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'firstName',
-				operator: 'ENDS WITH', // I don't think this was ever working. the % is being removed
-				value: 'T'
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE '%T'`);
-	});
-	xit('should format the where clause for LIKE', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'firstName',
-				operator: 'LIKE', // I don't think this was ever working. the % is being removed
-				value: 'T'
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE '%T%'`);
-	});
-	it('should format the where clause for =', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'firstName',
-				operator: '=',
-				value: 'Tanner'
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" = 'Tanner'`);
-	});
-	it('should format the where clause for >', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: '>',
-				value: 0
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" > 0`);
-	});
-	it('should format the where clause for <', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: '<',
-				value: 0
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" < 0`);
-	});
-	it('should format the where clause for >', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: '>',
-				value: 0
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" > 0`);
-	});
-	it('should format the where clause for >=', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: '>=',
-				value: 0
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" >= 0`);
-	});
-	it('should format the where clause for <=', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: '<=',
-				value: 0
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" <= 0`);
-	});
-	it('should format the where clause for !=', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: '!=',
-				value: 0
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" != 0`);
-	});
-	xit('should format the where clause for IN numbers', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: 'IN',
-				value: [1, 2, 3] as unknown as string // type needs to be updated to support arrays but this is technically working
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" IN (1,2,3)`);
-	});
-	it('should format the where clause for IN strings', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: 'IN',
-				value: ['a', 'b', 'c'] as unknown as string // type needs to be updated to support arrays but this is technically working
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" IN ('a','b','c')`);
-	});
-	it('should format the where clause for NOT IN strings', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: 'NOT IN',
-				value: ['a', 'b', 'c'] as unknown as string // type needs to be updated to support arrays but this is technically working
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" NOT IN ('a','b','c')`);
-	});
-	it('should format the where clause and prevent sql injection', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: '=',
-				value: "';DROP DB;"
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" = ''';DROP DB;'`);
-	});
-	it('should test optional conjunction (AND OR)', () => {
-		const whereData: WhereData[] = [
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: '!=',
-				value: 0
-			},
-			{
-				tableName: 'user',
-				columnName: 'id',
-				operator: '=',
-				value: 0,
-				conjunction: 'OR'
-			}
-		];
-		// use array notation ['generateWhereClause'] to access private methods for unit testing
-		const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-		expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" != 0 OR "user"."id" = 0`);
-	});
-});
-
-const trimRedundantWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();

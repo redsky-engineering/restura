@@ -1,5 +1,5 @@
-import SqlEngine from './SqlEngine';
-import { DynamicObject, RsRequest } from '../types/expressCustom.js';
+import { ObjectUtils } from '@redskytech/core-utils';
+import { RsError } from '../errors';
 import {
 	CustomRouteData,
 	JoinData,
@@ -8,12 +8,12 @@ import {
 	StandardRouteData,
 	WhereData
 } from '../restura.schema.js';
-import { RsError } from '../errors';
-import { ObjectUtils } from '@redskytech/core-utils';
-import { SqlUtils } from './SqlUtils';
-import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
+import { DynamicObject, RsRequest } from '../types/customExpress.types.js';
 import { PageQuery } from '../types/restura.types.js';
 import { PsqlPool } from './PsqlPool.js';
+import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
+import SqlEngine from './SqlEngine';
+import { SqlUtils } from './SqlUtils';
 import filterPsqlParser from './filterPsqlParser.js';
 
 export default class PsqlEngine extends SqlEngine {
@@ -100,7 +100,7 @@ export default class PsqlEngine extends SqlEngine {
 		});
 
 		const query = insertObjectQuery(routeData.table, { ...(req.data as DynamicObject), ...parameterObj });
-		const createdItem = await this.psqlConnectionPool.queryOne(query, sqlParams);
+		const createdItem = await this.psqlConnectionPool.queryOne(query, sqlParams, req.requesterDetails);
 		const insertId = createdItem?.id;
 		const whereData: WhereData[] = [
 			{
@@ -164,13 +164,15 @@ export default class PsqlEngine extends SqlEngine {
 		if (routeData.type === 'ONE') {
 			return this.psqlConnectionPool.queryOne(
 				`${selectStatement}${sqlStatement}${groupByOrderByStatement};`,
-				sqlParams
+				sqlParams,
+				req.requesterDetails
 			);
 		} else if (routeData.type === 'ARRAY') {
 			// Array
 			return this.psqlConnectionPool.runQuery(
 				`${selectStatement}${sqlStatement}${groupByOrderByStatement};`,
-				sqlParams
+				sqlParams,
+				req.requesterDetails
 			);
 		} else if (routeData.type === 'PAGED') {
 			const data = req.data as PageQuery;
@@ -184,7 +186,8 @@ export default class PsqlEngine extends SqlEngine {
 					data.perPage || DEFAULT_PAGED_PER_PAGE_NUMBER,
 					(data.page - 1) * data.perPage || DEFAULT_PAGED_PAGE_NUMBER,
 					...sqlParams
-				]
+				],
+				req.requesterDetails
 			);
 			let total = 0;
 			if (ObjectUtils.isArrayWithData(pageResults)) {
@@ -243,7 +246,7 @@ export default class PsqlEngine extends SqlEngine {
 		// );
 		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
 		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause);
-		await this.psqlConnectionPool.queryOne(query, [...sqlParams]);
+		await this.psqlConnectionPool.queryOne(query, [...sqlParams], req.requesterDetails);
 		return this.executeGetRequest(req, routeData, schema) as unknown as DynamicObject;
 	}
 
@@ -268,7 +271,7 @@ export default class PsqlEngine extends SqlEngine {
                            FROM "${routeData.table}" ${joinStatement}`;
 		deleteStatement += this.generateWhereClause(req, routeData.where, routeData, sqlParams);
 		deleteStatement += ';';
-		await this.psqlConnectionPool.runQuery(deleteStatement, sqlParams);
+		await this.psqlConnectionPool.runQuery(deleteStatement, sqlParams, req.requesterDetails);
 		return true;
 	}
 
@@ -374,7 +377,7 @@ export default class PsqlEngine extends SqlEngine {
 				});
 				if (!requestParam)
 					throw new RsError('SCHEMA_ERROR', `Invalid route keyword in route ${routeData.name}`);
-				return data[requestParam.name];
+				return data[requestParam.name]?.toString() || '';
 			});
 
 			statement = statement.replace(/#[a-zA-Z][a-zA-Z0-9_]+/g, (value: string) => {
@@ -383,7 +386,7 @@ export default class PsqlEngine extends SqlEngine {
 				});
 				if (!requestParam)
 					throw new RsError('SCHEMA_ERROR', `Invalid route keyword in route ${routeData.name}`);
-				return data[requestParam.name];
+				return data[requestParam.name]?.toString() || '';
 			});
 
 			statement = filterPsqlParser.parse(statement);

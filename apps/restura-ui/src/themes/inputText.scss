@@ -1,0 +1,40 @@
+@import 'src/themes/themes';
+.App .rsInputText {
+	.inputContainer {
+		border: 1px solid theme-var($neutralBeige700);
+		border-radius: 4px;
+		padding: 8px;
+		background-color: theme-var($neutralBeige800);
+		height: 40px;
+
+		&:hover {
+			border: 1px solid theme-var($neutralBeige500);
+		}
+
+		&:focus-within {
+			border: 1px solid theme-var($primaryRed500);
+		}
+
+		input,
+		input::placeholder {
+			color: theme-var($neutralBeige500);
+			font-family: 'Poppins', sans-serif;
+			font-weight: 400;
+			font-size: 16px;
+			line-height: 24px;
+			letter-spacing: 0.08em;
+		}
+
+		input {
+			color: theme-var($neutralWhite);
+		}
+	}
+	.rsInputErrorMessage {
+		color: theme-var($neutralBeige500);
+		font-family: 'Poppins', sans-serif;
+		font-weight: 500;
+		font-size: 16px;
+		line-height: 24px;
+		letter-spacing: 0.08em;
+	}
+}

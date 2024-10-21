@@ -1,3 +1,4 @@
+import { ObjectUtils } from '@redskytech/core-utils';
 import { RsError } from '../errors';
 import {
 	JoinData,
@@ -8,8 +9,7 @@ import {
 	TableData,
 	WhereData
 } from '../restura.schema.js';
-import { DynamicObject, RsRequest } from '../types/expressCustom.js';
-import { ObjectUtils } from '@redskytech/core-utils';
+import { DynamicObject, RsRequest } from '../types/customExpress.types.js';
 
 export default abstract class SqlEngine {
 	async runQueryForRoute(
@@ -162,7 +162,10 @@ export default abstract class SqlEngine {
 				// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 				const globalParamValue = (req.requesterDetails as any)[param];
 				if (!globalParamValue)
-					throw new RsError('SCHEMA_ERROR', `Invalid global keyword clause in route ${routeData.name}`);
+					throw new RsError(
+						'SCHEMA_ERROR',
+						`Invalid global keyword clause in route (${routeData.path}) when looking for (#${param})`
+					);
 				sqlParams.push(globalParamValue); // pass by reference
 			});
 			return value.replace(new RegExp(/#[a-zA-Z][a-zA-Z0-9_]+/g), '?');

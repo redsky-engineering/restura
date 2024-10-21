@@ -1,0 +1,184 @@
+@import 'themes';
+@import '_variables.scss';
+
+.App .rsButton {
+	font-family: 'Space Mono', monospace;
+	font-size: 16px;
+	line-height: 24px;
+	font-weight: $fwBold;
+
+	height: 40px;
+	padding: 8px 16px;
+
+	&.small {
+		height: 32px;
+		padding: 4px 14px;
+	}
+
+	&.fullWidth {
+		width: 100%;
+	}
+
+	white-space: nowrap;
+	border-radius: 0;
+
+	&.containedPrimary {
+		color: theme-var($neutralBeige900);
+		background-image: theme-var($gradient90Deg);
+		border-radius: 20px;
+		position: relative;
+
+		&:hover:enabled {
+			color: theme-var($neutralWhite);
+		}
+		&:active:enabled {
+			color: theme-var($neutralWhite);
+		}
+		&:focus {
+		}
+		&.small {
+		}
+		&:disabled {
+			cursor: not-allowed;
+			opacity: 0.5;
+			background-image: unset;
+			background-color: theme-var($neutralBeige600);
+			color: theme-var($neutralBeige800);
+		}
+	}
+	&.outlinedPrimary {
+		background: theme-var($burntOrange);
+		background: theme-var($gradient90Deg);
+		background-clip: text;
+		-webkit-background-clip: text;
+		color: transparent;
+
+		border: 2px solid #ff1e1e;
+		border-radius: 20px;
+		position: relative;
+
+		&:hover {
+			background-clip: unset;
+			-webkit-background-clip: unset;
+			color: #ff1e1e;
+			background: theme-var($gradient90Deg_20);
+		}
+		&:active {
+		}
+		&:focus {
+		}
+		&.small {
+		}
+		&:disabled {
+			opacity: 0.5;
+			border: 2px solid theme-var($neutralBeige600);
+			color: theme-var($neutralBeige600);
+			cursor: not-allowed;
+		}
+	}
+	&.textPrimary {
+		color: theme-var($neutralWhite);
+		background: none;
+		border-radius: 20px;
+		&:hover {
+			color: #ff1e1e;
+			background-image: theme-var($gradient90Deg_20);
+		}
+		&:active {
+			color: #ff1e1e;
+			background: none;
+		}
+		&:focus {
+		}
+		&.small {
+		}
+		&:disabled {
+			cursor: not-allowed;
+		}
+	}
+
+	&.containedSecondary {
+		color: theme-var($neutralBeige900);
+		background: theme-var($primaryRed500);
+		border-radius: 20px;
+		position: relative;
+
+		&:hover:enabled {
+			color: theme-var($neutralWhite);
+		}
+		&:active:enabled {
+			color: theme-var($neutralWhite);
+		}
+		&:focus {
+		}
+		&.small {
+		}
+		&:disabled {
+			cursor: not-allowed;
+			background-color: theme-var($neutralBeige600);
+			color: theme-var($neutralBeige800);
+		}
+	}
+	&.outlinedSecondary {
+		border: 2px solid theme-var($primaryRed500);
+		border-radius: 20px;
+		position: relative;
+
+		&:hover {
+			color: theme-var($primaryRed500);
+			background: theme-var($gradient90Deg_20);
+		}
+		&:active {
+		}
+		&:focus {
+		}
+		&.small {
+		}
+		&:disabled {
+			cursor: not-allowed;
+			border: 2px solid theme-var($neutralBeige600);
+			color: theme-var($neutralBeige600);
+		}
+	}
+	&.textSecondary {
+		color: theme-var($neutralWhite);
+		background: none;
+		border-radius: 20px;
+		&:hover {
+			color: theme-var($primaryRed500);
+			background-image: theme-var($primaryRed500_50);
+		}
+		&:active {
+			color: theme-var($primaryRed500);
+			background: none;
+		}
+		&:focus {
+		}
+		&.small {
+		}
+		&:disabled {
+			cursor: not-allowed;
+			color: theme-var($neutralBeige600);
+		}
+	}
+	&.iconPrimary {
+		padding: 8px;
+		width: 40px;
+		border-radius: 50%;
+		background-color: theme-var($primaryRed500);
+		.rsIcon {
+			color: theme-var($neutralBlack);
+		}
+		&:hover {
+		}
+		&:active {
+		}
+		&:focus {
+		}
+		&.small {
+		}
+		&:disabled {
+			cursor: not-allowed;
+		}
+	}
+}

@@ -1,0 +1,45 @@
+@import 'src/themes/themes';
+
+.rsRouteEditor {
+	background-color: theme-var($neutralBlack);
+	flex-grow: 1;
+
+	.tabHeader {
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		padding: 4px 24px 0;
+		gap: 32px;
+
+		height: 43px;
+
+		background: theme-var($neutralBeige700);
+		border-bottom: 1px solid theme-var($primaryRed700);
+
+		.tab {
+			padding: 8px 16px 7px;
+			height: 39px;
+
+			.rsLabel {
+				color: theme-var($neutralBeige500);
+			}
+
+			&:not(.isSelected) {
+				cursor: pointer;
+			}
+
+			&.isSelected {
+				/* Neutral/Black */
+				background: theme-var($neutralBlack);
+				border-width: 1px 1px 0 1px;
+				border-style: solid;
+				border-color: theme-var($primaryRed700);
+				border-radius: 4px 4px 0 0;
+				.rsLabel {
+					color: theme-var($neutralWhite);
+				}
+			}
+		}
+	}
+}

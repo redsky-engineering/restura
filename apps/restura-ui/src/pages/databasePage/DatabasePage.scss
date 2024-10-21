@@ -1,0 +1,13 @@
+@import 'src/themes/themes';
+
+.rsDatabasePage {
+	.rsDbTable + .rsDbTable {
+		margin-top: 64px;
+	}
+
+	.pageContent {
+		padding: 32px;
+		height: calc(100vh - 128px);
+		overflow: auto;
+	}
+}

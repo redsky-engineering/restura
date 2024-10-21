@@ -1,0 +1,26 @@
+@import 'src/themes/themes';
+
+.rsEditSubqueryPopup {
+	width: 90%;
+	min-width: 500px;
+	max-width: 900px;
+	background: theme-var($neutralBeige900);
+	box-shadow: 1px 3px 8px -4px rgba(0, 0, 0, 0.3);
+	z-index: 10;
+
+	.header {
+		height: 64px;
+		padding: 0 16px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-bottom: 1px solid theme-var($neutralBeige600);
+	}
+
+	.content {
+		padding: 32px;
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+}

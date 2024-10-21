@@ -1,0 +1,55 @@
+@import 'src/themes/themes';
+
+.rsMenu {
+	background-color: theme-var($neutralBeige800);
+	color: theme-var($neutralWhite);
+	box-shadow:
+		0 1px 1px 0 rgba(0, 0, 0, 0.14),
+		0 2px 1px -1px rgba(0, 0, 0, 0.12),
+		0 1px 3px 0 rgba(0, 0, 0, 0.2);
+
+	width: 56px;
+	min-width: 56px; // Flex basis uses min-width
+	transition:
+		width 0.3s ease-in-out,
+		min-width 0.3s ease-in-out;
+
+	.rsMenuItem .rsLabel {
+		opacity: 0;
+		transition: opacity 0.3s ease-in-out;
+	}
+
+	&:hover {
+		width: 250px;
+		min-width: 250px;
+
+		.rsMenuItem .rsLabel {
+			opacity: 1;
+		}
+	}
+
+	.rsLabel {
+		color: theme-var($neutralWhite);
+	}
+
+	.logout {
+		border-top: 1px solid theme-var($neutralBeige700);
+		cursor: pointer;
+	}
+
+	.rsAccordion {
+		.articleItemChildren {
+			.rsMenuItem {
+				.rsLabel {
+					font-weight: 500;
+				}
+			}
+		}
+	}
+
+	.topName {
+		padding: 24px;
+		height: $desktopAppBarHeight;
+		background-color: theme-var($neutralBeige900);
+	}
+}

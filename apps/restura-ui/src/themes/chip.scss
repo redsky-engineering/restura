@@ -1,0 +1,32 @@
+@import 'src/themes/themes';
+
+.App .rsChip {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: baseline;
+	padding: 3px 12px 0;
+
+	height: 27px;
+	border-radius: 16px;
+
+	&.standard {
+		background: theme-var($gradient90Deg);
+		border: 1px solid transparent;
+		.rsLabel {
+			color: theme-var($neutralBeige900);
+			font-weight: $fwBlack;
+			user-select: none;
+		}
+	}
+
+	&.outlined {
+		background: theme-var($neutralBeige900);
+		border: 1px solid theme-var($neutralBeige600);
+		.rsLabel {
+			color: theme-var($neutralBeige600);
+			font-weight: $fwBlack;
+			user-select: none;
+		}
+	}
+}

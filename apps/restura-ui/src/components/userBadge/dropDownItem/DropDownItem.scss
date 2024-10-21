@@ -1,0 +1,15 @@
+@import '../../../themes/themes';
+
+.rsDropDownItem {
+	width: 100%;
+	background-color: inherit;
+	height: 35px;
+	transition: filter 300ms;
+	.rsIcon {
+		margin-left: auto;
+	}
+	&:hover {
+		cursor: pointer;
+		filter: brightness(1.2) !important;
+	}
+}

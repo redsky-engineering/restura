@@ -1,4 +1,4 @@
-import type { RsRequest } from './expressCustom.js';
+import type { RsRequest, RsResponse } from './customExpress.types.js';
 
 export interface SchemaChangeValue {
 	name: string;
@@ -61,17 +61,19 @@ export interface PageQuery {
 	sortBy: string;
 	sortOrder: StandardOrderTypes;
 	filter?: string;
-	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	[key: string]: any; // Other keys with any JSON-compatible value type
+	[key: string]: string | number | boolean | object | null | undefined; // Other keys with any JSON-compatible value type
 }
 
-export interface RoleWithOptionalUserDetails {
+export interface AuthenticationUserDetails {
 	role: string;
-	[key: string]: string | number | boolean | object | null; // Other keys with any JSON-compatible value type
+	userId?: number;
+	[key: string]: string | number | boolean | object | null | undefined; // Other keys with any JSON-compatible value type
 }
+
+export type ValidAuthenticationCallback = (userDetails: AuthenticationUserDetails) => void;
 
 export type AuthenticateHandler = (
 	req: RsRequest<unknown>,
-	onValid: (userDetails: RoleWithOptionalUserDetails) => void,
-	onReject: (errorMessage: string) => void
+	res: RsResponse<unknown>,
+	onValid: ValidAuthenticationCallback
 ) => Promise<void>;

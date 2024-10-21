@@ -1,5 +1,5 @@
 import format from 'pg-format';
-import { DynamicObject } from '../types/expressCustom.js';
+import { DynamicObject } from '../types/customExpress.types.js';
 
 export function escapeColumnName(columnName: string | undefined): string {
 	// consider using an existing library
@@ -10,7 +10,7 @@ export function escapeColumnName(columnName: string | undefined): string {
 export function questionMarksToOrderedParams(query: string) {
 	let count = 1;
 
-	return query.replace(/'\?'/g, () => `$${count++}`);
+	return query.replace(/'\?'|\?/g, () => `$${count++}`);
 }
 
 export function insertObjectQuery(table: string, obj: DynamicObject): string {
@@ -37,7 +37,7 @@ export function updateObjectQuery(table: string, obj: DynamicObject, whereStatem
                  RETURNING *`;
 }
 
-function isValueNumber(value: unknown): value is number {
+export function isValueNumber(value: unknown): value is number {
 	return !isNaN(Number(value));
 }
 // eslint-disable-next-line  @typescript-eslint/no-explicit-any
