@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { types } from 'pg';
+import { types, Client } from 'pg';
 import {
 	CustomRouteData,
 	JoinData,
@@ -23,6 +23,7 @@ const sampleSchema: ResturaSchema = {
 					hasAutoIncrement: true,
 					isNullable: false,
 					roles: [],
+					isPrimary: true,
 					type: 'BIGINT'
 				},
 				{
@@ -121,7 +122,7 @@ const sampleSchema: ResturaSchema = {
 					name: 'permissionLogin',
 					type: 'BOOLEAN',
 					isNullable: false,
-					default: '1'
+					default: true
 				},
 				{ roles: [], name: 'lastLoginOn', type: 'DATETIME', isNullable: true },
 				{
@@ -650,6 +651,17 @@ describe('PsqlEngine', function () {
 		psqlPool.pool.end();
 	});
 
+	describe('db diff', () => {
+		it('should create the database DDL from ResturaSchema', async () => {
+			const psqlEngine = new PsqlEngine(psqlPool);
+			// await psqlEngine.diffDatabaseToSchema(sampleSchema);
+			const ddl = psqlEngine.generateDatabaseSchemaFromSchema(sampleSchema);
+			const ddlNoSpace = trimRedundantWhitespace(ddl);
+			expect(ddlNoSpace).to.equal(
+				`CREATE TYPE "user_role_enum" AS ENUM ('admin','user'); CREATE TYPE "user_accountStatus_enum" AS ENUM ('banned','view_only','active'); CREATE TYPE "user_onboardingStatus_enum" AS ENUM ('verify_email','complete'); CREATE TABLE "company" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT 'now()', "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT 'now()', "name" VARCHAR(255) NULL ); CREATE TABLE "order" ( "id" BIGSERIAL NOT NULL, "amountCents" BIGINT NOT NULL, "userId" BIGINT NOT NULL ); CREATE TABLE "user" ( "id" BIGSERIAL NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT 'now()', "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT 'now()', "firstName" VARCHAR(30) NOT NULL, "lastName" VARCHAR(30) NOT NULL, "companyId" BIGINT NOT NULL, "password" VARCHAR(70) NOT NULL, "email" VARCHAR(100) NOT NULL, "role" "user_role_enum" NOT NULL, "permissionLogin" BOOLEAN NOT NULL DEFAULT 'true', "lastLoginOn" TIMESTAMPTZ NULL, "phone" VARCHAR(30) NULL, "loginDisabledOn" TIMESTAMPTZ NULL, "passwordResetGuid" VARCHAR(100) NULL, "verifyEmailPin" INT NULL, "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, "accountStatus" "user_accountStatus_enum" NOT NULL DEFAULT 'view_only', "passwordResetExpiresOn" TIMESTAMPTZ NULL, "onboardingStatus" "user_onboardingStatus_enum" NOT NULL DEFAULT 'verify_email', "pendingEmail" VARCHAR(100) NULL ); ALTER TABLE "user" ADD CONSTRAINT "user_companyId_company_id_fk" FOREIGN KEY ("companyId") REFERENCES "company" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION; CREATE INDEX "user_companyId_index" ON "user" ("companyId" ASC); CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC); CREATE INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC)`
+			);
+		});
+	});
 	describe('PsqlEngine createNestedSelect', () => {
 		xit('should call createNestedSelect', () => {
 			// const psqlEngine = new PsqlEngine({} as PsqlPool);
