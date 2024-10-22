@@ -120,50 +120,47 @@ export default class PsqlEngine extends SqlEngine {
 		sqlStatements.push(indexes.join(';\n'));
 		return enums.join('\n') + '\n' + sqlStatements.join('\n\n');
 	}
-	private async getScratchPool(): Promise<{ scratchPool: PsqlPool; scratchDBString: string }> {
-		const psqlConnectionPool = new PsqlPool({
-			host: 'localhost',
-			port: 5488,
-			user: 'postgres',
-			database: 'postgres',
-			password: 'postgres',
-			max: 20,
-			idleTimeoutMillis: 30000,
-			connectionTimeoutMillis: 2000
-		});
-		const scratchDBString = 'random';
-		await psqlConnectionPool.runQuery(`DROP DATABASE IF EXISTS temp_${scratchDBString}_scratch`, [], systemUser);
-		await psqlConnectionPool.runQuery(`CREATE DATABASE temp_${scratchDBString}_scratch;`, [], systemUser);
+	private async getScratchPool(): Promise<PsqlPool> {
+		await this.psqlConnectionPool.runQuery(
+			`DROP DATABASE IF EXISTS ${this.psqlConnectionPool.poolConfig.database}_scratch`,
+			[],
+			systemUser
+		);
+		await this.psqlConnectionPool.runQuery(
+			`CREATE DATABASE ${this.psqlConnectionPool.poolConfig.database}_scratch;`,
+			[],
+			systemUser
+		);
 		const scratchPool = new PsqlPool({
-			host: 'localhost',
-			port: 5488,
-			user: 'postgres',
-			database: `temp_${scratchDBString}_scratch`,
-			password: 'postgres',
-			max: 20,
-			idleTimeoutMillis: 30000,
-			connectionTimeoutMillis: 2000
+			host: this.psqlConnectionPool.poolConfig.host,
+			port: this.psqlConnectionPool.poolConfig.port,
+			user: this.psqlConnectionPool.poolConfig.user,
+			database: this.psqlConnectionPool.poolConfig.database + '_scratch',
+			password: this.psqlConnectionPool.poolConfig.password,
+			max: this.psqlConnectionPool.poolConfig.max,
+			idleTimeoutMillis: this.psqlConnectionPool.poolConfig.idleTimeoutMillis,
+			connectionTimeoutMillis: this.psqlConnectionPool.poolConfig.connectionTimeoutMillis
 		});
-		return { scratchPool, scratchDBString };
+		return scratchPool;
 	}
 
 	async diffDatabaseToSchema(schema: ResturaSchema): Promise<string> {
-		const { scratchPool, scratchDBString } = await this.getScratchPool();
+		const scratchPool = await this.getScratchPool();
 		await this.createDatabaseFromSchema(schema, scratchPool);
 
 		const originalClient = new Client({
-			database: 'postgres',
-			user: 'postgres',
-			password: 'postgres',
-			host: 'localhost',
-			port: 5488
+			database: this.psqlConnectionPool.poolConfig.database,
+			user: this.psqlConnectionPool.poolConfig.user,
+			password: this.psqlConnectionPool.poolConfig.password,
+			host: this.psqlConnectionPool.poolConfig.host,
+			port: this.psqlConnectionPool.poolConfig.port
 		});
 		const scratchClient = new Client({
-			database: `temp_${scratchDBString}_scratch`,
-			user: 'postgres',
-			password: 'postgres',
-			host: 'localhost',
-			port: 5488
+			database: this.psqlConnectionPool.poolConfig.database + '_scratch',
+			user: this.psqlConnectionPool.poolConfig.user,
+			password: this.psqlConnectionPool.poolConfig.password,
+			host: this.psqlConnectionPool.poolConfig.host,
+			port: this.psqlConnectionPool.poolConfig.port
 		});
 
 		await originalClient.connect();
