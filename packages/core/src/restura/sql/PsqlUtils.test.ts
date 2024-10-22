@@ -34,6 +34,19 @@ describe('PsqlUtils', () => {
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
+	it('should format a query and treat phone_numbers as a string', () => {
+		const phoneNumber = '+18018885555';
+		const id = 1;
+		const query = SQL`UPDATE "USER"
+                      SET "phone" = ${phoneNumber},
+                      WHERE "id" = ${id}
+                      RETURNING *`;
+		const expectedQuery = `UPDATE "USER"
+                           SET "phone" = '+18018885555',
+                           WHERE "id" = 1
+                           RETURNING *`;
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
+	});
 	it('should format a query and prevent sql injection', () => {
 		const firstName = "'; drop db;";
 		const isActive = true;
