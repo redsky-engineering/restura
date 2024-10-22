@@ -1,7 +1,7 @@
 import pg from 'pg';
 import format from 'pg-format';
 // See this github issue for why we need to do this https://github.com/brianc/node-postgres/issues/2819
-import { PoolConfig, Pool as PoolType, QueryConfigValues } from 'pg';
+import type { PoolConfig, Pool as PoolType, QueryConfigValues } from 'pg';
 import { logger } from '../../logger/logger.js';
 import { RsError } from '../errors.js';
 import type { RequesterDetails } from '../types/customExpress.types.js';

@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { types, Client } from 'pg';
+import { types } from 'pg';
 import {
 	CustomRouteData,
 	JoinData,

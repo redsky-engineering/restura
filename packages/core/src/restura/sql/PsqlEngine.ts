@@ -17,7 +17,8 @@ import { SqlUtils } from './SqlUtils';
 import filterPsqlParser from './filterPsqlParser.js';
 import getDiff from '@wmfs/pg-diff-sync';
 import pgInfo from '@wmfs/pg-info';
-import { Client } from 'pg';
+import pg from 'pg';
+const { Client } = 'pg';
 
 const systemUser: RequesterDetails = {
 	role: '',
