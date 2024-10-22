@@ -35,6 +35,7 @@ import type { AuthenticateHandler } from './types/restura.types.js';
 import validateRequestParams, { ValidationDictionary } from './validateRequestParams.js';
 import PsqlTransaction from './sql/PsqlTransaction.js';
 import PsqlConnection from './sql/PsqlConnection.js';
+import compareSchema from './compareSchema.js';
 const { types } = pg;
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
@@ -290,8 +291,7 @@ class ResturaEngine {
 	@boundMethod
 	private async previewCreateSchema(req: RsRequest<ResturaSchema>, res: express.Response) {
 		try {
-			// const schemaDiff = await compareSchema.diffSchema(req.data, this.schema);
-			const schemaDiff = { commands: '', endPoints: [], globalParams: [], roles: [], customTypes: false }; // todo remove this line
+			const schemaDiff = await compareSchema.diffSchema(req.data, this.schema, this.psqlEngine);
 			res.send({ data: schemaDiff });
 		} catch (err) {
 			res.status(400).send(err);

@@ -253,6 +253,9 @@ importers:
             jsonschema:
                 specifier: ^1.4.1
                 version: 1.4.1
+            lodash.clonedeep:
+                specifier: ^4.5.0
+                version: 4.5.0
             logform:
                 specifier: ^2.6.1
                 version: 2.6.1
@@ -299,6 +302,9 @@ importers:
             '@types/express':
                 specifier: ^4.17.21
                 version: 4.17.21
+            '@types/lodash.clonedeep':
+                specifier: ^4.5.6
+                version: 4.5.9
             '@types/mysql':
                 specifier: ^2.15.26
                 version: 2.15.26
