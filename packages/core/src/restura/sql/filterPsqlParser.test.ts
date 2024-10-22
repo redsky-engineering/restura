@@ -21,75 +21,75 @@ function testBadInput(inputString: string) {
 
 describe('Filter Psql Parsing test', function () {
 	it('Should parse valid strings', function (done: Done) {
-		test('!(column:id,value:4504055,type:contains)', `!(id ILIKE '%4504055%')`);
-		test('!(column:id,value:4504055,type:startsWith)', `!(id ILIKE '4504055%')`);
+		test('!(column:id,value:4504055,type:contains)', `!("id" ILIKE '%4504055%')`);
+		test('!(column:id,value:4504055,type:startsWith)', `!("id" ILIKE '4504055%')`);
 		test(
 			'!(column:id,value:4504055,type:contains)and!(column:name,value:jim,type:endsWith)',
-			`!(id ILIKE '%4504055%') and !(name ILIKE '%jim')`
+			`!("id" ILIKE '%4504055%') and !("name" ILIKE '%jim')`
 		);
-		test('(((column:id,value:4504055,type:contains)))', `(((id ILIKE '%4504055%')))`);
+		test('(((column:id,value:4504055,type:contains)))', `((("id" ILIKE '%4504055%')))`);
 
-		test('(column:id,value:15234,type:exact)', `(id = '15234')`);
+		test('(column:id,value:15234,type:exact)', `("id" = '15234')`);
 		test('(column:userId,value:15234,type:exact)', `("userId" = '15234')`);
 		test('!(column:userId,value:15234,type:exact)', `!("userId" = '15234')`);
 		test(
 			'!(!(column:userId,value:15234,type:exact)and!(column:name,value:jim,type:startsWith))or(column:name,value:bob)',
-			`!(!("userId" = '15234') and !(name ILIKE 'jim%')) or (name = 'bob')`
+			`!(!("userId" = '15234') and !("name" ILIKE 'jim%')) or ("name" = 'bob')`
 		);
 
-		test('(column:id,value:251,type:contains)', `(id ILIKE '%251%')`);
-		test('(column:id,value:25,type:exact)', `(id = '25')`);
-		test('(column:id,value:251,type:startsWith)', `(id ILIKE '251%')`);
-		test('(column:id,value:251,type:endsWith)', `(id ILIKE '%251')`);
+		test('(column:id,value:251,type:contains)', `("id" ILIKE '%251%')`);
+		test('(column:id,value:25,type:exact)', `("id" = '25')`);
+		test('(column:id,value:251,type:startsWith)', `("id" ILIKE '251%')`);
+		test('(column:id,value:251,type:endsWith)', `("id" ILIKE '%251')`);
 
 		test(
 			'(column:id,value:251,type:endsWith)or(column:id,value:278,type:endsWith)',
-			`(id ILIKE '%251') or (id ILIKE '%278')`
+			`("id" ILIKE '%251') or ("id" ILIKE '%278')`
 		);
 		test(
 			'((column:id,value:251)or(column:id,value:278)or(column:id,value:215))AND(column:status,value:PROCESSING,type:exact)',
-			`((id = '251') or (id = '278') or (id = '215')) AND (status = 'PROCESSING')`
+			`(("id" = '251') or ("id" = '278') or ("id" = '215')) AND ("status" = 'PROCESSING')`
 		);
 
 		test(
 			'(column:id,value:215)AND(column:totalPriceCents,value:3069,type:greaterThan)',
-			`(id = '215') AND ("totalPriceCents" > '3069')`
+			`("id" = '215') AND ("totalPriceCents" > '3069')`
 		);
 		test(
 			'(column:id,value:215)AND(column:totalPriceCents,value:3070,type:greaterThan)',
-			`(id = '215') AND ("totalPriceCents" > '3070')`
+			`("id" = '215') AND ("totalPriceCents" > '3070')`
 		);
 		test(
 			'(column:id,value:215)AND!(column:totalPriceCents,value:3070,type:greaterThan)',
-			`(id = '215') AND !("totalPriceCents" > '3070')`
+			`("id" = '215') AND !("totalPriceCents" > '3070')`
 		);
 		test(
 			'(column:id,value:215)AND!(column:totalPriceCents,value:3071,type:lessThan)',
-			`(id = '215') AND !("totalPriceCents" < '3071')`
+			`("id" = '215') AND !("totalPriceCents" < '3071')`
 		);
 		test(
 			'(column:id,value:215)AND!(column:totalPriceCents,value:3071,type:lessThanEqual)',
-			`(id = '215') AND !("totalPriceCents" <= '3071')`
+			`("id" = '215') AND !("totalPriceCents" <= '3071')`
 		);
 
 		test(
 			'(column:id,value:215)AND!(column:totalPriceCents,value:3071,type:lessThan)',
-			`(id = '215') AND !("totalPriceCents" < '3071')`
+			`("id" = '215') AND !("totalPriceCents" < '3071')`
 		);
-		test('(column:orderV2.id,value:215)', `("orderV2".id = '215')`);
+		test('(column:orderV2.id,value:215)', `("orderV2"."id" = '215')`);
 		test(
 			'(column:orderV2.id,value:215)AND(column:orderV2.totalPriceCents,value:3070,type:greaterThanEqual)and(column:totalPriceCents,value:3070,type:lessThanEqual)',
-			`("orderV2".id = '215') AND ("orderV2"."totalPriceCents" >= '3070') and ("totalPriceCents" <= '3070')`
+			`("orderV2"."id" = '215') AND ("orderV2"."totalPriceCents" >= '3070') and ("totalPriceCents" <= '3070')`
 		);
 
 		test(
 			'(column:id)AND!(column:totalPriceCents,value:3071,type:lessThan)',
-			`(id = NULL) AND !("totalPriceCents" < '3071')`
+			`("id" = NULL) AND !("totalPriceCents" < '3071')`
 		);
 
 		test(
 			'(column:id,type:isNull)AND!(column:totalPriceCents,value:3071,type:lessThan)',
-			`(isNull(id)) AND !("totalPriceCents" < '3071')`
+			`(isNull("id")) AND !("totalPriceCents" < '3071')`
 		);
 
 		done();

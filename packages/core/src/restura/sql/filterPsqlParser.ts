@@ -1,6 +1,57 @@
 import peg, { ParserBuildOptions } from 'pegjs';
 
 const filterSqlGrammar = `
+{
+// ported from pg-format but intentionally will add double quotes to every column
+ function quoteSqlIdentity(value) {
+    if (value === undefined || value === null) {
+        throw new Error('SQL identifier cannot be null or undefined');
+    } else if (value === false) {
+        return '"f"';
+    } else if (value === true) {
+        return '"t"';
+    } else if (value instanceof Date) {
+        // return '"' + formatDate(value.toISOString()) + '"';
+    } else if (value instanceof Buffer) {
+        throw new Error('SQL identifier cannot be a buffer');
+    } else if (Array.isArray(value) === true) {
+        var temp = [];
+        for (var i = 0; i < value.length; i++) {
+            if (Array.isArray(value[i]) === true) {
+                throw new Error('Nested array to grouped list conversion is not supported for SQL identifier');
+            } else {
+                // temp.push(quoteIdent(value[i]));
+            }
+        }
+        return temp.toString();
+    } else if (value === Object(value)) {
+        throw new Error('SQL identifier cannot be an object');
+    }
+
+    var ident = value.toString().slice(0); // create copy
+
+    // do not quote a valid, unquoted identifier
+    // if (/^[a-z_][a-z0-9_$]*$/.test(ident) === true && isReserved(ident) === false) {
+    //     return ident;
+    // }
+
+    var quoted = '"';
+
+    for (var i = 0; i < ident.length; i++) {
+        var c = ident[i];
+        if (c === '"') {
+            quoted += c + c;
+        } else {
+            quoted += c;
+        }
+    }
+
+    quoted += '"';
+
+    return quoted;
+};
+}
+
 start = expressionList
 
 expressionList =
@@ -19,9 +70,9 @@ negate = "!"
 operator = "and"i / "or"i
 
 	   
-column = left:text "." right:text { return  \`\${format.ident(left)}.\${format.ident(right)}\`; } 
+column = left:text "." right:text { return  \`\${quoteSqlIdentity(left)}.\${quoteSqlIdentity(right)}\`; } 
     / 
-    text:text { return format.ident(text); } 
+    text:text { return quoteSqlIdentity(text); } 
     
 
 text = text:[a-z0-9-_:@]i+ { return text.join("");}
