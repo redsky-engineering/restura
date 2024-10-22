@@ -251,6 +251,28 @@ const sampleSchema: ResturaSchema = {
 					where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
 				},
 				{
+					type: 'PAGED',
+					method: 'GET',
+					name: 'get all users',
+					description: 'Get all users',
+					path: '/user/all',
+					table: 'user',
+					roles: ['user', 'admin'],
+					request: [],
+					joins: [],
+					response: [
+						{ name: 'id', selector: 'user.id' },
+						{
+							name: 'firstName',
+							selector: 'user.firstName'
+						},
+						{ name: 'lastName', selector: 'user.lastName' },
+						{ name: 'email', selector: 'user.email' }
+					],
+					assignments: [],
+					where: []
+				},
+				{
 					type: 'CUSTOM_ONE',
 					method: 'POST',
 					name: 'Login',
@@ -608,6 +630,29 @@ const patchUserRouteData: RouteData = {
 	assignments: [],
 	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
 };
+const getAllRouteData: RouteData = {
+	type: 'PAGED',
+	method: 'GET',
+	name: 'get all users',
+	description: 'Get all users',
+	path: '/user/all',
+	table: 'user',
+	roles: ['user', 'admin'],
+	request: [],
+	joins: [],
+	response: [
+		{ name: 'id', selector: 'user.id' },
+		{
+			name: 'firstName',
+			selector: 'user.firstName'
+		},
+		{ name: 'lastName', selector: 'user.lastName' },
+		{ name: 'email', selector: 'user.email' }
+	],
+	assignments: [],
+	where: []
+};
+
 const basicRequest: RsRequest = {
 	requesterDetails: {
 		role: 'admin',
@@ -678,6 +723,24 @@ describe('PsqlEngine', function () {
 
 	describe('PsqlEngine executeGetRequest', () => {
 		const psqlEngine = new PsqlEngine(psqlPool);
+		it('should executeGetRequest that will return many', async () => {
+			const allRequest: RsRequest = {
+				requesterDetails: {
+					role: 'admin',
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				},
+				data: { page: 2 }
+			} as unknown as RsRequest;
+			const response = (await psqlEngine['executeGetRequest'](
+				allRequest,
+				getAllRouteData,
+				sampleSchema
+			)) as DynamicObject;
+			expect(response?.data.length).to.greaterThan(1);
+			expect(response?.total).to.greaterThan(1);
+		});
 		it('should executeGetRequest', async () => {
 			const response = (await psqlEngine['executeGetRequest'](
 				basicRequest,

@@ -331,23 +331,24 @@ export default class PsqlEngine extends SqlEngine {
 		} else if (routeData.type === 'PAGED') {
 			const data = req.data as PageQuery;
 			// The COUNT() does not work with group by and order by, so we need to catch that case and act accordingly
-			const pageResults = await this.psqlConnectionPool.runQuery(
-				`${selectStatement}${sqlStatement}${groupByOrderByStatement} LIMIT ? OFFSET ?;SELECT COUNT(${
-					routeData.groupBy ? `DISTINCT ${routeData.groupBy.tableName}.${routeData.groupBy.columnName}` : '*'
-				}) AS total\n${sqlStatement};`,
-				[
-					...sqlParams,
-					data.perPage || DEFAULT_PAGED_PER_PAGE_NUMBER,
-					(data.page - 1) * data.perPage || DEFAULT_PAGED_PAGE_NUMBER,
-					...sqlParams
-				],
+			const pagePromise = this.psqlConnectionPool.runQuery(
+				`${selectStatement}${sqlStatement}${groupByOrderByStatement}` +
+					SQL`LIMIT ${data.perPage || DEFAULT_PAGED_PER_PAGE_NUMBER} OFFSET ${(data.page - 1) * data.perPage || DEFAULT_PAGED_PAGE_NUMBER};`,
+				sqlParams,
 				req.requesterDetails
 			);
+			const totalQuery = `SELECT COUNT(${
+				routeData.groupBy ? `DISTINCT ${routeData.groupBy.tableName}.${routeData.groupBy.columnName}` : '*'
+			}) AS total\n ${sqlStatement};`;
+			const totalPromise = await this.psqlConnectionPool.runQuery(totalQuery, sqlParams, req.requesterDetails);
+
+			const [pageResults, totalResponse] = await Promise.all([pagePromise, totalPromise]);
+
 			let total = 0;
-			if (ObjectUtils.isArrayWithData(pageResults)) {
-				total = pageResults[1][0].total;
+			if (ObjectUtils.isArrayWithData(totalResponse)) {
+				total = totalResponse[0].total;
 			}
-			return { data: pageResults[0], total };
+			return { data: pageResults, total };
 		} else {
 			throw new RsError('UNKNOWN_ERROR', 'Unknown route type.');
 		}
