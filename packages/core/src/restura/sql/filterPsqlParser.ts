@@ -61,9 +61,9 @@ expressionList =
 
 expression = 
     negate:negate?"(" "column:" column:column ","? value:value? ","? type:type? ")" 
-    {return \`\${negate? "!" : ""}(\${type?  type(column, value) : \`\${column\} = \${format.literal(value)}\`})\`;}
+    {return \`\${negate? " NOT " : ""}(\${type?  type(column, value) : \`\${column\} = \${format.literal(value)}\`})\`;}
     /
-    negate:negate?"("expression:expressionList")" { return \`\${negate? "!" : ""}(\${expression})\`; }
+    negate:negate?"("expression:expressionList")" { return \`\${negate? " NOT " : ""}(\${expression})\`; }
 
 negate = "!"
     
