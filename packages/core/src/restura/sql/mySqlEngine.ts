@@ -89,47 +89,47 @@ class MySqlEngine extends SqlEngine {
 		return sqlStatements.join('\n\n');
 	}
 
-	// async diffDatabaseToSchema(schema: ResturaSchema): Promise<string> {
-	// 	let dbConfig: IMysqlDatabase = config.database[0];
-	//
-	// 	let scratchConnection: CustomPool = createCustomPool([
-	// 		{
-	// 			host: dbConfig.host,
-	// 			user: dbConfig.user,
-	// 			password: dbConfig.password,
-	// 			port: dbConfig.port
-	// 		}
-	// 	]);
-	// 	await scratchConnection.runQuery(
-	// 		`DROP DATABASE IF EXISTS ${config.database[0].database}_scratch;
-	// 									 CREATE DATABASE ${config.database[0].database}_scratch;
-	// 									 USE ${config.database[0].database}_scratch;`,
-	// 		[],
-	// 		systemUserRequesterDetails
-	// 	);
-	//
-	// 	scratchConnection.end();
-	// 	scratchConnection = createCustomPool([
-	// 		{
-	// 			host: dbConfig.host,
-	// 			user: dbConfig.user,
-	// 			password: dbConfig.password,
-	// 			port: dbConfig.port,
-	// 			database: `${config.database[0].database}_scratch`
-	// 		}
-	// 	]);
-	//
-	// 	await this.createDatabaseFromSchema(schema, scratchConnection);
-	// 	const diff = new DbDiff.DbDiff();
-	// 	const conn1 = `mysql://${dbConfig.user}:${encodeURIComponent(dbConfig.password)}@${dbConfig.host}:${
-	// 		dbConfig.port
-	// 	}/${dbConfig.database}`;
-	// 	const conn2 = `mysql://${dbConfig.user}:${encodeURIComponent(dbConfig.password)}@${dbConfig.host}:${
-	// 		dbConfig.port
-	// 	}/${dbConfig.database}_scratch`;
-	// 	await diff.compare(conn1, conn2);
-	// 	return diff.commands('');
-	// }
+	async diffDatabaseToSchema(schema: ResturaSchema): Promise<string> {
+		let dbConfig: IMysqlDatabase = config.database[0];
+
+		let scratchConnection: CustomPool = createCustomPool([
+			{
+				host: dbConfig.host,
+				user: dbConfig.user,
+				password: dbConfig.password,
+				port: dbConfig.port
+			}
+		]);
+		await scratchConnection.runQuery(
+			`DROP DATABASE IF EXISTS ${config.database[0].database}_scratch;
+										 CREATE DATABASE ${config.database[0].database}_scratch;
+										 USE ${config.database[0].database}_scratch;`,
+			[],
+			systemUserRequesterDetails
+		);
+
+		scratchConnection.end();
+		scratchConnection = createCustomPool([
+			{
+				host: dbConfig.host,
+				user: dbConfig.user,
+				password: dbConfig.password,
+				port: dbConfig.port,
+				database: `${config.database[0].database}_scratch`
+			}
+		]);
+
+		await this.createDatabaseFromSchema(schema, scratchConnection);
+		const diff = new DbDiff.DbDiff();
+		const conn1 = `mysql://${dbConfig.user}:${encodeURIComponent(dbConfig.password)}@${dbConfig.host}:${
+			dbConfig.port
+		}/${dbConfig.database}`;
+		const conn2 = `mysql://${dbConfig.user}:${encodeURIComponent(dbConfig.password)}@${dbConfig.host}:${
+			dbConfig.port
+		}/${dbConfig.database}_scratch`;
+		await diff.compare(conn1, conn2);
+		return diff.commands('');
+	}
 
 	private createNestedSelect(
 		req: RsRequest<unknown>,

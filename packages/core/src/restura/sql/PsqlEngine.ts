@@ -8,27 +8,183 @@ import {
 	StandardRouteData,
 	WhereData
 } from '../restura.schema.js';
-import { DynamicObject, RsRequest } from '../types/customExpress.types.js';
+import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpress.types.js';
 import { PageQuery } from '../types/restura.types.js';
 import { PsqlPool } from './PsqlPool.js';
 import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
 import SqlEngine from './SqlEngine';
 import { SqlUtils } from './SqlUtils';
 import filterPsqlParser from './filterPsqlParser.js';
+import getDiff from '@wmfs/pg-diff-sync';
+import pgInfo from '@wmfs/pg-info';
+import { Client } from 'pg';
+
+const systemUser: RequesterDetails = {
+	role: '',
+	host: '',
+	ipAddress: '',
+	isSystemUser: true
+};
 
 export default class PsqlEngine extends SqlEngine {
 	constructor(private psqlConnectionPool: PsqlPool) {
 		super();
 	}
-
-	async diffDatabaseToSchema(schema: ResturaSchema): Promise<string> {
-		console.log(schema);
-		return Promise.resolve('');
+	async createDatabaseFromSchema(schema: ResturaSchema, connection: PsqlPool): Promise<string> {
+		const sqlFullStatement = this.generateDatabaseSchemaFromSchema(schema);
+		await connection.runQuery(sqlFullStatement, [], systemUser);
+		return sqlFullStatement;
 	}
 
 	generateDatabaseSchemaFromSchema(schema: ResturaSchema): string {
-		console.log(schema);
-		return '';
+		const sqlStatements = [];
+		const enums = [];
+		const indexes = [];
+		for (const table of schema.database) {
+			let sql = `CREATE TABLE "${table.name}"
+					   ( `;
+			const tableColumns = [];
+			for (const column of table.columns) {
+				let columnSql = '';
+				if (column.type === 'ENUM') {
+					enums.push(`CREATE TYPE ${schemaToPsqlType(column, table.name)} AS ENUM (${column.value});`);
+				}
+				columnSql += `\t"${column.name}" ${schemaToPsqlType(column, table.name)}`;
+				let value = column.value;
+				// JSON's value is used only for typescript not for the database
+				if (column.type === 'JSON') value = '';
+				if (column.type === 'JSONB') value = '';
+				if (column.type === 'DECIMAL' && value) {
+					// replace the character '-' with comma since we use it to separate the values in restura for decimals
+					// also remove single and double quotes
+					value = value.replace('-', ',').replace(/['"]/g, '');
+				}
+				if (value && column.type !== 'ENUM') {
+					columnSql += `(${value})`;
+				} else if (column.length) columnSql += `(${column.length})`;
+				if (column.isPrimary) {
+					columnSql += ' PRIMARY KEY ';
+				}
+				if (column.isUnique) {
+					columnSql += ` CONSTRAINT "${table.name}_${column.name}_unique_index" UNIQUE `;
+				}
+				if (column.isNullable) columnSql += ' NULL';
+				else columnSql += ' NOT NULL';
+				if (column.default) columnSql += ` DEFAULT '${column.default}'`;
+				tableColumns.push(columnSql);
+			}
+			sql += tableColumns.join(', \n');
+			for (const index of table.indexes) {
+				if (!index.isPrimaryKey) {
+					let unique = ' ';
+					if (index.isUnique) unique = 'UNIQUE ';
+
+					indexes.push(
+						`\tCREATE ${unique}INDEX "${index.name}" ON "${table.name}" (${index.columns
+							.map((item) => {
+								return `"${item}" ${index.order}`;
+							})
+							.join(', ')})`
+					);
+				}
+			}
+			sql += '\n);';
+			sqlStatements.push(sql);
+		}
+		// Now setup foreign keys
+		for (const table of schema.database) {
+			if (!table.foreignKeys.length) continue;
+			const sql = `ALTER TABLE "${table.name}" `;
+			const constraints: string[] = [];
+			for (const foreignKey of table.foreignKeys) {
+				let constraint = `\t ADD CONSTRAINT "${foreignKey.name}"
+        FOREIGN KEY ("${foreignKey.column}") REFERENCES "${foreignKey.refTable}" ("${foreignKey.refColumn}")`;
+				constraint += ` ON DELETE ${foreignKey.onDelete}`;
+				constraint += ` ON UPDATE ${foreignKey.onUpdate}`;
+				constraints.push(constraint);
+			}
+			sqlStatements.push(sql + constraints.join(',\n') + ';');
+		}
+
+		// Now setup check constraints
+		for (const table of schema.database) {
+			if (!table.checkConstraints.length) continue;
+			const sql = `ALTER TABLE "${table.name}" `;
+			const constraints: string[] = [];
+			for (const check of table.checkConstraints) {
+				const constraint = `ADD CONSTRAINT "${check.name}" CHECK (${check.check})`;
+				constraints.push(constraint);
+			}
+			sqlStatements.push(sql + constraints.join(',\n') + ';');
+		}
+		sqlStatements.push(indexes.join(';\n'));
+		return enums.join('\n') + '\n' + sqlStatements.join('\n\n');
+	}
+	private async getScratchPool(): Promise<{ scratchPool: PsqlPool; scratchDBString: string }> {
+		const psqlConnectionPool = new PsqlPool({
+			host: 'localhost',
+			port: 5488,
+			user: 'postgres',
+			database: 'postgres',
+			password: 'postgres',
+			max: 20,
+			idleTimeoutMillis: 30000,
+			connectionTimeoutMillis: 2000
+		});
+		const scratchDBString = 'random';
+		await psqlConnectionPool.runQuery(`DROP DATABASE IF EXISTS temp_${scratchDBString}_scratch`, [], systemUser);
+		await psqlConnectionPool.runQuery(`CREATE DATABASE temp_${scratchDBString}_scratch;`, [], systemUser);
+		const scratchPool = new PsqlPool({
+			host: 'localhost',
+			port: 5488,
+			user: 'postgres',
+			database: `temp_${scratchDBString}_scratch`,
+			password: 'postgres',
+			max: 20,
+			idleTimeoutMillis: 30000,
+			connectionTimeoutMillis: 2000
+		});
+		return { scratchPool, scratchDBString };
+	}
+
+	async diffDatabaseToSchema(schema: ResturaSchema): Promise<string> {
+		const { scratchPool, scratchDBString } = await this.getScratchPool();
+		await this.createDatabaseFromSchema(schema, scratchPool);
+
+		const originalClient = new Client({
+			database: 'postgres',
+			user: 'postgres',
+			password: 'postgres',
+			host: 'localhost',
+			port: 5488
+		});
+		const scratchClient = new Client({
+			database: `temp_${scratchDBString}_scratch`,
+			user: 'postgres',
+			password: 'postgres',
+			host: 'localhost',
+			port: 5488
+		});
+
+		await originalClient.connect();
+		await scratchClient.connect();
+
+		const info1 = await pgInfo({
+			client: originalClient,
+			schema: 'public'
+		});
+
+		const info2 = await pgInfo({
+			client: scratchClient,
+			schema: 'public'
+		});
+
+		const diff = getDiff(info1, info2);
+		console.log('Schema differences:', diff);
+
+		await originalClient.end();
+		await scratchClient.end();
+		return diff.join('\n');
 	}
 
 	protected createNestedSelect(
@@ -400,3 +556,11 @@ export default class PsqlEngine extends SqlEngine {
 		return whereClause;
 	}
 }
+
+const schemaToPsqlType = (column, tableName) => {
+	if (column.hasAutoIncrement) return 'BIGSERIAL';
+	if (column.type === 'ENUM') return `"${tableName}_${column.name}_enum"`;
+	if (column.type === 'DATETIME') return 'TIMESTAMPTZ';
+	if (column.type === 'MEDIUMINT') return 'INT';
+	return column.type;
+};
