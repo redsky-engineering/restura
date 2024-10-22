@@ -45,7 +45,9 @@ export function SQL(strings: any, ...values: any) {
 	let query = strings[0];
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 	values.forEach((value: any, index: number) => {
-		if (isValueNumber(value)) {
+		if (typeof value === 'boolean') {
+			query += value;
+		} else if (typeof value === 'number') {
 			query += value;
 		} else {
 			query += format.literal(value); // escape input
