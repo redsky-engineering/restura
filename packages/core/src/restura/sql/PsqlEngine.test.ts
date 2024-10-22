@@ -795,7 +795,7 @@ describe('PsqlEngine', function () {
 			expect(response?.firstName).to.equal('Billy');
 			expect(response?.lastName).to.equal('Bob');
 			expect(response?.email).to.equal(email);
-			console.log(response.id);
+			// console.log(response.id);
 			// const deleteRequest: RsRequest = {
 			// 	requesterDetails: {
 			// 		role: 'admin',

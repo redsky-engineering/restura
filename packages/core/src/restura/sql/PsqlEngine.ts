@@ -178,8 +178,6 @@ export default class PsqlEngine extends SqlEngine {
 		});
 
 		const diff = getDiff(info1, info2);
-		console.log('Schema differences:', diff);
-
 		await originalClient.end();
 		await scratchClient.end();
 		return diff.join('\n');
