@@ -5,15 +5,13 @@ import { RsError } from '../errors.js';
 import { logger } from '../../logger/logger.js';
 import format from 'pg-format';
 
-export default class PsqlConnection {
+export default abstract class PsqlConnection {
 	constructor() {}
 
-	protected async query<R extends QueryResultRow = any>(
+	protected abstract query<R extends QueryResultRow = any>(
 		query: string,
 		values?: QueryConfigValues<any>
-	): Promise<QueryResult<R>> {
-		return {} as unknown as QueryResult<R>;
-	}
+	): Promise<QueryResult<R>>;
 
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 	async queryOne(query: string, options: any[], requesterDetails: RequesterDetails) {
