@@ -11,25 +11,25 @@ class CompareSchema {
 		latestSchema: ResturaSchema,
 		psqlEngine: PsqlEngine
 	): Promise<SchemaPreview> {
-		let endPoints = this.diffEndPoints(newSchema.endpoints![0].routes, latestSchema.endpoints![0].routes);
-		let globalParams = this.diffStringArray(newSchema.globalParams, latestSchema.globalParams);
-		let roles = this.diffStringArray(newSchema.roles, latestSchema.roles);
+		const endPoints = this.diffEndPoints(newSchema.endpoints![0].routes, latestSchema.endpoints![0].routes);
+		const globalParams = this.diffStringArray(newSchema.globalParams, latestSchema.globalParams);
+		const roles = this.diffStringArray(newSchema.roles, latestSchema.roles);
 
 		let commands = '';
 		if (JSON.stringify(newSchema.database) !== JSON.stringify(latestSchema.database))
 			commands = await psqlEngine.diffDatabaseToSchema(newSchema);
 
-		let customTypes = newSchema.customTypes !== latestSchema.customTypes;
+		const customTypes = newSchema.customTypes !== latestSchema.customTypes;
 		const schemaPreview: SchemaPreview = { endPoints, globalParams, roles, commands, customTypes };
 		return schemaPreview;
 	}
 
 	@boundMethod
 	private diffStringArray(newArray: string[], originalArray: string[]): SchemaChangeValue[] {
-		let stringsDiff: SchemaChangeValue[] = [];
-		let originalClone = new Set(originalArray);
+		const stringsDiff: SchemaChangeValue[] = [];
+		const originalClone = new Set(originalArray);
 		newArray.forEach((item) => {
-			let originalIndex = originalClone.has(item);
+			const originalIndex = originalClone.has(item);
 			if (!originalIndex) {
 				stringsDiff.push({
 					name: item,
@@ -50,11 +50,11 @@ class CompareSchema {
 
 	@boundMethod
 	private diffEndPoints(newEndPoints: RouteData[], originalEndpoints: RouteData[]): SchemaChangeValue[] {
-		let originalClone = cloneDeep(originalEndpoints);
-		let diffObj: SchemaChangeValue[] = [];
+		const originalClone = cloneDeep(originalEndpoints);
+		const diffObj: SchemaChangeValue[] = [];
 		newEndPoints.forEach((endPoint) => {
-			let { path, method } = endPoint;
-			let endPointIndex = originalClone.findIndex((original) => {
+			const { path, method } = endPoint;
+			const endPointIndex = originalClone.findIndex((original) => {
 				return original.path === endPoint.path && original.method === endPoint.method;
 			});
 			if (endPointIndex === -1) {
@@ -63,7 +63,7 @@ class CompareSchema {
 					changeType: 'NEW'
 				});
 			} else {
-				let original = originalClone.findIndex((original) => {
+				const original = originalClone.findIndex((original) => {
 					return this.compareEndPoints(endPoint, original);
 				});
 				if (original === -1) {
@@ -76,7 +76,7 @@ class CompareSchema {
 			}
 		});
 		originalClone.forEach((original) => {
-			let { path, method } = original;
+			const { path, method } = original;
 			diffObj.push({
 				name: `${method} ${path}`,
 				changeType: 'DELETED'

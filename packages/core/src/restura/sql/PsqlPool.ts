@@ -21,9 +21,9 @@ export class PsqlPool extends PsqlConnection {
 			});
 	}
 
-	protected async query<R extends QueryResultRow = any>(
+	protected async query<R extends QueryResultRow = QueryResultRow, T extends Array<unknown> = unknown[]>(
 		query: string,
-		values?: QueryConfigValues<any>
+		values?: QueryConfigValues<T>
 	): Promise<QueryResult<R>> {
 		return this.pool.query(query, values) as Promise<QueryResult<R>>;
 	}

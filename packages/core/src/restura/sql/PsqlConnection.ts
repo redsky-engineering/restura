@@ -1,16 +1,16 @@
 import { QueryConfigValues, QueryResult, QueryResultRow } from 'pg';
+import format from 'pg-format';
+import { logger } from '../../logger/logger.js';
+import { RsError } from '../errors.js';
 import { RequesterDetails } from '../types/customExpress.types.js';
 import { questionMarksToOrderedParams } from './PsqlUtils.js';
-import { RsError } from '../errors.js';
-import { logger } from '../../logger/logger.js';
-import format from 'pg-format';
 
 export default abstract class PsqlConnection {
 	constructor() {}
 
-	protected abstract query<R extends QueryResultRow = any>(
+	protected abstract query<R extends QueryResultRow = QueryResultRow, T extends Array<unknown> = unknown[]>(
 		query: string,
-		values?: QueryConfigValues<any>
+		values?: QueryConfigValues<T>
 	): Promise<QueryResult<R>>;
 
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any

@@ -1,12 +1,12 @@
-import pg from 'pg';
 import type { ClientConfig, Client as ClientType, QueryConfigValues, QueryResult, QueryResultRow } from 'pg';
+import pg from 'pg';
 import PsqlConnection from './PsqlConnection.js';
 
 const { Client } = pg;
 
 export default class PsqlTransaction extends PsqlConnection {
 	public client: ClientType;
-	private beginTransactionPromise: Promise<any>;
+	private beginTransactionPromise: Promise<QueryResult<QueryResultRow>>;
 
 	constructor(public clientConfig: ClientConfig) {
 		super();
@@ -30,9 +30,9 @@ export default class PsqlTransaction extends PsqlConnection {
 		return this.client.end();
 	}
 
-	protected async query<R extends QueryResultRow = any>(
+	protected async query<R extends QueryResultRow = QueryResultRow, T extends Array<unknown> = unknown[]>(
 		query: string,
-		values?: QueryConfigValues<any>
+		values?: QueryConfigValues<T>
 	): Promise<QueryResult<R>> {
 		await this.client.connect();
 		await this.beginTransactionPromise;

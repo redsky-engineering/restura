@@ -90,7 +90,7 @@ class MySqlEngine extends SqlEngine {
 	}
 
 	async diffDatabaseToSchema(schema: ResturaSchema): Promise<string> {
-		let dbConfig: IMysqlDatabase = config.database[0];
+		const dbConfig: IMysqlDatabase = config.database[0];
 
 		let scratchConnection: CustomPool = createCustomPool([
 			{
