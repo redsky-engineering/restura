@@ -1,4 +1,7 @@
 import { ObjectUtils } from '@redskytech/core-utils';
+import getDiff from '@wmfs/pg-diff-sync';
+import pgInfo from '@wmfs/pg-info';
+import pg from 'pg';
 import { RsError } from '../errors';
 import {
 	CustomRouteData,
@@ -6,7 +9,8 @@ import {
 	ResponseData,
 	ResturaSchema,
 	StandardRouteData,
-	WhereData
+	WhereData,
+	type ColumnData
 } from '../restura.schema.js';
 import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpress.types.js';
 import { PageQuery } from '../types/restura.types.js';
@@ -15,10 +19,7 @@ import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './P
 import SqlEngine from './SqlEngine';
 import { SqlUtils } from './SqlUtils';
 import filterPsqlParser from './filterPsqlParser.js';
-import getDiff from '@wmfs/pg-diff-sync';
-import pgInfo from '@wmfs/pg-info';
-import pg from 'pg';
-const { Client } = 'pg';
+const { Client } = pg;
 
 const systemUser: RequesterDetails = {
 	role: '',
@@ -71,7 +72,7 @@ export default class PsqlEngine extends SqlEngine {
 				}
 				if (column.isNullable) columnSql += ' NULL';
 				else columnSql += ' NOT NULL';
-				if (column.default) columnSql += ` DEFAULT '${column.default}'`;
+				if (column.default) columnSql += ` DEFAULT ${column.default}`;
 				tableColumns.push(columnSql);
 			}
 			sql += tableColumns.join(', \n');
@@ -168,13 +169,11 @@ export default class PsqlEngine extends SqlEngine {
 		await scratchClient.connect();
 
 		const info1 = await pgInfo({
-			client: originalClient,
-			schema: 'public'
+			client: originalClient
 		});
 
 		const info2 = await pgInfo({
-			client: scratchClient,
-			schema: 'public'
+			client: scratchClient
 		});
 
 		const diff = getDiff(info1, info2);
@@ -554,10 +553,10 @@ export default class PsqlEngine extends SqlEngine {
 	}
 }
 
-const schemaToPsqlType = (column, tableName) => {
+function schemaToPsqlType(column: ColumnData, tableName: string) {
 	if (column.hasAutoIncrement) return 'BIGSERIAL';
 	if (column.type === 'ENUM') return `"${tableName}_${column.name}_enum"`;
 	if (column.type === 'DATETIME') return 'TIMESTAMPTZ';
 	if (column.type === 'MEDIUMINT') return 'INT';
 	return column.type;
-};
+}

@@ -55,6 +55,7 @@ const sampleSchema: ResturaSchema = {
 					hasAutoIncrement: true,
 					isNullable: false,
 					roles: ['admin', 'user'],
+					isPrimary: true,
 					type: 'BIGINT'
 				},
 				{
@@ -122,7 +123,7 @@ const sampleSchema: ResturaSchema = {
 					name: 'permissionLogin',
 					type: 'BOOLEAN',
 					isNullable: false,
-					default: true
+					default: 'true'
 				},
 				{ roles: [], name: 'lastLoginOn', type: 'DATETIME', isNullable: true },
 				{
@@ -153,7 +154,7 @@ const sampleSchema: ResturaSchema = {
 					type: 'ENUM',
 					isNullable: false,
 					value: "'banned','view_only','active'",
-					default: 'view_only'
+					default: '"view_only"'
 				},
 				{
 					roles: [],
@@ -168,7 +169,7 @@ const sampleSchema: ResturaSchema = {
 					type: 'ENUM',
 					isNullable: false,
 					value: "'verify_email','complete'",
-					default: 'verify_email'
+					default: '"verify_email"'
 				},
 				{
 					roles: [],
@@ -685,7 +686,7 @@ const psqlPool = new PsqlPool({
 	password: 'postgres',
 	max: 20,
 	idleTimeoutMillis: 30000,
-	connectionTimeoutMillis: 2000
+	connectionTimeoutMillis: 10000
 });
 setupPgReturnTypes();
 
@@ -703,7 +704,7 @@ describe('PsqlEngine', function () {
 			const ddl = psqlEngine.generateDatabaseSchemaFromSchema(sampleSchema);
 			const ddlNoSpace = trimRedundantWhitespace(ddl);
 			expect(ddlNoSpace).to.equal(
-				`CREATE TYPE "user_role_enum" AS ENUM ('admin','user'); CREATE TYPE "user_accountStatus_enum" AS ENUM ('banned','view_only','active'); CREATE TYPE "user_onboardingStatus_enum" AS ENUM ('verify_email','complete'); CREATE TABLE "company" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT 'now()', "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT 'now()', "name" VARCHAR(255) NULL ); CREATE TABLE "order" ( "id" BIGSERIAL NOT NULL, "amountCents" BIGINT NOT NULL, "userId" BIGINT NOT NULL ); CREATE TABLE "user" ( "id" BIGSERIAL NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT 'now()', "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT 'now()', "firstName" VARCHAR(30) NOT NULL, "lastName" VARCHAR(30) NOT NULL, "companyId" BIGINT NOT NULL, "password" VARCHAR(70) NOT NULL, "email" VARCHAR(100) NOT NULL, "role" "user_role_enum" NOT NULL, "permissionLogin" BOOLEAN NOT NULL DEFAULT 'true', "lastLoginOn" TIMESTAMPTZ NULL, "phone" VARCHAR(30) NULL, "loginDisabledOn" TIMESTAMPTZ NULL, "passwordResetGuid" VARCHAR(100) NULL, "verifyEmailPin" INT NULL, "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, "accountStatus" "user_accountStatus_enum" NOT NULL DEFAULT 'view_only', "passwordResetExpiresOn" TIMESTAMPTZ NULL, "onboardingStatus" "user_onboardingStatus_enum" NOT NULL DEFAULT 'verify_email', "pendingEmail" VARCHAR(100) NULL ); ALTER TABLE "user" ADD CONSTRAINT "user_companyId_company_id_fk" FOREIGN KEY ("companyId") REFERENCES "company" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION; CREATE INDEX "user_companyId_index" ON "user" ("companyId" ASC); CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC); CREATE INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC)`
+				`CREATE TYPE "user_role_enum" AS ENUM ('admin','user'); CREATE TYPE "user_accountStatus_enum" AS ENUM ('banned','view_only','active'); CREATE TYPE "user_onboardingStatus_enum" AS ENUM ('verify_email','complete'); CREATE TABLE "company" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "name" VARCHAR(255) NULL ); CREATE TABLE "order" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "amountCents" BIGINT NOT NULL, "userId" BIGINT NOT NULL ); CREATE TABLE "user" ( "id" BIGSERIAL NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "firstName" VARCHAR(30) NOT NULL, "lastName" VARCHAR(30) NOT NULL, "companyId" BIGINT NOT NULL, "password" VARCHAR(70) NOT NULL, "email" VARCHAR(100) NOT NULL, "role" "user_role_enum" NOT NULL, "permissionLogin" BOOLEAN NOT NULL DEFAULT true, "lastLoginOn" TIMESTAMPTZ NULL, "phone" VARCHAR(30) NULL, "loginDisabledOn" TIMESTAMPTZ NULL, "passwordResetGuid" VARCHAR(100) NULL, "verifyEmailPin" INT NULL, "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, "accountStatus" "user_accountStatus_enum" NOT NULL DEFAULT "view_only", "passwordResetExpiresOn" TIMESTAMPTZ NULL, "onboardingStatus" "user_onboardingStatus_enum" NOT NULL DEFAULT "verify_email", "pendingEmail" VARCHAR(100) NULL ); ALTER TABLE "user" ADD CONSTRAINT "user_companyId_company_id_fk" FOREIGN KEY ("companyId") REFERENCES "company" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION; CREATE INDEX "user_companyId_index" ON "user" ("companyId" ASC); CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC); CREATE INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC)`
 			);
 		});
 	});

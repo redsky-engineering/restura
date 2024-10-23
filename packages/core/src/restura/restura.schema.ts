@@ -63,7 +63,7 @@ const requestDataSchema = z
 	.object({
 		name: z.string(),
 		required: z.boolean(),
-		isNullable: z.boolean().optional().default(false),
+		isNullable: z.boolean().optional(),
 		validator: z.array(validatorDataSchema)
 	})
 	.strict();
@@ -134,7 +134,6 @@ export type CustomRouteData = z.infer<typeof customRouteSchema>;
 
 export type RouteData = CustomRouteData | StandardRouteData;
 
-// PostgresColumnNumericTypes Zod enum with PascalCase values and comments
 export const postgresColumnNumericTypesSchema = z.enum([
 	'SMALLINT', // 2 bytes, -32,768 to 32,767
 	'INTEGER', // 4 bytes, -2,147,483,648 to 2,147,483,647
@@ -148,7 +147,6 @@ export const postgresColumnNumericTypesSchema = z.enum([
 ]);
 export type PostgresColumnNumericTypes = z.infer<typeof postgresColumnNumericTypesSchema>;
 
-// PostgresColumnStringTypes Zod enum with PascalCase values and comments
 export const postgresColumnStringTypesSchema = z.enum([
 	'CHAR', // fixed-length, blank-padded
 	'VARCHAR', // variable-length with limit
@@ -157,7 +155,6 @@ export const postgresColumnStringTypesSchema = z.enum([
 ]);
 export type PostgresColumnStringTypes = z.infer<typeof postgresColumnStringTypesSchema>;
 
-// PostgresColumnDateTypes Zod enum with PascalCase values and comments
 export const postgresColumnDateTypesSchema = z.enum([
 	'DATE', // calendar date (year, month, day)
 	'TIMESTAMP', // both date and time (without time zone)
@@ -167,7 +164,12 @@ export const postgresColumnDateTypesSchema = z.enum([
 ]);
 export type PostgresColumnDateTypes = z.infer<typeof postgresColumnDateTypesSchema>;
 
-// MariaDbColumnNumericTypes Zod enum with PascalCase values and comments
+export const postgresColumnJsonTypesSchema = z.enum([
+	'JSON', // stores JSON data as raw text
+	'JSONB' // stores JSON data in a binary format, optimized for query performance
+]);
+export type PostgresColumnJsonTypes = z.infer<typeof postgresColumnJsonTypesSchema>;
+
 export const mariaDbColumnNumericTypesSchema = z.enum([
 	'BOOLEAN', // 1-byte A synonym for "TINYINT(1)". Supported from version 1.2.0 onwards.
 	'TINYINT', // 1-byte A very small integer. Numeric value with scale 0. Signed: -126 to +127. Unsigned: 0 to 253.
@@ -181,7 +183,6 @@ export const mariaDbColumnNumericTypesSchema = z.enum([
 ]);
 export type MariaDbColumnNumericTypes = z.infer<typeof mariaDbColumnNumericTypesSchema>;
 
-// MariaDbColumnStringTypes Zod enum with PascalCase values and comments
 export const mariaDbColumnStringTypesSchema = z.enum([
 	'CHAR', // 1, 2, 4, or 8 bytes Holds letters and special characters of fixed length. Max length is 255. Default and minimum size is 1 byte.
 	'VARCHAR', // 1, 2, 4, or 8 bytes or 8-byte token Holds letters, numbers, and special characters of variable length. Max length = 8000 bytes or characters and minimum length = 1 byte or character.
@@ -215,6 +216,7 @@ const columnDataSchema = z
 			postgresColumnNumericTypesSchema,
 			postgresColumnStringTypesSchema,
 			postgresColumnDateTypesSchema,
+			postgresColumnJsonTypesSchema,
 			mariaDbColumnNumericTypesSchema,
 			mariaDbColumnStringTypesSchema,
 			mariaDbColumnDateTypesSchema
