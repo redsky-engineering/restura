@@ -235,6 +235,9 @@ importers:
             '@wmfs/pg-info':
                 specifier: ^1.20.1
                 version: 1.20.1
+            bluebird:
+                specifier: ^3.7.2
+                version: 3.7.2
             body-parser:
                 specifier: ^1.20.3
                 version: 1.20.3
@@ -287,6 +290,9 @@ importers:
                 specifier: ^3.23.8
                 version: 3.23.8
         devDependencies:
+            '@types/bluebird':
+                specifier: ^3.5.42
+                version: 3.5.42
             '@types/body-parser':
                 specifier: ^1.19.5
                 version: 1.19.5
@@ -2432,6 +2438,12 @@ packages:
             }
         deprecated: This is a stub types definition for axios (https://github.com/mzabriskie/axios). axios provides its own type definitions, so you don't need @types/axios installed!
 
+    '@types/bluebird@3.5.42':
+        resolution:
+            {
+                integrity: sha512-Jhy+MWRlro6UjVi578V/4ZGNfeCOcNCp0YaFNIUGFKlImowqwb1O/22wDVk3FDGMLqxdpOV3qQHD5fPEH4hK6A==
+            }
+
     '@types/body-parser@1.19.5':
         resolution:
             {
@@ -3491,6 +3503,12 @@ packages:
         resolution:
             {
                 integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==
+            }
+
+    bluebird@3.7.2:
+        resolution:
+            {
+                integrity: sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg==
             }
 
     body-parser@1.20.3:
@@ -10913,6 +10931,8 @@ snapshots:
         transitivePeerDependencies:
             - supports-color
 
+    '@types/bluebird@3.5.42': {}
+
     '@types/body-parser@1.19.5':
         dependencies:
             '@types/connect': 3.4.38
@@ -11652,6 +11672,8 @@ snapshots:
             buffer: 5.7.1
             inherits: 2.0.4
             readable-stream: 3.6.2
+
+    bluebird@3.7.2: {}
 
     body-parser@1.20.3:
         dependencies:

@@ -1,5 +1,5 @@
 import format from 'pg-format';
-import { DynamicObject } from '../types/customExpress.types.js';
+import { DynamicObject, RequesterDetails } from '../types/customExpress.types.js';
 
 export function escapeColumnName(columnName: string | undefined): string {
 	// consider using an existing library
@@ -13,26 +13,33 @@ export function questionMarksToOrderedParams(query: string) {
 	return query.replace(/'\?'|\?/g, () => `$${count++}`);
 }
 
-export function insertObjectQuery(table: string, obj: DynamicObject): string {
+export function insertObjectQuery(table: string, obj: DynamicObject, requesterDetails: RequesterDetails): string {
 	const keys = Object.keys(obj);
 	const params = Object.values(obj);
 
 	const columns = keys.map((column) => escapeColumnName(column)).join(', ');
 	const values = params.map((value) => SQL`${value}`).join(', ');
 
-	const query = `INSERT INTO "${table}" (${columns})
+	const query = `--REQUESTER_DETAILS(${JSON.stringify(requesterDetails)})
+INSERT INTO "${table}" (${columns})
                  VALUES (${values})
                  RETURNING *`;
 	return query;
 }
 
-export function updateObjectQuery(table: string, obj: DynamicObject, whereStatement: string): string {
+export function updateObjectQuery(
+	table: string,
+	obj: DynamicObject,
+	whereStatement: string,
+	requesterDetails: RequesterDetails
+): string {
 	const setArray = [];
 	for (const i in obj) {
 		setArray.push(`${escapeColumnName(i)} = ` + SQL`${obj[i]}`);
 	}
 
-	return `UPDATE ${escapeColumnName(table)}
+	return `--REQUESTER_DETAILS(${JSON.stringify(requesterDetails)})
+UPDATE ${escapeColumnName(table)}
                  SET ${setArray.join(', ')} ${whereStatement}
                  RETURNING *`;
 }

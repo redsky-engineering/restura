@@ -9,9 +9,11 @@ import {
 	StandardRouteData,
 	WhereData
 } from '../restura.schema.js';
-import { DynamicObject, RsRequest } from '../types/customExpress.types.js';
+import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpress.types.js';
 import PsqlEngine from './PsqlEngine.js';
 import { PsqlPool } from './PsqlPool.js';
+import eventManager from '../eventManager.js';
+import cloneDeep from 'lodash.clonedeep';
 
 const sampleSchema: ResturaSchema = {
 	database: [
@@ -631,6 +633,77 @@ const patchUserRouteData: RouteData = {
 	assignments: [],
 	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
 };
+
+const createOrderRouteData: RouteData = {
+	type: 'ONE',
+	method: 'POST',
+	name: 'Create order',
+	description: 'Create order',
+	path: '/order',
+	table: 'order',
+	roles: ['user', 'admin'],
+	orderBy: {
+		columnName: 'id',
+		order: 'DESC',
+		tableName: 'order'
+	},
+	request: [
+		{
+			name: 'userId',
+			required: true,
+			validator: [{ type: 'TYPE_CHECK', value: 'number' }]
+		},
+		{
+			name: 'amountCents',
+			required: true,
+			validator: [{ type: 'TYPE_CHECK', value: 'number' }]
+		}
+	],
+	joins: [],
+	response: [
+		{ name: 'id', selector: 'order.id' },
+		{ name: 'userId', selector: 'order.userId' },
+		{ name: 'amountCents', selector: 'order.amountCents' }
+	],
+	assignments: [],
+	// where: [{ tableName: 'order', columnName: 'id', operator: '=', value: '#userId' }]
+	where: []
+};
+const deleteOrderRouteData: RouteData = {
+	type: 'PAGED',
+	method: 'DELETE',
+	name: 'Delete order',
+	description: 'Delete order',
+	path: '/order',
+	table: 'order',
+	roles: ['user', 'admin'],
+	orderBy: {
+		columnName: 'id',
+		order: 'DESC',
+		tableName: 'order'
+	},
+	request: [
+		{
+			name: 'userId',
+			required: true,
+			validator: [{ type: 'TYPE_CHECK', value: 'number' }]
+		},
+		{
+			name: 'amountCents',
+			required: true,
+			validator: [{ type: 'TYPE_CHECK', value: 'number' }]
+		}
+	],
+	joins: [],
+	response: [
+		{ name: 'id', selector: 'order.id' },
+		{ name: 'userId', selector: 'order.userId' },
+		{ name: 'amountCents', selector: 'order.amountCents' }
+	],
+	assignments: [],
+	// where: [{ tableName: 'order', columnName: 'id', operator: '=', value: '#userId' }]
+	where: []
+};
 const getAllRouteData: RouteData = {
 	type: 'PAGED',
 	method: 'GET',
@@ -691,6 +764,22 @@ const psqlPool = new PsqlPool({
 setupPgReturnTypes();
 
 const trimRedundantWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
+let eventPsqlEngine: PsqlEngine;
+const getEventPsqlEngine = () => {
+	if (eventPsqlEngine) return eventPsqlEngine;
+	const pool = new PsqlPool({
+		host: 'localhost',
+		port: 5488,
+		user: 'postgres',
+		database: 'postgres',
+		password: 'postgres',
+		max: 20,
+		idleTimeoutMillis: 30000,
+		connectionTimeoutMillis: 10000
+	});
+	eventPsqlEngine = new PsqlEngine(pool, true);
+	return eventPsqlEngine;
+};
 
 describe('PsqlEngine', function () {
 	after(function () {
@@ -704,7 +793,170 @@ describe('PsqlEngine', function () {
 			const ddl = psqlEngine.generateDatabaseSchemaFromSchema(sampleSchema);
 			const ddlNoSpace = trimRedundantWhitespace(ddl);
 			expect(ddlNoSpace).to.equal(
-				`CREATE TYPE "user_role_enum" AS ENUM ('admin','user'); CREATE TYPE "user_accountStatus_enum" AS ENUM ('banned','view_only','active'); CREATE TYPE "user_onboardingStatus_enum" AS ENUM ('verify_email','complete'); CREATE TABLE "company" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "name" VARCHAR(255) NULL ); CREATE TABLE "order" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "amountCents" BIGINT NOT NULL, "userId" BIGINT NOT NULL ); CREATE TABLE "user" ( "id" BIGSERIAL NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "firstName" VARCHAR(30) NOT NULL, "lastName" VARCHAR(30) NOT NULL, "companyId" BIGINT NOT NULL, "password" VARCHAR(70) NOT NULL, "email" VARCHAR(100) NOT NULL, "role" "user_role_enum" NOT NULL, "permissionLogin" BOOLEAN NOT NULL DEFAULT true, "lastLoginOn" TIMESTAMPTZ NULL, "phone" VARCHAR(30) NULL, "loginDisabledOn" TIMESTAMPTZ NULL, "passwordResetGuid" VARCHAR(100) NULL, "verifyEmailPin" INT NULL, "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, "accountStatus" "user_accountStatus_enum" NOT NULL DEFAULT "view_only", "passwordResetExpiresOn" TIMESTAMPTZ NULL, "onboardingStatus" "user_onboardingStatus_enum" NOT NULL DEFAULT "verify_email", "pendingEmail" VARCHAR(100) NULL ); ALTER TABLE "user" ADD CONSTRAINT "user_companyId_company_id_fk" FOREIGN KEY ("companyId") REFERENCES "company" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION; CREATE INDEX "user_companyId_index" ON "user" ("companyId" ASC); CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC); CREATE INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC)`
+				trimRedundantWhitespace(`CREATE TYPE "user_role_enum" AS ENUM ('admin','user');
+CREATE TYPE "user_accountStatus_enum" AS ENUM ('banned','view_only','active');
+CREATE TYPE "user_onboardingStatus_enum" AS ENUM ('verify_email','complete');
+CREATE TABLE "company"
+	   ( 	"id" BIGSERIAL PRIMARY KEY  NOT NULL, 
+	"createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+	"modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+	"name" VARCHAR(255) NULL
+);
+
+CREATE TABLE "order"
+	   ( 	"id" BIGSERIAL PRIMARY KEY  NOT NULL, 
+	"amountCents" BIGINT NOT NULL, 
+	"userId" BIGINT NOT NULL
+);
+
+CREATE TABLE "user"
+	   ( 	"id" BIGSERIAL NOT NULL, 
+	"createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+	"modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+	"firstName" VARCHAR(30) NOT NULL, 
+	"lastName" VARCHAR(30) NOT NULL, 
+	"companyId" BIGINT NOT NULL, 
+	"password" VARCHAR(70) NOT NULL, 
+	"email" VARCHAR(100) NOT NULL, 
+	"role" "user_role_enum" NOT NULL, 
+	"permissionLogin" BOOLEAN NOT NULL DEFAULT true, 
+	"lastLoginOn" TIMESTAMPTZ NULL, 
+	"phone" VARCHAR(30) NULL, 
+	"loginDisabledOn" TIMESTAMPTZ NULL, 
+	"passwordResetGuid" VARCHAR(100) NULL, 
+	"verifyEmailPin" INT NULL, 
+	"verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, 
+	"accountStatus" "user_accountStatus_enum" NOT NULL DEFAULT "view_only", 
+	"passwordResetExpiresOn" TIMESTAMPTZ NULL, 
+	"onboardingStatus" "user_onboardingStatus_enum" NOT NULL DEFAULT "verify_email", 
+	"pendingEmail" VARCHAR(100) NULL
+);
+
+ALTER TABLE "user" 	 ADD CONSTRAINT "user_companyId_company_id_fk"
+        FOREIGN KEY ("companyId") REFERENCES "company" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+	CREATE  INDEX "user_companyId_index" ON "user" ("companyId" ASC);
+	CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC);
+	CREATE  INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC);
+
+
+CREATE OR REPLACE FUNCTION notify_company_insert()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('insert', JSON_BUILD_OBJECT('table', 'company', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "company_insert"
+    AFTER INSERT ON "company"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_company_insert();
+ 
+CREATE OR REPLACE FUNCTION notify_company_update()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('update', JSON_BUILD_OBJECT('table', 'company', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER company_update
+    AFTER UPDATE ON "company"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_company_update();
+
+CREATE OR REPLACE FUNCTION notify_company_delete()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('delete', JSON_BUILD_OBJECT('table', 'company', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "company_delete"
+    AFTER DELETE ON "company"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_company_delete();
+
+CREATE OR REPLACE FUNCTION notify_order_insert()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('insert', JSON_BUILD_OBJECT('table', 'order', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "order_insert"
+    AFTER INSERT ON "order"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_order_insert();
+ 
+CREATE OR REPLACE FUNCTION notify_order_update()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('update', JSON_BUILD_OBJECT('table', 'order', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER order_update
+    AFTER UPDATE ON "order"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_order_update();
+
+CREATE OR REPLACE FUNCTION notify_order_delete()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('delete', JSON_BUILD_OBJECT('table', 'order', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "order_delete"
+    AFTER DELETE ON "order"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_order_delete();
+
+CREATE OR REPLACE FUNCTION notify_user_insert()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('insert', JSON_BUILD_OBJECT('table', 'user', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "user_insert"
+    AFTER INSERT ON "user"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_user_insert();
+ 
+CREATE OR REPLACE FUNCTION notify_user_update()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('update', JSON_BUILD_OBJECT('table', 'user', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER user_update
+    AFTER UPDATE ON "user"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_user_update();
+
+CREATE OR REPLACE FUNCTION notify_user_delete()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('delete', JSON_BUILD_OBJECT('table', 'user', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "user_delete"
+    AFTER DELETE ON "user"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_user_delete();			
+`)
 			);
 		});
 	});
@@ -754,6 +1006,99 @@ describe('PsqlEngine', function () {
 			expect(response?.email).to.equal('tanner@plvr.com');
 		});
 	});
+	describe('PsqlEngine events', () => {
+		it('should receive notification of user row being inserted', function (done) {
+			const email = `${Date.now()}@plvr.com`;
+			eventManager.addRowInsertHandler(
+				async function (data) {
+					try {
+						expect(data.requesterDetails.role).to.equal('admin');
+						expect(data.requesterDetails.host).to.equal('google.com');
+						expect(data.requesterDetails.ipAddress).to.equal('1.1.1.1');
+						expect(data.requesterDetails.userId).to.equal(1);
+						expect(data.insertObject.email).to.equal(email);
+						expect(data.tableName).to.equal('user');
+					} catch (e) {
+						console.log(e);
+						return done(e);
+					}
+					done();
+				},
+				{ tableName: 'user' }
+			);
+
+			const getData = () => {
+				return { firstName: 'Billy', lastName: 'Bob', companyId: 1, password: 'asdfa', email, role: 'user' };
+			};
+			const requesterDetails: RequesterDetails = {
+				role: 'admin',
+				host: 'google.com',
+				ipAddress: '1.1.1.1',
+				userId: 1
+			};
+			const createRequest: RsRequest = {
+				requesterDetails,
+				data: getData()
+			} as unknown as RsRequest;
+			getEventPsqlEngine().setupTriggerListeners.then(() => {
+				getEventPsqlEngine()['executeCreateRequest'](
+					cloneDeep(createRequest),
+					patchUserRouteData,
+					sampleSchema
+				);
+			});
+		});
+		it('should receive notification of user row being updated', function (done) {
+			(async () => {
+				let calledHandler = false;
+				await eventManager.addColumnChangeHandler(
+					async function (data) {
+						if (calledHandler) return;
+						calledHandler = true;
+						try {
+							expect(data.requesterDetails.role).to.equal('admin');
+							expect(data.requesterDetails.host).to.equal('google.com');
+							expect(data.requesterDetails.ipAddress).to.equal('1.1.1.1');
+							expect(data.requesterDetails.userId).to.equal(1);
+							expect(data.tableName).to.equal('user');
+							expect(data.newData.firstName).to.equal('Billy');
+						} catch (e) {
+							console.log(e);
+							return done(e);
+						}
+						done();
+					},
+					{ tableName: 'user' }
+				);
+
+				const updateRequest: RsRequest = {
+					requesterDetails: {
+						role: 'admin',
+						host: 'google.com',
+						ipAddress: '1.1.1.1',
+						userId: 1
+					},
+					body: { id: 1, firstName: 'Billy', permissionLogin: false }
+				} as unknown as RsRequest;
+				await getEventPsqlEngine().setupTriggerListeners;
+				const response = await getEventPsqlEngine()['executeUpdateRequest'](
+					updateRequest,
+					patchUserRouteData,
+					sampleSchema
+				);
+				expect(response?.id).to.equal(1);
+				expect(response?.firstName).to.equal('Billy');
+				expect(response?.lastName).to.equal('Burton');
+				expect(response?.permissionLogin).to.equal(false);
+				expect(response?.email).to.equal('tanner@plvr.com');
+				const resetUserRequest = {
+					...updateRequest,
+					body: { id: 1, firstName: 'Tanner', permissionLogin: true }
+				} as unknown as RsRequest;
+				await psqlEngine['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
+			})();
+		});
+	});
 	describe('PsqlEngine executeUpdateRequest', () => {
 		const psqlEngine = new PsqlEngine(psqlPool);
 		it('should executeUpdateRequest', async () => {
@@ -780,7 +1125,6 @@ describe('PsqlEngine', function () {
 		});
 	});
 	describe('PsqlEngine executeCreateRequest', () => {
-		const psqlEngine = new PsqlEngine(psqlPool);
 		it('should executeCreateRequest', async () => {
 			const email = `${Date.now()}@plvr.com`;
 			const createRequest: RsRequest = {
@@ -792,11 +1136,14 @@ describe('PsqlEngine', function () {
 				},
 				data: { firstName: 'Billy', lastName: 'Bob', companyId: 1, password: 'asdfa', email, role: 'user' }
 			} as unknown as RsRequest;
-			const response = await psqlEngine['executeCreateRequest'](createRequest, patchUserRouteData, sampleSchema);
+			const response = await getEventPsqlEngine()['executeCreateRequest'](
+				createRequest,
+				patchUserRouteData,
+				sampleSchema
+			);
 			expect(response?.firstName).to.equal('Billy');
 			expect(response?.lastName).to.equal('Bob');
 			expect(response?.email).to.equal(email);
-			// console.log(response.id);
 			// const deleteRequest: RsRequest = {
 			// 	requesterDetails: {
 			// 		role: 'admin',
@@ -809,6 +1156,57 @@ describe('PsqlEngine', function () {
 			// const deleteResponse = await psqlEngine['executeDeleteRequest'](deleteRequest, patchUserRouteData, sampleSchema);
 			// console.log(deleteResponse.id);
 		});
+
+		it('should executeDelete and listen for events', function (done) {
+			(async () => {
+				eventManager.addRowDeleteHandler(
+					async function (data) {
+						try {
+							expect(data.requesterDetails.role).to.equal('admin');
+							expect(data.requesterDetails.host).to.equal('google.com');
+							expect(data.requesterDetails.ipAddress).to.equal('1.1.1.1');
+							expect(data.requesterDetails.userId).to.equal(1);
+							expect(data.deletedRow.amountCents).to.equal(100);
+							expect(data.deletedRow.userId).to.equal(1);
+							expect(data.tableName).to.equal('order');
+						} catch (e) {
+							console.log(e);
+							return done(e);
+						}
+						done();
+					},
+					{ tableName: 'order' }
+				);
+				const createRequest: RsRequest = {
+					requesterDetails: {
+						role: 'admin',
+						host: 'google.com',
+						ipAddress: '1.1.1.1',
+						userId: 1
+					},
+					data: { userId: 1, amountCents: 100 }
+				} as unknown as RsRequest;
+				await getEventPsqlEngine().setupTriggerListeners;
+				const response = await getEventPsqlEngine()['executeCreateRequest'](
+					createRequest,
+					createOrderRouteData,
+					sampleSchema
+				);
+				expect(response?.userId).to.equal(1);
+				expect(response?.amountCents).to.equal(100);
+				const deleteRequest: RsRequest = {
+					requesterDetails: {
+						role: 'admin',
+						host: 'google.com',
+						ipAddress: '1.1.1.1',
+						userId: 1
+					},
+					query: {},
+					data: { filter: `(column:id,value:${response.id})` }
+				} as unknown as RsRequest;
+				await getEventPsqlEngine()['executeDeleteRequest'](deleteRequest, deleteOrderRouteData, sampleSchema);
+			})();
+		});
 		it('should fail executeCreateRequest for duplicates', async () => {
 			const email = `${Date.now()}@plvr.com`;
 			const createRequest: RsRequest = {
@@ -820,13 +1218,13 @@ describe('PsqlEngine', function () {
 				},
 				data: { firstName: 'Billy', lastName: 'Bob', companyId: 1, password: 'asdfa', email, role: 'user' }
 			} as unknown as RsRequest;
-			await psqlEngine['executeCreateRequest'](
+			await getEventPsqlEngine()['executeCreateRequest'](
 				{ ...createRequest } as unknown as RsRequest,
 				patchUserRouteData,
 				sampleSchema
 			);
 			try {
-				await psqlEngine['executeCreateRequest'](
+				await getEventPsqlEngine()['executeCreateRequest'](
 					{ ...createRequest } as unknown as RsRequest,
 					patchUserRouteData,
 					sampleSchema

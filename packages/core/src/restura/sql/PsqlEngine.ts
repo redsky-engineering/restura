@@ -19,6 +19,8 @@ import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './P
 import SqlEngine from './SqlEngine';
 import { SqlUtils } from './SqlUtils';
 import filterPsqlParser from './filterPsqlParser.js';
+import eventManager, { MutationType, TriggerResult } from '../eventManager.js';
+import { boundMethod } from 'autobind-decorator';
 const { Client } = pg;
 
 const systemUser: RequesterDetails = {
@@ -29,9 +31,56 @@ const systemUser: RequesterDetails = {
 };
 
 export default class PsqlEngine extends SqlEngine {
-	constructor(private psqlConnectionPool: PsqlPool) {
+	constructor(
+		private psqlConnectionPool: PsqlPool,
+		shouldListenForDbTriggers?: boolean = false
+	) {
 		super();
+		if (shouldListenForDbTriggers) {
+			this.setupTriggerListeners = this.listenForDbTriggers();
+		}
 	}
+	setupTriggerListeners: Promise<void>;
+	private async listenForDbTriggers() {
+		const client = new Client({
+			user: this.psqlConnectionPool.poolConfig.user,
+			host: this.psqlConnectionPool.poolConfig.host,
+			database: this.psqlConnectionPool.poolConfig.database,
+			password: this.psqlConnectionPool.poolConfig.password,
+			port: this.psqlConnectionPool.poolConfig.port,
+			connectionTimeoutMillis: 2000
+		});
+
+		await client.connect();
+
+		const promises = [];
+		promises.push(client.query('LISTEN insert'));
+		promises.push(client.query('LISTEN update'));
+		promises.push(client.query('LISTEN delete'));
+		await Promise.all(promises);
+		// Handle notifications
+		client.on('notification', async (msg) => {
+			if (msg.channel === 'insert' || msg.channel === 'update' || msg.channel === 'delete') {
+				const payload: TriggerResult = JSON.parse(msg.payload);
+				await this.handleTrigger(payload, msg.channel.toUpperCase() as MutationType);
+			}
+		});
+	}
+	@boundMethod
+	private async handleTrigger(payload: TriggerResult, mutationType: MutationType) {
+		const findRequesterDetailsRegex = /^--REQUESTER_DETAILS\(\{.*\}\)/; //only looking at the beginning of the query
+		let requesterDetails = {} as RequesterDetails;
+		const match = payload?.query.match(findRequesterDetailsRegex);
+		if (match) {
+			console.log(match[0]);
+			const jsonString = match[0].slice(match[0].indexOf('{'), match[0].lastIndexOf('}') + 1);
+			try {
+				requesterDetails = JSON.parse(jsonString);
+			} catch {}
+		}
+		await eventManager.fireActionFromDbTrigger({ requesterDetails, mutationType }, payload);
+	}
+
 	async createDatabaseFromSchema(schema: ResturaSchema, connection: PsqlPool): Promise<string> {
 		const sqlFullStatement = this.generateDatabaseSchemaFromSchema(schema);
 		await connection.runQuery(sqlFullStatement, [], systemUser);
@@ -42,7 +91,12 @@ export default class PsqlEngine extends SqlEngine {
 		const sqlStatements = [];
 		const enums = [];
 		const indexes = [];
+		const triggers = [];
+
 		for (const table of schema.database) {
+			triggers.push(this.createInsertTriggers(table.name));
+			triggers.push(this.createUpdateTrigger(table.name));
+			triggers.push(this.createDeleteTrigger(table.name));
 			let sql = `CREATE TABLE "${table.name}"
 					   ( `;
 			const tableColumns = [];
@@ -86,7 +140,7 @@ export default class PsqlEngine extends SqlEngine {
 							.map((item) => {
 								return `"${item}" ${index.order}`;
 							})
-							.join(', ')})`
+							.join(', ')});`
 					);
 				}
 			}
@@ -119,7 +173,8 @@ export default class PsqlEngine extends SqlEngine {
 			}
 			sqlStatements.push(sql + constraints.join(',\n') + ';');
 		}
-		sqlStatements.push(indexes.join(';\n'));
+		sqlStatements.push(indexes.join('\n'));
+		sqlStatements.push(triggers.join('\n'));
 		return enums.join('\n') + '\n' + sqlStatements.join('\n\n');
 	}
 	private async getScratchPool(): Promise<PsqlPool> {
@@ -250,7 +305,11 @@ export default class PsqlEngine extends SqlEngine {
 			parameterObj[assignment.name] = this.replaceParamKeywords(assignment.value, routeData, req, sqlParams);
 		});
 
-		const query = insertObjectQuery(routeData.table, { ...(req.data as DynamicObject), ...parameterObj });
+		const query = insertObjectQuery(
+			routeData.table,
+			{ ...(req.data as DynamicObject), ...parameterObj },
+			req.requesterDetails
+		);
 		const createdItem = await this.psqlConnectionPool.queryOne(query, sqlParams, req.requesterDetails);
 		const insertId = createdItem?.id;
 		const whereData: WhereData[] = [
@@ -397,7 +456,7 @@ export default class PsqlEngine extends SqlEngine {
 		// 	sqlParams
 		// );
 		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
-		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause);
+		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause, req.requesterDetails);
 		await this.psqlConnectionPool.queryOne(query, [...sqlParams], req.requesterDetails);
 		return this.executeGetRequest(req, routeData, schema) as unknown as DynamicObject;
 	}
@@ -418,11 +477,13 @@ export default class PsqlEngine extends SqlEngine {
 			req.requesterDetails.role,
 			sqlParams
 		);
+		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
+		if (whereClause.replace(/\s/g, '') === '') {
+			throw new RsError('DELETE_FORBIDDEN', 'Deletes need a where clause');
+		}
 
-		let deleteStatement = `DELETE
-                           FROM "${routeData.table}" ${joinStatement}`;
-		deleteStatement += this.generateWhereClause(req, routeData.where, routeData, sqlParams);
-		deleteStatement += ';';
+		const deleteStatement = `--REQUESTER_DETAILS(${JSON.stringify(req.requesterDetails)})
+DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		await this.psqlConnectionPool.runQuery(deleteStatement, sqlParams, req.requesterDetails);
 		return true;
 	}
@@ -550,6 +611,57 @@ export default class PsqlEngine extends SqlEngine {
 		}
 
 		return whereClause;
+	}
+	@boundMethod
+	private createUpdateTrigger(tableName: string) {
+		return ` 
+CREATE OR REPLACE FUNCTION notify_${tableName}_update()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('update', JSON_BUILD_OBJECT('table', '${tableName}', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER ${tableName}_update
+    AFTER UPDATE ON "${tableName}"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_${tableName}_update();
+		`;
+	}
+	@boundMethod
+	private createDeleteTrigger(tableName: string) {
+		return `
+CREATE OR REPLACE FUNCTION notify_${tableName}_delete()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('delete', JSON_BUILD_OBJECT('table', '${tableName}', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "${tableName}_delete"
+    AFTER DELETE ON "${tableName}"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_${tableName}_delete();
+		`;
+	}
+	@boundMethod
+	private createInsertTriggers(tableName: string) {
+		return `
+CREATE OR REPLACE FUNCTION notify_${tableName}_insert()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('insert', JSON_BUILD_OBJECT('table', '${tableName}', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "${tableName}_insert"
+    AFTER INSERT ON "${tableName}"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_${tableName}_insert();
+		`;
 	}
 }
 
