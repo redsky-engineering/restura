@@ -210,7 +210,7 @@ class MySqlEngine extends SqlEngine {
 			req.requesterDetails
 		);
 		const insertId = createdItem.insertId;
-		const whereData: Restura.WhereData[] = [
+		const whereData: WhereData[] = [
 			...routeData.where,
 			{
 				...(routeData.where.length ? { conjunction: 'AND' } : {}),

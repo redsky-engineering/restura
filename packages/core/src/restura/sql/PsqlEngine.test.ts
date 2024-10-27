@@ -77,6 +77,29 @@ const sampleSchema: ResturaSchema = {
 			roles: []
 		},
 		{
+			name: 'item',
+			columns: [
+				{
+					name: 'id',
+					hasAutoIncrement: true,
+					isNullable: false,
+					roles: ['admin', 'user'],
+					isPrimary: true,
+					type: 'BIGINT'
+				},
+				{
+					name: 'orderId',
+					isNullable: false,
+					roles: ['admin', 'user'],
+					type: 'BIGINT'
+				}
+			],
+			checkConstraints: [],
+			foreignKeys: [],
+			indexes: [{ name: 'PRIMARY', columns: ['id'], isUnique: true, isPrimaryKey: true, order: 'ASC' }],
+			roles: []
+		},
+		{
 			name: 'user',
 			columns: [
 				{
@@ -704,7 +727,48 @@ describe('PsqlEngine', function () {
 			const ddl = psqlEngine.generateDatabaseSchemaFromSchema(sampleSchema);
 			const ddlNoSpace = trimRedundantWhitespace(ddl);
 			expect(ddlNoSpace).to.equal(
-				`CREATE TYPE "user_role_enum" AS ENUM ('admin','user'); CREATE TYPE "user_accountStatus_enum" AS ENUM ('banned','view_only','active'); CREATE TYPE "user_onboardingStatus_enum" AS ENUM ('verify_email','complete'); CREATE TABLE "company" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "name" VARCHAR(255) NULL ); CREATE TABLE "order" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "amountCents" BIGINT NOT NULL, "userId" BIGINT NOT NULL ); CREATE TABLE "user" ( "id" BIGSERIAL NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "firstName" VARCHAR(30) NOT NULL, "lastName" VARCHAR(30) NOT NULL, "companyId" BIGINT NOT NULL, "password" VARCHAR(70) NOT NULL, "email" VARCHAR(100) NOT NULL, "role" "user_role_enum" NOT NULL, "permissionLogin" BOOLEAN NOT NULL DEFAULT true, "lastLoginOn" TIMESTAMPTZ NULL, "phone" VARCHAR(30) NULL, "loginDisabledOn" TIMESTAMPTZ NULL, "passwordResetGuid" VARCHAR(100) NULL, "verifyEmailPin" INT NULL, "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, "accountStatus" "user_accountStatus_enum" NOT NULL DEFAULT "view_only", "passwordResetExpiresOn" TIMESTAMPTZ NULL, "onboardingStatus" "user_onboardingStatus_enum" NOT NULL DEFAULT "verify_email", "pendingEmail" VARCHAR(100) NULL ); ALTER TABLE "user" ADD CONSTRAINT "user_companyId_company_id_fk" FOREIGN KEY ("companyId") REFERENCES "company" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION; CREATE INDEX "user_companyId_index" ON "user" ("companyId" ASC); CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC); CREATE INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC)`
+				trimRedundantWhitespace(`
+CREATE TYPE "user_role_enum" AS ENUM ('admin','user');
+CREATE TYPE "user_accountStatus_enum" AS ENUM ('banned','view_only','active');
+CREATE TYPE "user_onboardingStatus_enum" AS ENUM ('verify_email','complete');
+
+CREATE TABLE "company"
+( "id" BIGSERIAL PRIMARY KEY NOT NULL,
+  "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "name" VARCHAR(255) NULL );
+CREATE TABLE "order"
+( "id" BIGSERIAL PRIMARY KEY NOT NULL,
+  "amountCents" BIGINT NOT NULL,
+  "userId" BIGINT NOT NULL );
+CREATE TABLE "item"
+( "id" BIGSERIAL PRIMARY KEY NOT NULL,
+  "orderId" BIGINT NOT NULL );
+CREATE TABLE "user"
+( "id" BIGSERIAL NOT NULL,
+  "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "firstName" VARCHAR(30) NOT NULL,
+  "lastName" VARCHAR(30) NOT NULL,
+  "companyId" BIGINT NOT NULL,
+  "password" VARCHAR(70) NOT NULL,
+  "email" VARCHAR(100) NOT NULL,
+  "role" "user_role_enum" NOT NULL,
+  "permissionLogin" BOOLEAN NOT NULL DEFAULT true,
+  "lastLoginOn" TIMESTAMPTZ NULL,
+  "phone" VARCHAR(30) NULL,
+  "loginDisabledOn" TIMESTAMPTZ NULL,
+  "passwordResetGuid" VARCHAR(100) NULL,
+  "verifyEmailPin" INT NULL,
+  "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL,
+  "accountStatus" "user_accountStatus_enum" NOT NULL DEFAULT "view_only",
+  "passwordResetExpiresOn" TIMESTAMPTZ NULL,
+  "onboardingStatus" "user_onboardingStatus_enum" NOT NULL DEFAULT "verify_email",
+  "pendingEmail" VARCHAR(100) NULL );
+ALTER TABLE "user" ADD CONSTRAINT "user_companyId_company_id_fk" FOREIGN KEY ("companyId") REFERENCES "company" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+CREATE INDEX "user_companyId_index" ON "user" ("companyId" ASC);
+CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC);
+CREATE INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC)`)
 			);
 		});
 	});
@@ -896,6 +960,119 @@ describe('PsqlEngine', function () {
 	});
 
 	describe('PsqlEngine createNestedSelect', () => {
+		it('should call createNestedSelect twice to test recursion', () => {
+			const psqlEngine = new PsqlEngine({} as PsqlPool);
+			const responseData: ResponseData = {
+				name: 'firstName',
+				selector: 'user.firstName',
+				subquery: {
+					table: 'order',
+					properties: [
+						{
+							name: 'id',
+							selector: 'order.id'
+						},
+						{
+							name: 'amountCents',
+							selector: 'order.amountCents'
+						},
+						{
+							name: 'items',
+							subquery: {
+								table: 'item',
+								properties: [
+									{
+										name: 'id',
+										selector: 'item.id'
+									},
+									{
+										name: 'orderId',
+										selector: 'item.orderId'
+									}
+								],
+								joins: [],
+								where: []
+							}
+						}
+					],
+					joins: [],
+					where: []
+				}
+			};
+			const response = psqlEngine['createNestedSelect'](
+				basicRequest,
+				sampleSchema,
+				responseData,
+				patchUserRouteData,
+				'admin',
+				[]
+			);
+			const expected = `COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT( 'id', "order"."id", 'amountCents', "order"."amountCents", 'items',
+                                                 COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT( 'id', "item"."id", 'orderId', "item"."orderId" ))
+                                                          FROM "item" ), '[]') ))
+                FROM "order" ), '[]')`;
+			expect(trimRedundantWhitespace(response)).to.equal(trimRedundantWhitespace(expected));
+		});
+		it('should call createNestedSelect twice to test recursion with a where clause', () => {
+			const psqlEngine = new PsqlEngine({} as PsqlPool);
+			const responseData: ResponseData = {
+				name: 'firstName',
+				selector: 'user.firstName',
+				subquery: {
+					table: 'order',
+					properties: [
+						{
+							name: 'id',
+							selector: 'order.id'
+						},
+						{
+							name: 'amountCents',
+							selector: 'order.amountCents'
+						},
+						{
+							name: 'items',
+							subquery: {
+								table: 'item',
+								properties: [
+									{
+										name: 'id',
+										selector: 'item.id'
+									},
+									{
+										name: 'orderId',
+										selector: 'item.orderId'
+									}
+								],
+								joins: [],
+								where: [
+									{
+										tableName: 'item',
+										columnName: 'orderId',
+										operator: '=',
+										value: 1
+									}
+								]
+							}
+						}
+					],
+					joins: [],
+					where: []
+				}
+			};
+			const response = psqlEngine['createNestedSelect'](
+				basicRequest,
+				sampleSchema,
+				responseData,
+				patchUserRouteData,
+				'admin',
+				[]
+			);
+			const expected = `COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT( 'id', "order"."id", 'amountCents', "order"."amountCents", 'items',
+                                                 COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT( 'id', "item"."id", 'orderId', "item"."orderId" ))
+                                                          FROM "item" WHERE "item"."orderId" = 1 ), '[]') ))
+                FROM "order" ), '[]')`;
+			expect(trimRedundantWhitespace(response)).to.equal(trimRedundantWhitespace(expected));
+		});
 		it('should call createNestedSelect', () => {
 			const psqlEngine = new PsqlEngine({} as PsqlPool);
 			const responseData: ResponseData = {
@@ -925,8 +1102,51 @@ describe('PsqlEngine', function () {
 				'admin',
 				[]
 			);
-			const expected = `COALESCE(( SELECT JSON_AGG(JSON_BUILD_OBJECT( 'id', "order"."id",'amountCents', "order"."amountCents" )) FROM "order" ), '[]')`;
-			expect(trimRedundantWhitespace(response)).to.equal(expected);
+			const expected = `COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT(
+                                           'id', "order"."id", 'amountCents', "order"."amountCents"
+                                       )) FROM "order" ), '[]')`;
+			expect(trimRedundantWhitespace(response)).to.equal(trimRedundantWhitespace(expected));
+		});
+		it('should call createNestedSelect with a where clause', () => {
+			const psqlEngine = new PsqlEngine({} as PsqlPool);
+			const responseData: ResponseData = {
+				name: 'firstName',
+				selector: 'user.firstName',
+				subquery: {
+					table: 'order',
+					properties: [
+						{
+							name: 'id',
+							selector: 'order.id'
+						},
+						{
+							name: 'amountCents',
+							selector: 'order.amountCents'
+						}
+					],
+					joins: [],
+					where: [
+						{
+							tableName: 'order',
+							columnName: 'userId',
+							operator: '=',
+							value: '999'
+						}
+					]
+				}
+			};
+			const response = psqlEngine['createNestedSelect'](
+				basicRequest,
+				sampleSchema,
+				responseData,
+				patchUserRouteData,
+				'admin',
+				[]
+			);
+			const expected = `COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT(
+                                           'id', "order"."id", 'amountCents', "order"."amountCents"
+                                       )) FROM "order"  WHERE "order"."userId" = '999' ), '[]')`;
+			expect(trimRedundantWhitespace(response)).to.equal(trimRedundantWhitespace(expected));
 		});
 	});
 
@@ -968,12 +1188,12 @@ describe('PsqlEngine', function () {
 	describe('PsqlEngine generateWhereClause', () => {
 		const psqlEngine = new PsqlEngine({} as PsqlPool);
 
-		xit('should format the where clause for STARTS WITH', () => {
+		it('should format the where clause for STARTS WITH', () => {
 			const whereData: WhereData[] = [
 				{
 					tableName: 'user',
 					columnName: 'firstName',
-					operator: 'STARTS WITH', // I don't think this was ever working. the % is being removed
+					operator: 'STARTS WITH',
 					value: 'T'
 				}
 			];
@@ -981,12 +1201,12 @@ describe('PsqlEngine', function () {
 			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
 			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE 'T%'`);
 		});
-		xit('should format the where clause for ENDS WITH', () => {
+		it('should format the where clause for ENDS WITH', () => {
 			const whereData: WhereData[] = [
 				{
 					tableName: 'user',
 					columnName: 'firstName',
-					operator: 'ENDS WITH', // I don't think this was ever working. the % is being removed
+					operator: 'ENDS WITH',
 					value: 'T'
 				}
 			];
@@ -994,12 +1214,12 @@ describe('PsqlEngine', function () {
 			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
 			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE '%T'`);
 		});
-		xit('should format the where clause for LIKE', () => {
+		it('should format the where clause for LIKE', () => {
 			const whereData: WhereData[] = [
 				{
 					tableName: 'user',
 					columnName: 'firstName',
-					operator: 'LIKE', // I don't think this was ever working. the % is being removed
+					operator: 'LIKE',
 					value: 'T'
 				}
 			];
