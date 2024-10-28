@@ -20,7 +20,8 @@ export function insertObjectQuery(table: string, obj: DynamicObject): string {
 	const columns = keys.map((column) => escapeColumnName(column)).join(', ');
 	const values = params.map((value) => SQL`${value}`).join(', ');
 
-	const query = `INSERT INTO "${table}" (${columns})
+	const query = `
+INSERT INTO "${table}" (${columns})
                  VALUES (${values})
                  RETURNING *`;
 	return query;
@@ -32,7 +33,8 @@ export function updateObjectQuery(table: string, obj: DynamicObject, whereStatem
 		setArray.push(`${escapeColumnName(i)} = ` + SQL`${obj[i]}`);
 	}
 
-	return `UPDATE ${escapeColumnName(table)}
+	return `
+UPDATE ${escapeColumnName(table)}
                  SET ${setArray.join(', ')} ${whereStatement}
                  RETURNING *`;
 }

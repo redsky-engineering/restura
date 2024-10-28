@@ -208,9 +208,6 @@ importers:
             vite:
                 specifier: ^3.0.9
                 version: 3.2.11(@types/node@14.18.63)(sass@1.79.5)(terser@5.34.1)
-            vite-imagetools:
-                specifier: ^4.0.4
-                version: 4.0.19(rollup@4.22.2)
             vite-plugin-css-export:
                 specifier: ^1.1.0
                 version: 1.2.1(vite@3.2.11(@types/node@14.18.63)(sass@1.79.5)(terser@5.34.1))
@@ -235,6 +232,9 @@ importers:
             '@wmfs/pg-info':
                 specifier: ^1.20.1
                 version: 1.20.1
+            bluebird:
+                specifier: ^3.7.2
+                version: 3.7.2
             body-parser:
                 specifier: ^1.20.3
                 version: 1.20.3
@@ -287,6 +287,9 @@ importers:
                 specifier: ^3.23.8
                 version: 3.23.8
         devDependencies:
+            '@types/bluebird':
+                specifier: ^3.5.42
+                version: 3.5.42
             '@types/body-parser':
                 specifier: ^1.19.5
                 version: 1.19.5
@@ -2231,18 +2234,6 @@ packages:
             }
         engines: { node: '>= 8.0.0' }
 
-    '@rollup/pluginutils@5.1.2':
-        resolution:
-            {
-                integrity: sha512-/FIdS3PyZ39bjZlwqFnWqCOVnW7o963LtKMwQOD0NhQqw22gSr2YY1afu3FxRip4ZCZNsD5jq6Aaz6QV3D/Njw==
-            }
-        engines: { node: '>=14.0.0' }
-        peerDependencies:
-            rollup: ^1.20.0||^2.0.0||^3.0.0||^4.0.0
-        peerDependenciesMeta:
-            rollup:
-                optional: true
-
     '@rollup/rollup-android-arm-eabi@4.22.2':
         resolution:
             {
@@ -2431,6 +2422,12 @@ packages:
                 integrity: sha512-KqQnQbdYE54D7oa/UmYVMZKq7CO4l8DEENzOKc4aBRwxCXSlJXGz83flFx5L7AWrOQnmuN3kVsRdt+GZPPjiVQ==
             }
         deprecated: This is a stub types definition for axios (https://github.com/mzabriskie/axios). axios provides its own type definitions, so you don't need @types/axios installed!
+
+    '@types/bluebird@3.5.42':
+        resolution:
+            {
+                integrity: sha512-Jhy+MWRlro6UjVi578V/4ZGNfeCOcNCp0YaFNIUGFKlImowqwb1O/22wDVk3FDGMLqxdpOV3qQHD5fPEH4hK6A==
+            }
 
     '@types/body-parser@1.19.5':
         resolution:
@@ -3493,6 +3490,12 @@ packages:
                 integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==
             }
 
+    bluebird@3.7.2:
+        resolution:
+            {
+                integrity: sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg==
+            }
+
     body-parser@1.20.3:
         resolution:
             {
@@ -3859,13 +3862,6 @@ packages:
             {
                 integrity: sha512-aBl7dZI9ENN6fUGC7mWpMTPNHmWUSNan9tuWN6ahh5ZLNk9baLJOnSMlrQkHcrfFgz2/RigjUVAjdx36VcemKA==
             }
-
-    color@4.2.3:
-        resolution:
-            {
-                integrity: sha512-1rXeuUUiGGrykh+CeBdu5Ie7OJwinCgQY0bc7GCRxy5xVHy+moaqkpL/jqQq0MtQOeYcrqEz4abc5f0KtU7W4A==
-            }
-        engines: { node: '>=12.5.0' }
 
     colorette@2.0.20:
         resolution:
@@ -4310,13 +4306,6 @@ packages:
             }
         engines: { node: '>=0.10' }
         hasBin: true
-
-    detect-libc@2.0.3:
-        resolution:
-            {
-                integrity: sha512-bwy0MGW55bG41VqxxypOsdSdGqLwXPI/focwgTYCFMbdUiBAxLg9CFzG08sz2aqzknwiX7Hkl0bQENjg8iLByw==
-            }
-        engines: { node: '>=8' }
 
     diff-match-patch@1.0.5:
         resolution:
@@ -5856,13 +5845,6 @@ packages:
             }
         engines: { node: '>= 4' }
 
-    imagetools-core@3.3.1:
-        resolution:
-            {
-                integrity: sha512-xllF2GDRg0SXCQQRxBAtE6N9dPAttc+ro+QDLnRmVSE5lH5clQxD2Al4XluirXj0T7lIH5VbetFmBLowW6ps+w==
-            }
-        engines: { node: '>=12.0.0' }
-
     immutable@4.3.7:
         resolution:
             {
@@ -6979,23 +6961,10 @@ packages:
                 integrity: sha512-/2D0wOQPgaUWzVSVgRMx+trKJRC2UG4SUc4oCJoXx9Uxjtp0Vy3/kt7zcbxHF8+Z/pK3UloLWzBISg72brfy1w==
             }
 
-    node-abi@3.70.0:
-        resolution:
-            {
-                integrity: sha512-xMTIZdvAyzGyxwOwxXv/8V/f/KAqKWNCeNIIFu2doEtQp9wvMUTam036At/iVtJqum6n5ljbAhUmXAUOhyivSA==
-            }
-        engines: { node: '>=10' }
-
     node-addon-api@3.2.1:
         resolution:
             {
                 integrity: sha512-mmcei9JghVNDYydghQmeDX8KoAm0FAiYyIcUt/N4nhyAipB17pllZQDOJD2fotxABnt4Mdz+dKTO7eftLg4d0A==
-            }
-
-    node-addon-api@5.1.0:
-        resolution:
-            {
-                integrity: sha512-eh0GgfEkpnoWDq+VY8OyvYhFEzBk6jIYbRKdIlyTiAXIVJ8PyBaKb0rp7oDtoddbdoHWhq8wwr+XZ81F1rpNdA==
             }
 
     node-addon-api@7.1.1:
@@ -7662,14 +7631,6 @@ packages:
         engines: { node: '>=6' }
         hasBin: true
 
-    prebuild-install@7.1.2:
-        resolution:
-            {
-                integrity: sha512-UnNke3IQb6sgarcZIDU3gbMeTp/9SSU1DAIkil7PrqG1vZlBtY5msYccSKSHDqa3hNg436IXK+SNImReuA1wEQ==
-            }
-        engines: { node: '>=10' }
-        hasBin: true
-
     prelude-ls@1.2.1:
         resolution:
             {
@@ -8289,13 +8250,6 @@ packages:
                 integrity: sha512-umSzJJ1oBwIOfwFFt/fJ7JgCva9FvrEU2cbbm7u/3hSDZhXvkME8WE5qpaJqLIe2Har5msF5UG4CzYlEg5o3BQ==
             }
         engines: { node: '>=10' }
-
-    sharp@0.31.3:
-        resolution:
-            {
-                integrity: sha512-XcR4+FCLBFKw1bdB+GEhnUNXNXvnt0tDo4WsBsraKymuo/IAuPuCBVAL2wIkUw2r/dwFW5Q5+g66Kwl2dgDFVg==
-            }
-        engines: { node: '>=14.15.0' }
 
     shebang-command@2.0.0:
         resolution:
@@ -9158,13 +9112,6 @@ packages:
                 integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==
             }
         engines: { node: '>= 0.8' }
-
-    vite-imagetools@4.0.19:
-        resolution:
-            {
-                integrity: sha512-vZaPsjLDgEqZrbj+ZsniRKthmoj4mvVrMOK/FZhRAbrVB4LOsil0BO2Gcq20e/JRlom4DzqtLw1UQUkfcqgCrA==
-            }
-        engines: { node: '>=12.0.0' }
 
     vite-plugin-css-export@1.2.1:
         resolution:
@@ -10831,14 +10778,6 @@ snapshots:
             estree-walker: 2.0.2
             picomatch: 2.3.1
 
-    '@rollup/pluginutils@5.1.2(rollup@4.22.2)':
-        dependencies:
-            '@types/estree': 1.0.6
-            estree-walker: 2.0.2
-            picomatch: 2.3.1
-        optionalDependencies:
-            rollup: 4.22.2
-
     '@rollup/rollup-android-arm-eabi@4.22.2':
         optional: true
 
@@ -10912,6 +10851,8 @@ snapshots:
             axios: 0.19.2
         transitivePeerDependencies:
             - supports-color
+
+    '@types/bluebird@3.5.42': {}
 
     '@types/body-parser@1.19.5':
         dependencies:
@@ -11653,6 +11594,8 @@ snapshots:
             inherits: 2.0.4
             readable-stream: 3.6.2
 
+    bluebird@3.7.2: {}
+
     body-parser@1.20.3:
         dependencies:
             bytes: 3.1.2
@@ -11861,11 +11804,6 @@ snapshots:
     color@3.2.1:
         dependencies:
             color-convert: 1.9.3
-            color-string: 1.9.1
-
-    color@4.2.3:
-        dependencies:
-            color-convert: 2.0.1
             color-string: 1.9.1
 
     colorette@2.0.20: {}
@@ -12108,8 +12046,6 @@ snapshots:
     destroy@1.2.0: {}
 
     detect-libc@1.0.3: {}
-
-    detect-libc@2.0.3: {}
 
     diff-match-patch@1.0.5: {}
 
@@ -13259,10 +13195,6 @@ snapshots:
 
     ignore@5.3.2: {}
 
-    imagetools-core@3.3.1:
-        dependencies:
-            sharp: 0.31.3
-
     immutable@4.3.7: {}
 
     import-fresh@3.3.0:
@@ -13893,13 +13825,7 @@ snapshots:
         dependencies:
             semver: 5.7.2
 
-    node-abi@3.70.0:
-        dependencies:
-            semver: 7.6.3
-
     node-addon-api@3.2.1: {}
-
-    node-addon-api@5.1.0: {}
 
     node-addon-api@7.1.1: {}
 
@@ -14307,21 +14233,6 @@ snapshots:
             tar-fs: 2.1.1
             tunnel-agent: 0.6.0
             which-pm-runs: 1.1.0
-
-    prebuild-install@7.1.2:
-        dependencies:
-            detect-libc: 2.0.3
-            expand-template: 2.0.3
-            github-from-package: 0.0.0
-            minimist: 1.2.8
-            mkdirp-classic: 0.5.3
-            napi-build-utils: 1.0.2
-            node-abi: 3.70.0
-            pump: 3.0.2
-            rc: 1.2.8
-            simple-get: 4.0.1
-            tar-fs: 2.1.1
-            tunnel-agent: 0.6.0
 
     prelude-ls@1.2.1: {}
 
@@ -14759,17 +14670,6 @@ snapshots:
             semver: 7.6.3
             simple-get: 4.0.1
             tar: 6.2.1
-            tunnel-agent: 0.6.0
-
-    sharp@0.31.3:
-        dependencies:
-            color: 4.2.3
-            detect-libc: 2.0.3
-            node-addon-api: 5.1.0
-            prebuild-install: 7.1.2
-            semver: 7.6.3
-            simple-get: 4.0.1
-            tar-fs: 2.1.1
             tunnel-agent: 0.6.0
 
     shebang-command@2.0.0:
@@ -15330,13 +15230,6 @@ snapshots:
     v8-compile-cache-lib@3.0.1: {}
 
     vary@1.1.2: {}
-
-    vite-imagetools@4.0.19(rollup@4.22.2):
-        dependencies:
-            '@rollup/pluginutils': 5.1.2(rollup@4.22.2)
-            imagetools-core: 3.3.1
-        transitivePeerDependencies:
-            - rollup
 
     vite-plugin-css-export@1.2.1(vite@3.2.11(@types/node@14.18.63)(sass@1.79.5)(terser@5.34.1)):
         dependencies:

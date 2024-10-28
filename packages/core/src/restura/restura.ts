@@ -33,8 +33,6 @@ import { PsqlPool } from './sql/PsqlPool.js';
 import type { RsRequest, RsResponse } from './types/customExpress.types.js';
 import type { AuthenticateHandler } from './types/restura.types.js';
 import validateRequestParams, { ValidationDictionary } from './validateRequestParams.js';
-import PsqlTransaction from './sql/PsqlTransaction.js';
-import PsqlConnection from './sql/PsqlConnection.js';
 import compareSchema from './compareSchema.js';
 const { types } = pg;
 class ResturaEngine {
@@ -515,4 +513,4 @@ const setupPgReturnTypes = () => {
 setupPgReturnTypes();
 
 const restura = new ResturaEngine();
-export { PsqlPool, restura, PsqlTransaction, PsqlConnection };
+export { restura };

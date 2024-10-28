@@ -31,6 +31,7 @@
 		"@types/tmp": "^0.2.6",
 		"@wmfs/pg-diff-sync": "^1.31.0",
 		"@wmfs/pg-info": "^1.20.1",
+		"bluebird": "^3.7.2",
 		"body-parser": "^1.20.3",
 		"compression": "^1.7.4",
 		"cookie-parser": "^1.4.7",
@@ -50,6 +51,7 @@
 		"zod": "^3.23.8"
 	},
 	"devDependencies": {
+		"@types/bluebird": "^3.5.42",
 		"@types/body-parser": "^1.19.5",
 		"@types/compression": "^1.7.5",
 		"@types/cookie-parser": "^1.4.7",
