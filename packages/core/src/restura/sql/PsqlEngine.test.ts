@@ -14,6 +14,7 @@ import PsqlEngine from './PsqlEngine.js';
 import { PsqlPool } from './PsqlPool.js';
 import eventManager from '../eventManager.js';
 import cloneDeep from 'lodash.clonedeep';
+import { PsqlTransaction } from './PsqlTransaction.js';
 
 const sampleSchema: ResturaSchema = {
 	database: [
@@ -774,7 +775,7 @@ const setupPgReturnTypes = () => {
 	});
 };
 
-const psqlPool = new PsqlPool({
+const clientConfig = {
 	host: 'localhost',
 	port: 5488,
 	user: 'postgres',
@@ -783,7 +784,9 @@ const psqlPool = new PsqlPool({
 	max: 20,
 	idleTimeoutMillis: 30000,
 	connectionTimeoutMillis: 10000
-});
+};
+
+const psqlPool = new PsqlPool(clientConfig);
 setupPgReturnTypes();
 
 const trimRedundantWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
@@ -791,27 +794,30 @@ let eventPsqlEngine: PsqlEngine;
 let enginePool: PsqlPool;
 const getEventPsqlEngine = () => {
 	if (eventPsqlEngine) return eventPsqlEngine;
-	enginePool = new PsqlPool({
-		host: 'localhost',
-		port: 5488,
-		user: 'postgres',
-		database: 'postgres',
-		password: 'postgres',
-		max: 20,
-		idleTimeoutMillis: 30000,
-		connectionTimeoutMillis: 10000
-	});
+	enginePool = new PsqlPool(clientConfig);
 	eventPsqlEngine = new PsqlEngine(enginePool, true);
 	return eventPsqlEngine;
 };
 
 describe('PsqlEngine', function () {
 	after(async function () {
-		psqlPool.pool.end();
-		enginePool.pool.end();
+		if (psqlPool) psqlPool.pool.end();
 		await getEventPsqlEngine().close();
+		if (enginePool) enginePool.pool.end();
 	});
 
+	describe('db transaction', () => {
+		it('db transaction', async () => {
+			const psqlTransaction = new PsqlTransaction(clientConfig);
+			const user = await psqlTransaction.queryOne(
+				`SELECT * FROM "user" WHERE id = 1;`,
+				[],
+				{} as RequesterDetails
+			);
+			expect(user.id).to.equal(1);
+			await psqlTransaction.close();
+		});
+	});
 	describe('db diff', () => {
 		it('should create the database DDL from ResturaSchema', async () => {
 			const psqlEngine = new PsqlEngine(psqlPool);
