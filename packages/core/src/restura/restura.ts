@@ -28,7 +28,7 @@ import {
 	type ResturaSchema,
 	type RouteData
 } from './restura.schema.js';
-import PsqlEngine from './sql/PsqlEngine.js';
+import { PsqlEngine } from './sql/PsqlEngine.js';
 import { PsqlPool } from './sql/PsqlPool.js';
 import type { RsRequest, RsResponse } from './types/customExpress.types.js';
 import type { AuthenticateHandler } from './types/restura.types.js';
@@ -70,7 +70,7 @@ class ResturaEngine {
 		this.resturaConfig = config.validate('restura', resturaConfigSchema) as ResturaConfigSchema;
 
 		this.psqlConnectionPool = psqlConnectionPool;
-		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool);
+		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool, true);
 		setupPgReturnTypes();
 
 		await customApiFactory.loadApiFiles(this.resturaConfig.customApiFolderPath);
