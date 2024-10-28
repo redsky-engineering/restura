@@ -1,10 +1,10 @@
 import type { ClientConfig, Client as ClientType, QueryConfigValues, QueryResult, QueryResultRow } from 'pg';
 import pg from 'pg';
-import PsqlConnection from './PsqlConnection.js';
+import { PsqlConnection } from './PsqlConnection.js';
 
 const { Client } = pg;
 
-export default class PsqlTransaction extends PsqlConnection {
+export class PsqlTransaction extends PsqlConnection {
 	public client: ClientType;
 	private beginTransactionPromise: Promise<QueryResult<QueryResultRow>>;
 

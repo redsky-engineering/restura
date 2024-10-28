@@ -8,3 +8,4 @@ export * from './restura/sql/PsqlPool.js';
 export * from './restura/types/customExpress.types.js';
 export * from './restura/types/restura.types.js';
 export * from './restura/eventManager.js';
+export { default as eventManager } from './restura/eventManager.js';

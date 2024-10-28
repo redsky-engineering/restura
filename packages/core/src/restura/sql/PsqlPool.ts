@@ -2,7 +2,7 @@ import pg, { QueryResult, QueryResultRow } from 'pg';
 // See this github issue for why we need to do this https://github.com/brianc/node-postgres/issues/2819
 import type { PoolConfig, Pool as PoolType, QueryConfigValues } from 'pg';
 import { logger } from '../../logger/logger.js';
-import PsqlConnection from './PsqlConnection.js';
+import { PsqlConnection } from './PsqlConnection.js';
 const { Pool } = pg;
 
 export class PsqlPool extends PsqlConnection {
