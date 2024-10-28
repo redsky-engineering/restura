@@ -6,7 +6,7 @@ import { RequesterDetails } from '../types/customExpress.types.js';
 import { questionMarksToOrderedParams } from './PsqlUtils.js';
 
 export default abstract class PsqlConnection {
-	constructor() {}
+	protected constructor() {}
 
 	protected abstract query<R extends QueryResultRow = QueryResultRow, T extends Array<unknown> = unknown[]>(
 		query: string,
@@ -17,10 +17,11 @@ export default abstract class PsqlConnection {
 	async queryOne(query: string, options: any[], requesterDetails: RequesterDetails) {
 		const formattedQuery = questionMarksToOrderedParams(query);
 		this.logSqlStatement(formattedQuery, options, requesterDetails);
+		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(requesterDetails)})\n`;
 
 		try {
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-			const response = await this.query(formattedQuery, options as QueryConfigValues<any>);
+			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<any>);
 			// There should be one and only one row returned
 			if (response.rows.length === 0) throw new RsError('NOT_FOUND', 'No results found');
 			else if (response.rows.length > 1) throw new RsError('DUPLICATE', 'More than one result found');
@@ -42,10 +43,10 @@ export default abstract class PsqlConnection {
 	async runQuery(query: string, options: any[], requesterDetails: RequesterDetails) {
 		const formattedQuery = questionMarksToOrderedParams(query);
 		this.logSqlStatement(formattedQuery, options, requesterDetails);
-
+		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(requesterDetails)})\n`;
 		try {
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-			const response = await this.query(formattedQuery, options as QueryConfigValues<any>);
+			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<any>);
 			return response.rows;
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (error: any) {

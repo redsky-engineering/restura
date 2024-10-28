@@ -1,23 +1,17 @@
 import { insertObjectQuery, questionMarksToOrderedParams, SQL, updateObjectQuery } from './PsqlUtils.js';
 import { expect } from 'chai';
-import { RequesterDetails } from '../types/customExpress.types.js';
 
 describe('PsqlUtils', () => {
 	it('should convert an object to an insert statement', () => {
-		const query = insertObjectQuery('USER', { id: 1, firstName: 'bob', isActive: true }, {} as RequesterDetails);
-		const expectedQuery = `--REQUESTER_DETAILS({}) INSERT INTO "USER" ("id", "firstName", "isActive")
+		const query = insertObjectQuery('USER', { id: 1, firstName: 'bob', isActive: true });
+		const expectedQuery = `INSERT INTO "USER" ("id", "firstName", "isActive")
                            VALUES (1, 'bob', true)
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
 	it('should convert an object to an update statement', () => {
-		const query = updateObjectQuery(
-			'USER',
-			{ firstName: 'bob', isActive: true },
-			'WHERE "id" = 1',
-			{} as RequesterDetails
-		);
-		const expectedQuery = `--REQUESTER_DETAILS({}) UPDATE "USER"
+		const query = updateObjectQuery('USER', { firstName: 'bob', isActive: true }, 'WHERE "id" = 1');
+		const expectedQuery = `UPDATE "USER"
                            SET "firstName" = 'bob',
                                "isActive"  = true
                            WHERE "id" = 1

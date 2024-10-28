@@ -31,6 +31,7 @@ const systemUser: RequesterDetails = {
 };
 
 export default class PsqlEngine extends SqlEngine {
+	setupTriggerListeners: Promise<void>;
 	constructor(
 		private psqlConnectionPool: PsqlPool,
 		shouldListenForDbTriggers?: boolean = false
@@ -40,7 +41,7 @@ export default class PsqlEngine extends SqlEngine {
 			this.setupTriggerListeners = this.listenForDbTriggers();
 		}
 	}
-	setupTriggerListeners: Promise<void>;
+
 	private async listenForDbTriggers() {
 		const client = new Client({
 			user: this.psqlConnectionPool.poolConfig.user,
@@ -66,19 +67,17 @@ export default class PsqlEngine extends SqlEngine {
 			}
 		});
 	}
+
 	@boundMethod
 	private async handleTrigger(payload: TriggerResult, mutationType: MutationType) {
-		const findRequesterDetailsRegex = /^--REQUESTER_DETAILS\(\{.*\}\)/; //only looking at the beginning of the query
+		const findRequesterDetailsRegex = /^--QUERY_METADATA\(\{.*\}\)/; //only looking at the beginning of the query
 		let requesterDetails = {} as RequesterDetails;
-		const match = payload?.query.match(findRequesterDetailsRegex);
+		const match = payload.query.match(findRequesterDetailsRegex);
 		if (match) {
-			console.log(match[0]);
 			const jsonString = match[0].slice(match[0].indexOf('{'), match[0].lastIndexOf('}') + 1);
-			try {
-				requesterDetails = JSON.parse(jsonString);
-			} catch {}
+			requesterDetails = ObjectUtils.safeParse<RequesterDetails>(jsonString) as RequesterDetails;
+			await eventManager.fireActionFromDbTrigger({ requesterDetails, mutationType }, payload);
 		}
-		await eventManager.fireActionFromDbTrigger({ requesterDetails, mutationType }, payload);
 	}
 
 	async createDatabaseFromSchema(schema: ResturaSchema, connection: PsqlPool): Promise<string> {
@@ -177,6 +176,7 @@ export default class PsqlEngine extends SqlEngine {
 		sqlStatements.push(triggers.join('\n'));
 		return enums.join('\n') + '\n' + sqlStatements.join('\n\n');
 	}
+
 	private async getScratchPool(): Promise<PsqlPool> {
 		await this.psqlConnectionPool.runQuery(
 			`DROP DATABASE IF EXISTS ${this.psqlConnectionPool.poolConfig.database}_scratch`,
@@ -305,11 +305,7 @@ export default class PsqlEngine extends SqlEngine {
 			parameterObj[assignment.name] = this.replaceParamKeywords(assignment.value, routeData, req, sqlParams);
 		});
 
-		const query = insertObjectQuery(
-			routeData.table,
-			{ ...(req.data as DynamicObject), ...parameterObj },
-			req.requesterDetails
-		);
+		const query = insertObjectQuery(routeData.table, { ...(req.data as DynamicObject), ...parameterObj });
 		const createdItem = await this.psqlConnectionPool.queryOne(query, sqlParams, req.requesterDetails);
 		const insertId = createdItem?.id;
 		const whereData: WhereData[] = [
@@ -456,7 +452,7 @@ export default class PsqlEngine extends SqlEngine {
 		// 	sqlParams
 		// );
 		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
-		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause, req.requesterDetails);
+		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause);
 		await this.psqlConnectionPool.queryOne(query, [...sqlParams], req.requesterDetails);
 		return this.executeGetRequest(req, routeData, schema) as unknown as DynamicObject;
 	}
@@ -482,7 +478,7 @@ export default class PsqlEngine extends SqlEngine {
 			throw new RsError('DELETE_FORBIDDEN', 'Deletes need a where clause');
 		}
 
-		const deleteStatement = `--REQUESTER_DETAILS(${JSON.stringify(req.requesterDetails)})
+		const deleteStatement = `
 DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		await this.psqlConnectionPool.runQuery(deleteStatement, sqlParams, req.requesterDetails);
 		return true;

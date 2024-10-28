@@ -70,8 +70,10 @@ class EventManager {
 		DATABASE_COLUMN_UPDATE: []
 	};
 
-	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	addRowInsertHandler(onInsert: (data: ActionRowInsertData<any>) => Promise<void>, filter?: ActionRowInsertFilter) {
+	addRowInsertHandler(
+		onInsert: (data: ActionRowInsertData<unknown>) => Promise<void>,
+		filter?: ActionRowInsertFilter
+	) {
 		this.actionHandlers.DATABASE_ROW_INSERT.push({
 			callback: onInsert,
 			filter
@@ -111,8 +113,8 @@ class EventManager {
 				if (!this.hasHandlersForEventType('DATABASE_ROW_INSERT', filter, triggerResult)) return;
 				const insertData: ActionRowInsertData = {
 					tableName: triggerResult.table,
-					insertId: (triggerResult.record.id as number) || 0,
-					insertObject: triggerResult.record || {},
+					insertId: triggerResult.record.id as number,
+					insertObject: triggerResult.record,
 					requesterDetails: data.requesterDetails
 				};
 				callback(insertData, data.requesterDetails);
@@ -127,7 +129,7 @@ class EventManager {
 				if (!this.hasHandlersForEventType('DATABASE_ROW_DELETE', filter, triggerResult)) return;
 				const deleteData: ActionRowDeleteData = {
 					tableName: triggerResult.table,
-					deletedRow: triggerResult.previousRecord || {},
+					deletedRow: triggerResult.previousRecord,
 					requesterDetails: data.requesterDetails
 				};
 				callback(deleteData, data.requesterDetails);
@@ -144,7 +146,7 @@ class EventManager {
 					tableName: triggerResult.table,
 					rowId: triggerResult.record.id as number,
 					newData: triggerResult.record,
-					oldData: triggerResult.previousRecord || {},
+					oldData: triggerResult.previousRecord,
 					requesterDetails: data.requesterDetails
 				};
 				callback(columnChangeData, data.requesterDetails);
@@ -167,9 +169,9 @@ class EventManager {
 				case 'DATABASE_COLUMN_UPDATE':
 					const filterColumnChange = filter as ActionColumnChangeFilter;
 					if (filterColumnChange.tableName !== filter.tableName) return false;
-					// if (
+					// if ( // TODO: implement this
 					// 	!filterColumnChange.columns.some((item) => {
-					// 		let updatedColumns = Object.keys(triggerResult.record || {});
+					// 		let updatedColumns = Object.keys(triggerResult.record);
 					// 		return updatedColumns.includes(item);
 					// 	})
 					// )
