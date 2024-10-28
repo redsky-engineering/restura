@@ -259,8 +259,7 @@ export default class PsqlEngine extends SqlEngine {
 			return "'[]'";
 		}
 
-		return `COALESCE((
-				SELECT JSON_AGG(JSON_BUILD_OBJECT(
+		return `COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT(
 			${item.subquery.properties
 				.map((nestedItem) => {
 					if (
@@ -272,7 +271,7 @@ export default class PsqlEngine extends SqlEngine {
 						return;
 					}
 					if (nestedItem.subquery) {
-						return `"${nestedItem.name}", ${this.createNestedSelect(
+						return `'${nestedItem.name}', ${this.createNestedSelect(
 							// recursion
 							req,
 							schema,
@@ -285,7 +284,7 @@ export default class PsqlEngine extends SqlEngine {
 					return `'${nestedItem.name}', ${escapeColumnName(nestedItem.selector)}`;
 				})
 				.filter(Boolean)
-				.join(',')}
+				.join(', ')}
 						)) 
 						FROM
 							"${item.subquery.table}"
@@ -563,18 +562,18 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 
 			let operator = item.operator;
 			if (operator === 'LIKE') {
-				sqlParams[sqlParams.length - 1] = `%${sqlParams[sqlParams.length - 1]}%`;
+				item.value = `%${item.value}%`;
 			} else if (operator === 'STARTS WITH') {
 				operator = 'LIKE';
-				sqlParams[sqlParams.length - 1] = `${sqlParams[sqlParams.length - 1]}%`;
+				item.value = `${item.value}%`;
 			} else if (operator === 'ENDS WITH') {
 				operator = 'LIKE';
-				sqlParams[sqlParams.length - 1] = `%${sqlParams[sqlParams.length - 1]}`;
+				item.value = `%${item.value}`;
 			}
 
 			const replacedValue = this.replaceParamKeywords(item.value, routeData, req, sqlParams);
 			const escapedValue = SQL`${replacedValue}`;
-			whereClause += `\t${item.conjunction || ''} "${item.tableName}"."${item.columnName}" ${operator} ${
+			whereClause += `\t${item.conjunction || ''} "${item.tableName}"."${item.columnName}" ${operator.replace('LIKE', 'ILIKE')} ${
 				['IN', 'NOT IN'].includes(operator) ? `(${escapedValue})` : escapedValue
 			}\n`;
 		});

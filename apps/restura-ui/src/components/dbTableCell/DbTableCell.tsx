@@ -1,9 +1,9 @@
-import * as React from 'react';
-import './DbTableCell.scss';
 import { Box, Icon, InputText, Label, Select } from '@redskytech/framework/ui';
-import { useEffect, useState } from 'react';
 import classNames from 'classnames';
+import * as React from 'react';
+import { useState } from 'react';
 import themes from '../../themes/themes.scss?export';
+import './DbTableCell.scss';
 
 export type ColumnCellType = 'text' | 'selectBoolean' | 'select' | 'multiSelect';
 
@@ -22,7 +22,15 @@ interface DbTableCellProps {
 
 const DbTableCell: React.FC<DbTableCellProps> = (props) => {
 	const [isEditing, setIsEditing] = useState<boolean>(false);
-	const [multiSelectValue, setMultiSelectValue] = useState<{ value: string; label: string }[]>([]);
+	const [multiSelectValue, setMultiSelectValue] =
+		useState<{ value: string; label: string }[]>(initMultiSelectValue());
+
+	function initMultiSelectValue(): { value: string; label: string }[] {
+		if (!Array.isArray(props.value)) return [];
+		return props.value.map((item) => {
+			return { label: item, value: item };
+		});
+	}
 
 	function onBlur(event: React.FocusEvent<HTMLInputElement>) {
 		if (props.onChange) props.onChange(event.target.value);
@@ -68,7 +76,7 @@ const DbTableCell: React.FC<DbTableCellProps> = (props) => {
 					/>
 				);
 			case 'selectBoolean':
-				let label = props.value ? 'YES' : 'NO';
+				const label = props.value ? 'YES' : 'NO';
 				return (
 					<Select<{ label: string; value: string }>
 						defaultValue={{ label, value: props.value.toString() }}
@@ -125,7 +133,7 @@ const DbTableCell: React.FC<DbTableCellProps> = (props) => {
 			return props.value ? <span style={{ color: themes.secondaryOrange500 }}>Yes</span> : 'No';
 		if (Array.isArray(props.value)) {
 			if (props.value.length === 0) return props.emptyValue || '-';
-			let mutatableValue = [...props.value];
+			const mutatableValue = [...props.value];
 			return mutatableValue
 				.sort((a, b) => {
 					return a.localeCompare(b);
