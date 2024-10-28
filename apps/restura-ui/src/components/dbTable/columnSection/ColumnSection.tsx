@@ -1,11 +1,11 @@
-import * as React from 'react';
-import './ColumnSection.scss';
 import { Box, Button, Icon, Label, rsToastify } from '@redskytech/framework/ui';
-import DbTableCell from '../../dbTableCell/DbTableCell';
 import cloneDeep from 'lodash.clonedeep';
+import * as React from 'react';
 import { useRecoilState } from 'recoil';
 import globalState from '../../../state/globalState';
 import themes from '../../../themes/themes.scss?export';
+import DbTableCell from '../../dbTableCell/DbTableCell';
+import './ColumnSection.scss';
 
 import SchemaService from '../../../services/schema/SchemaService.js';
 import MariaDbColumnNumericTypes = Restura.MariaDbColumnNumericTypes;
@@ -230,7 +230,11 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 	}
 
 	function isPrimaryColumn(columnName: string, tableData: Restura.TableData): boolean {
-		return tableData.indexes.find((item) => item.columns.includes(columnName) && item.isPrimaryKey) !== undefined;
+		let isPrimary =
+			tableData.indexes.find((item) => item.columns.includes(columnName) && item.isPrimaryKey) !== undefined;
+		const column = tableData.columns.find((item) => item.name === columnName);
+		isPrimary ||= column.isPrimary;
+		return isPrimary;
 	}
 
 	function getAllRoles(): string[] {
@@ -398,7 +402,7 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 								);
 								if (!getAllowLengthEdit(value as MariaDbColumnNumericTypes)) delete columnData.length;
 								else columnData.length = columnData.length || 10;
-								columnData.default = ('"' + value + '"') as Restura.MariaDbColumnDateTypes;
+								columnData.default = ("'" + value + "'") as Restura.MariaDbColumnDateTypes;
 								setSchema(updatedSchema);
 							}}
 						/>

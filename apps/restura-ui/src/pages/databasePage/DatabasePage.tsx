@@ -1,19 +1,19 @@
-import * as React from 'react';
-import './DatabasePage.scss';
 import { Page } from '@redskytech/framework/996';
-import PageHeader from '../../components/pageHeader/PageHeader';
-import { Box, Button, Icon, InputText, Label } from '@redskytech/framework/ui';
-import DbTable from '../../components/dbTable/DbTable';
-import { useRecoilState } from 'recoil';
-import globalState from '../../state/globalState';
+import { Box, Button, InputText, Label } from '@redskytech/framework/ui';
 import cloneDeep from 'lodash.clonedeep';
+import * as React from 'react';
 import { useEffect, useState } from 'react';
+import { useRecoilState } from 'recoil';
+import DbTable from '../../components/dbTable/DbTable';
+import PageHeader from '../../components/pageHeader/PageHeader';
 import SchemaService from '../../services/schema/SchemaService.js';
+import globalState from '../../state/globalState';
 import themes from '../../themes/themes.scss?export';
+import './DatabasePage.scss';
 
 interface DatabasePageProps {}
 
-const DatabasePage: React.FC<DatabasePageProps> = (props) => {
+const DatabasePage: React.FC<DatabasePageProps> = () => {
 	const [schema, setSchema] = useRecoilState(globalState.schema);
 	const [isColumnsFiltered, setIsColumnsFiltered] = useState<boolean>(false);
 	const [isIndexesFiltered, setIsIndexesFiltered] = useState<boolean>(false);
@@ -26,25 +26,17 @@ const DatabasePage: React.FC<DatabasePageProps> = (props) => {
 
 	function addNewTable() {
 		if (!schema) return;
-		let updatedSchema = cloneDeep(schema);
+		const updatedSchema = cloneDeep(schema);
 		updatedSchema.database.unshift({
 			name: `new_table_${Math.random().toString(36).substr(2, 5)}`,
 			columns: [
-				{ name: 'id', hasAutoIncrement: true, isNullable: false, roles: [], type: 'BIGINT' },
+				{ name: 'id', hasAutoIncrement: true, isNullable: false, roles: [], type: 'BIGINT', isPrimary: true },
 				{ name: 'createdOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME' },
 				{ name: 'modifiedOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME' }
 			],
 			foreignKeys: [],
 			checkConstraints: [],
-			indexes: [
-				{
-					name: 'PRIMARY',
-					columns: ['id'],
-					isUnique: true,
-					isPrimaryKey: true,
-					order: 'ASC'
-				}
-			],
+			indexes: [],
 			roles: []
 		});
 		setSchema(updatedSchema);
@@ -52,7 +44,7 @@ const DatabasePage: React.FC<DatabasePageProps> = (props) => {
 
 	useEffect(() => {
 		if (!schema) return;
-		let errors = SchemaService.validateDatabaseSchema(schema);
+		const errors = SchemaService.validateDatabaseSchema(schema);
 		if (!errors.length) return;
 		setValidationError(errors.join(','));
 	}, [schema]);

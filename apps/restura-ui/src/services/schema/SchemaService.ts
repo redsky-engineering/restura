@@ -1,8 +1,8 @@
-import { Service } from '../Service';
+import { rsToastify } from '@redskytech/framework/ui';
+import cloneDeep from 'lodash.clonedeep';
 import globalState, { getRecoilExternalValue, setRecoilExternalValue } from '../../state/globalState';
 import http from '../../utils/http.js';
-import cloneDeep from 'lodash.clonedeep';
-import { rsToastify } from '@redskytech/framework/ui';
+import { Service } from '../Service';
 
 export type SelectedRoute = { baseUrl: string; path: string; method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' };
 
@@ -399,7 +399,7 @@ export default class SchemaService extends Service {
 
 		// Check for a primary key per table
 		const tablesWithoutPrimaryKey = schema.database.filter(
-			(table) => !table.indexes.find((index) => index.isPrimaryKey)
+			(table) => !table.indexes.find((index) => index.isPrimaryKey) && !table.columns.find((col) => col.isPrimary)
 		);
 		if (tablesWithoutPrimaryKey.length > 0) {
 			errors.push(`Tables without primary key: ${tablesWithoutPrimaryKey.map((table) => table.name).join(', ')}`);
