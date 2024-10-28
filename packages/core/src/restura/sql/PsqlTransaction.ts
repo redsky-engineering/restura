@@ -7,15 +7,23 @@ const { Client } = pg;
 export class PsqlTransaction extends PsqlConnection {
 	public client: ClientType;
 	private beginTransactionPromise: Promise<QueryResult<QueryResultRow>>;
+	private connectPromise: Promise<void>;
 
 	constructor(public clientConfig: ClientConfig) {
 		super();
 		this.client = new Client(clientConfig);
+		this.connectPromise = this.client.connect();
 		this.beginTransactionPromise = this.beginTransaction();
+	}
+	async close() {
+		if (this.client) {
+			await this.client.end();
+		}
 	}
 
 	private async beginTransaction() {
-		return this.query('BEGIN');
+		await this.connectPromise;
+		return this.client.query('BEGIN');
 	}
 
 	async rollback() {
@@ -34,7 +42,7 @@ export class PsqlTransaction extends PsqlConnection {
 		query: string,
 		values?: QueryConfigValues<T>
 	): Promise<QueryResult<R>> {
-		await this.client.connect();
+		await this.connectPromise;
 		await this.beginTransactionPromise;
 		return this.client.query(query, values);
 	}
