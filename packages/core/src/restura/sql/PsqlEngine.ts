@@ -2,6 +2,7 @@ import { ObjectUtils } from '@redskytech/core-utils';
 import getDiff from '@wmfs/pg-diff-sync';
 import pgInfo from '@wmfs/pg-info';
 import pg from 'pg';
+import type { Client as ClientType } from 'pg';
 import { RsError } from '../errors';
 import {
 	CustomRouteData,
@@ -32,6 +33,7 @@ const systemUser: RequesterDetails = {
 
 export default class PsqlEngine extends SqlEngine {
 	setupTriggerListeners: Promise<void>;
+	private triggerClient: ClientType;
 	constructor(
 		private psqlConnectionPool: PsqlPool,
 		shouldListenForDbTriggers?: boolean = false
@@ -41,9 +43,14 @@ export default class PsqlEngine extends SqlEngine {
 			this.setupTriggerListeners = this.listenForDbTriggers();
 		}
 	}
+	async close() {
+		if (this.triggerClient) {
+			await this.triggerClient.end();
+		}
+	}
 
 	private async listenForDbTriggers() {
-		const client = new Client({
+		this.triggerClient = new Client({
 			user: this.psqlConnectionPool.poolConfig.user,
 			host: this.psqlConnectionPool.poolConfig.host,
 			database: this.psqlConnectionPool.poolConfig.database,
@@ -52,15 +59,15 @@ export default class PsqlEngine extends SqlEngine {
 			connectionTimeoutMillis: 2000
 		});
 
-		await client.connect();
+		await this.triggerClient.connect();
 
 		const promises = [];
-		promises.push(client.query('LISTEN insert'));
-		promises.push(client.query('LISTEN update'));
-		promises.push(client.query('LISTEN delete'));
+		promises.push(this.triggerClient.query('LISTEN insert'));
+		promises.push(this.triggerClient.query('LISTEN update'));
+		promises.push(this.triggerClient.query('LISTEN delete'));
 		await Promise.all(promises);
 		// Handle notifications
-		client.on('notification', async (msg) => {
+		this.triggerClient.on('notification', async (msg) => {
 			if (msg.channel === 'insert' || msg.channel === 'update' || msg.channel === 'delete') {
 				const payload: TriggerResult = JSON.parse(msg.payload);
 				await this.handleTrigger(payload, msg.channel.toUpperCase() as MutationType);

@@ -788,9 +788,10 @@ setupPgReturnTypes();
 
 const trimRedundantWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
 let eventPsqlEngine: PsqlEngine;
+let enginePool: PsqlPool;
 const getEventPsqlEngine = () => {
 	if (eventPsqlEngine) return eventPsqlEngine;
-	const pool = new PsqlPool({
+	enginePool = new PsqlPool({
 		host: 'localhost',
 		port: 5488,
 		user: 'postgres',
@@ -800,13 +801,15 @@ const getEventPsqlEngine = () => {
 		idleTimeoutMillis: 30000,
 		connectionTimeoutMillis: 10000
 	});
-	eventPsqlEngine = new PsqlEngine(pool, true);
+	eventPsqlEngine = new PsqlEngine(enginePool, true);
 	return eventPsqlEngine;
 };
 
 describe('PsqlEngine', function () {
-	after(function () {
+	after(async function () {
 		psqlPool.pool.end();
+		enginePool.pool.end();
+		await getEventPsqlEngine().close();
 	});
 
 	describe('db diff', () => {
@@ -945,6 +948,49 @@ CREATE OR REPLACE TRIGGER "order_delete"
     FOR EACH ROW
 EXECUTE FUNCTION notify_order_delete();
 
+
+CREATE OR REPLACE FUNCTION notify_item_insert()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('insert', JSON_BUILD_OBJECT('table', 'item', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "item_insert"
+    AFTER INSERT ON "item"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_item_insert();
+
+ 
+CREATE OR REPLACE FUNCTION notify_item_update()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('update', JSON_BUILD_OBJECT('table', 'item', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER item_update
+    AFTER UPDATE ON "item"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_item_update();
+
+
+CREATE OR REPLACE FUNCTION notify_item_delete()
+    RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('delete', JSON_BUILD_OBJECT('table', 'item', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "item_delete"
+    AFTER DELETE ON "item"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_item_delete();
+
+
 CREATE OR REPLACE FUNCTION notify_user_insert()
     RETURNS TRIGGER AS $$
 BEGIN
@@ -1036,8 +1082,10 @@ EXECUTE FUNCTION notify_user_delete();
 	describe('PsqlEngine events', () => {
 		it('should receive notification of user row being inserted', function (done) {
 			const email = `${Date.now()}@plvr.com`;
+			let doneCalled = false;
 			eventManager.addRowInsertHandler(
 				async function (data) {
+					if (doneCalled) return;
 					try {
 						expect(data.requesterDetails.role).to.equal('admin');
 						expect(data.requesterDetails.host).to.equal('google.com');
@@ -1047,8 +1095,10 @@ EXECUTE FUNCTION notify_user_delete();
 						expect(data.tableName).to.equal('user');
 					} catch (e) {
 						console.log(e);
+						doneCalled = true;
 						return done(e);
 					}
+					doneCalled = true;
 					done();
 				},
 				{ tableName: 'user' }
@@ -1186,8 +1236,10 @@ EXECUTE FUNCTION notify_user_delete();
 
 		it('should executeDelete and listen for events', function (done) {
 			(async () => {
+				let doneCalled = false;
 				eventManager.addRowDeleteHandler(
 					async function (data) {
+						if (doneCalled) return;
 						try {
 							expect(data.requesterDetails.role).to.equal('admin');
 							expect(data.requesterDetails.host).to.equal('google.com');
@@ -1198,8 +1250,10 @@ EXECUTE FUNCTION notify_user_delete();
 							expect(data.tableName).to.equal('order');
 						} catch (e) {
 							console.log(e);
+							doneCalled = true;
 							return done(e);
 						}
+						doneCalled = true;
 						done();
 					},
 					{ tableName: 'order' }
