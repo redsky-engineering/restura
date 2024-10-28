@@ -31,12 +31,12 @@ const systemUser: RequesterDetails = {
 	isSystemUser: true
 };
 
-export default class PsqlEngine extends SqlEngine {
-	setupTriggerListeners: Promise<void>;
-	private triggerClient: ClientType;
+export class PsqlEngine extends SqlEngine {
+	setupTriggerListeners: Promise<void> | undefined;
+	private triggerClient: ClientType | undefined;
 	constructor(
 		private psqlConnectionPool: PsqlPool,
-		shouldListenForDbTriggers?: boolean = false
+		shouldListenForDbTriggers: boolean = false
 	) {
 		super();
 		if (shouldListenForDbTriggers) {
@@ -69,7 +69,7 @@ export default class PsqlEngine extends SqlEngine {
 		// Handle notifications
 		this.triggerClient.on('notification', async (msg) => {
 			if (msg.channel === 'insert' || msg.channel === 'update' || msg.channel === 'delete') {
-				const payload: TriggerResult = JSON.parse(msg.payload);
+				const payload: TriggerResult = ObjectUtils.safeParse(msg.payload) as TriggerResult;
 				await this.handleTrigger(payload, msg.channel.toUpperCase() as MutationType);
 			}
 		});
@@ -312,16 +312,19 @@ export default class PsqlEngine extends SqlEngine {
 		});
 
 		const query = insertObjectQuery(routeData.table, { ...(req.data as DynamicObject), ...parameterObj });
-		const createdItem = await this.psqlConnectionPool.queryOne(query, sqlParams, req.requesterDetails);
-		const insertId = createdItem?.id;
-		const whereData: WhereData[] = [
-			{
-				tableName: routeData.table,
-				value: insertId,
-				columnName: 'id',
-				operator: '='
-			}
-		];
+		const createdItem = await this.psqlConnectionPool.queryOne<DynamicObject & { id: number }>(
+			query,
+			sqlParams,
+			req.requesterDetails
+		);
+		const insertId = createdItem.id;
+		const whereId: WhereData = {
+			tableName: routeData.table,
+			value: insertId,
+			columnName: 'id',
+			operator: '='
+		};
+		const whereData: WhereData[] = [whereId];
 		req.data = { id: insertId };
 		return this.executeGetRequest(req, { ...routeData, where: whereData }, schema) as Promise<DynamicObject>;
 	}
@@ -350,9 +353,9 @@ export default class PsqlEngine extends SqlEngine {
 		selectStatement += `\t${selectColumns
 			.map((item) => {
 				if (item.subquery) {
-					return `${this.createNestedSelect(req, schema, item, routeData, userRole, sqlParams)} AS ${
+					return `${this.createNestedSelect(req, schema, item, routeData, userRole, sqlParams)} AS ${escapeColumnName(
 						item.name
-					}`;
+					)}`;
 				}
 				return `${escapeColumnName(item.selector)} AS ${escapeColumnName(item.name)}`;
 			})
@@ -398,7 +401,11 @@ export default class PsqlEngine extends SqlEngine {
 			const totalQuery = `SELECT COUNT(${
 				routeData.groupBy ? `DISTINCT ${routeData.groupBy.tableName}.${routeData.groupBy.columnName}` : '*'
 			}) AS total\n ${sqlStatement};`;
-			const totalPromise = await this.psqlConnectionPool.runQuery(totalQuery, sqlParams, req.requesterDetails);
+			const totalPromise = await this.psqlConnectionPool.runQuery<{ total: number }>(
+				totalQuery,
+				sqlParams,
+				req.requesterDetails
+			);
 
 			const [pageResults, totalResponse] = await Promise.all([pagePromise, totalPromise]);
 
@@ -569,19 +576,18 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 
 			let operator = item.operator;
 			if (operator === 'LIKE') {
-				item.value = `%${item.value}%`;
+				item.value = `'%${item.value}%'`;
 			} else if (operator === 'STARTS WITH') {
 				operator = 'LIKE';
-				item.value = `${item.value}%`;
+				item.value = `'${item.value}%'`;
 			} else if (operator === 'ENDS WITH') {
 				operator = 'LIKE';
-				item.value = `%${item.value}`;
+				item.value = `'%${item.value}'`;
 			}
 
 			const replacedValue = this.replaceParamKeywords(item.value, routeData, req, sqlParams);
-			const escapedValue = SQL`${replacedValue}`;
 			whereClause += `\t${item.conjunction || ''} "${item.tableName}"."${item.columnName}" ${operator.replace('LIKE', 'ILIKE')} ${
-				['IN', 'NOT IN'].includes(operator) ? `(${escapedValue})` : escapedValue
+				['IN', 'NOT IN'].includes(operator) ? `(${replacedValue})` : replacedValue
 			}\n`;
 		});
 		const data = req.data as PageQuery;

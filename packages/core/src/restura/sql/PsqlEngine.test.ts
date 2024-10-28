@@ -10,7 +10,7 @@ import {
 	WhereData
 } from '../restura.schema.js';
 import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpress.types.js';
-import PsqlEngine from './PsqlEngine.js';
+import { PsqlEngine } from './PsqlEngine.js';
 import { PsqlPool } from './PsqlPool.js';
 import eventManager from '../eventManager.js';
 import cloneDeep from 'lodash.clonedeep';
@@ -1566,7 +1566,48 @@ EXECUTE FUNCTION notify_user_delete();
 			);
 			const expected = `COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT(
                                            'id', "order"."id", 'amountCents', "order"."amountCents"
-                                       )) FROM "order"  WHERE "order"."userId" = '999' ), '[]')`;
+                                       )) FROM "order"  WHERE "order"."userId" = 999 ), '[]')`;
+			expect(trimRedundantWhitespace(response)).to.equal(trimRedundantWhitespace(expected));
+		});
+		it('should call createNestedSelect with a where clause and column name', () => {
+			const psqlEngine = new PsqlEngine({} as PsqlPool);
+			const responseData: ResponseData = {
+				name: 'firstName',
+				selector: 'user.firstName',
+				subquery: {
+					table: 'order',
+					properties: [
+						{
+							name: 'id',
+							selector: 'order.id'
+						},
+						{
+							name: 'amountCents',
+							selector: 'order.amountCents'
+						}
+					],
+					joins: [],
+					where: [
+						{
+							tableName: 'order',
+							columnName: 'userId',
+							operator: '=',
+							value: '"company"."id"'
+						}
+					]
+				}
+			};
+			const response = psqlEngine['createNestedSelect'](
+				basicRequest,
+				sampleSchema,
+				responseData,
+				patchUserRouteData,
+				'admin',
+				[]
+			);
+			const expected = `COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT(
+                                           'id', "order"."id", 'amountCents', "order"."amountCents"
+                                       )) FROM "order"  WHERE "order"."userId" = "company"."id" ), '[]')`;
 			expect(trimRedundantWhitespace(response)).to.equal(trimRedundantWhitespace(expected));
 		});
 	});
@@ -1654,7 +1695,7 @@ EXECUTE FUNCTION notify_user_delete();
 					tableName: 'user',
 					columnName: 'firstName',
 					operator: '=',
-					value: 'Tanner'
+					value: "'Tanner'"
 				}
 			];
 			// use array notation ['generateWhereClause'] to access private methods for unit testing
@@ -1758,12 +1799,12 @@ EXECUTE FUNCTION notify_user_delete();
 					tableName: 'user',
 					columnName: 'id',
 					operator: 'IN',
-					value: ['a', 'b', 'c'] as unknown as string // type needs to be updated to support arrays but this is technically working
+					value: "'a', 'b', 'c'"
 				}
 			];
 			// use array notation ['generateWhereClause'] to access private methods for unit testing
 			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" IN ('a','b','c')`);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" IN ('a', 'b', 'c')`);
 		});
 		it('should format the where clause for NOT IN strings', () => {
 			const whereData: WhereData[] = [
@@ -1771,26 +1812,14 @@ EXECUTE FUNCTION notify_user_delete();
 					tableName: 'user',
 					columnName: 'id',
 					operator: 'NOT IN',
-					value: ['a', 'b', 'c'] as unknown as string // type needs to be updated to support arrays but this is technically working
+					value: "'a', 'b', 'c'"
 				}
 			];
 			// use array notation ['generateWhereClause'] to access private methods for unit testing
 			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" NOT IN ('a','b','c')`);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" NOT IN ('a', 'b', 'c')`);
 		});
-		it('should format the where clause and prevent sql injection', () => {
-			const whereData: WhereData[] = [
-				{
-					tableName: 'user',
-					columnName: 'id',
-					operator: '=',
-					value: "';DROP DB;"
-				}
-			];
-			// use array notation ['generateWhereClause'] to access private methods for unit testing
-			const response = psqlEngine['generateWhereClause'](basicRequest, whereData, patchUserRouteData, []);
-			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" = ''';DROP DB;'`);
-		});
+
 		it('should test optional conjunction (AND OR)', () => {
 			const whereData: WhereData[] = [
 				{

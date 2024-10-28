@@ -5,6 +5,7 @@ export * from './restura/sql/PsqlUtils.js';
 export * from './restura/sql/PsqlConnection.js';
 export * from './restura/sql/PsqlTransaction.js';
 export * from './restura/sql/PsqlPool.js';
+export * from './restura/sql/PsqlEngine.js';
 export * from './restura/types/customExpress.types.js';
 export * from './restura/types/restura.types.js';
 export * from './restura/eventManager.js';
