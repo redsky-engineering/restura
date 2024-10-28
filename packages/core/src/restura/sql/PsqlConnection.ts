@@ -5,7 +5,7 @@ import { RsError } from '../errors.js';
 import { RequesterDetails } from '../types/customExpress.types.js';
 import { questionMarksToOrderedParams } from './PsqlUtils.js';
 
-export default abstract class PsqlConnection {
+export abstract class PsqlConnection {
 	protected constructor() {}
 
 	protected abstract query<R extends QueryResultRow = QueryResultRow, T extends Array<unknown> = unknown[]>(
