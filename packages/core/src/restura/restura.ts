@@ -34,6 +34,8 @@ import type { RsRequest, RsResponse } from './types/customExpress.types.js';
 import type { AuthenticateHandler } from './types/restura.types.js';
 import validateRequestParams, { ValidationDictionary } from './validateRequestParams.js';
 import compareSchema from './compareSchema.js';
+import multerCommonUpload from './middleware/multerCommonUpload.js';
+import { RequestHandler } from 'express';
 const { types } = pg;
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
@@ -336,31 +338,31 @@ class ResturaEngine {
 		}
 	}
 
-	// @boundMethod
-	// private async getMulterFilesIfAny<T>(req: RsRequest<T>, res: RsResponse<T>, routeData: RouteData) {
-	// 	if (!req.header('content-type')?.includes('multipart/form-data')) return;
-	// 	if (!this.isCustomRoute(routeData)) return;
+	@boundMethod
+	private async getMulterFilesIfAny<T>(req: RsRequest<T>, res: RsResponse<T>, routeData: RouteData) {
+		if (!req.header('content-type')?.includes('multipart/form-data')) return;
+		if (!this.isCustomRoute(routeData)) return;
 
-	// 	if (!routeData.fileUploadType) {
-	// 		throw new RsError('BAD_REQUEST', 'File upload type not defined for route');
-	// 	}
+		if (!routeData.fileUploadType) {
+			throw new RsError('BAD_REQUEST', 'File upload type not defined for route');
+		}
 
-	// 	const multerFileUploadFunction =
-	// 		routeData.fileUploadType === 'MULTIPLE'
-	// 			? multerCommonUpload.array('files')
-	// 			: multerCommonUpload.single('file');
+		const multerFileUploadFunction: RequestHandler =
+			routeData.fileUploadType === 'MULTIPLE'
+				? multerCommonUpload.array('files')
+				: multerCommonUpload.single('file');
 
-	// 	return new Promise<void>((resolve, reject) => {
-	// 		multerFileUploadFunction(req as unknown as express.Request, res, (err: unknown) => {
-	// 			if (err) {
-	// 				logger.warn('Multer error: ' + err);
-	// 				reject(err);
-	// 			}
-	// 			if (req.body['data']) req.body = JSON.parse(req.body['data']);
-	// 			resolve();
-	// 		});
-	// 	});
-	// }
+		return new Promise<void>((resolve, reject) => {
+			multerFileUploadFunction(req as unknown as express.Request, res, (err: unknown) => {
+				if (err) {
+					logger.warn('Multer error: ' + err);
+					reject(err);
+				}
+				if (req.body['data']) req.body = JSON.parse(req.body['data']);
+				resolve();
+			});
+		});
+	}
 
 	@boundMethod
 	private async executeRouteLogic<T>(req: RsRequest<T>, res: RsResponse<T>, next: express.NextFunction) {
@@ -372,7 +374,7 @@ class ResturaEngine {
 			this.validateAuthorization(req, routeData);
 
 			// Check for file uploads
-			// await this.getMulterFilesIfAny(req, res, routeData);
+			await this.getMulterFilesIfAny(req, res, routeData);
 
 			// Validate the request and assign to req.data
 			validateRequestParams(req as RsRequest<unknown>, routeData, this.customTypeValidation);
@@ -434,7 +436,8 @@ class ResturaEngine {
 			res: RsResponse<T>,
 			routeData: RouteData
 		) => Promise<void>;
-		if (!customFunction) throw new RsError('NOT_FOUND', `API path ${routeData.path} not implemented`);
+		if (!customFunction)
+			throw new RsError('NOT_FOUND', `API path ${routeData.path} not implemented ${functionName}`);
 		await customFunction(req, res, routeData);
 	}
 

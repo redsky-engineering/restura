@@ -1,4 +1,4 @@
-/** Auto generated file from Schema Hash (bdffeb514215bec9744a4036f1524b9e3e8b4ea5d5e72d77743371e1b447cd89). DO NOT MODIFY **/
+/** Auto generated file from Schema Hash (72b4082c058dba63abf27a414faeb6c17a1f0d4152c36647777d9a79a1fb53d0). DO NOT MODIFY **/
 declare namespace Model {
 	export interface Company {
 		id: number;

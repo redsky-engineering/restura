@@ -16,4 +16,10 @@ export default class UserApiV1 {
 			refreshTokenExp: '2025-01-01T00:00:00.000Z'
 		});
 	}
+	async postUserMeAvatar(
+		req: RsRequest<Api.V1.User.Me.Avatar.Post.Req>,
+		res: RsResponse<Api.V1.User.Me.Avatar.Post.Res>
+	) {
+		res.sendData(true);
+	}
 }

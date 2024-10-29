@@ -1,0 +1,15 @@
+meta {
+  name: refresh token
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{host}}/api/v1/user/refresh-token
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}

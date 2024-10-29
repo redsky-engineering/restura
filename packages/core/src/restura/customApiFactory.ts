@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../logger/logger.js';
+import Bluebird from 'bluebird';
 
 export interface ICustomApi {
 	name: string;
@@ -13,8 +14,9 @@ class CustomApiFactory {
 		const apiVersions = ['v1'];
 		for (const apiVersion of apiVersions) {
 			const apiVersionFolderPath = path.join(baseFolderPath, apiVersion);
-			if (!fs.existsSync(apiVersionFolderPath)) continue;
 
+			const directory = await fs.promises.readdir(apiVersionFolderPath).catch(() => Promise.resolve(null));
+			if (!directory) continue;
 			await this.addDirectory(apiVersionFolderPath, apiVersion);
 		}
 	}
@@ -24,13 +26,13 @@ class CustomApiFactory {
 	}
 
 	private async addDirectory(directoryPath: string, apiVersion: string) {
-		const entries = fs.readdirSync(directoryPath, {
+		const entries = await fs.promises.readdir(directoryPath, {
 			withFileTypes: true
 		});
 
-		for (const entry of entries) {
+		await Bluebird.map(entries, async (entry) => {
 			if (entry.isFile()) {
-				if (entry.name.endsWith(`.api.${apiVersion}.js`) === false) continue;
+				if (entry.name.endsWith(`.api.${apiVersion}.ts`) === false) return;
 
 				// The following try / catch block fixes an issue when looking for the map file giving an exception thrown
 				try {
@@ -44,7 +46,7 @@ class CustomApiFactory {
 					console.error(e);
 				}
 			}
-		}
+		});
 	}
 
 	private bindMethodsToInstance<T extends object>(instance: T): void {
