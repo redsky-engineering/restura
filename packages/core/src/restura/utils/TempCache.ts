@@ -5,23 +5,15 @@ import { DateUtils } from '@redskytech/core-utils';
 import { logger } from '../../logger/logger.js';
 import Bluebird from 'bluebird';
 import * as os from 'os';
+import { fileUtils } from '@restura/internal';
 
-// TODO: this is not working. neither __dirname or import.meta.url are populated
-// we may need "type": "module" in package.json
-// console.log('__dirname:', __dirname);
-// console.log('import.meta.url:', import.meta.url);
-// const __filename = fileURLToPath(import.meta.url);
-// console.log('__filename:', __filename);
-// const __dirname = path.dirname(__filename);
-
-class TempCache {
-	// location = path.join(__dirname, '../../../temp-cache'); TODO: support this path again
+export default class TempCache {
 	location: string;
 	private readonly maxDurationDays = 7;
 
 	constructor(location?: string) {
 		this.location = location || os.tmpdir();
-		fs.promises.readdir(this.location).catch((e) => {
+		fileUtils.ensureDir(this.location).catch((e) => {
 			throw e;
 		});
 	}
@@ -45,5 +37,3 @@ class TempCache {
 		);
 	}
 }
-const tempCache = new TempCache();
-export default tempCache;

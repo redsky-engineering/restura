@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { logger } from '../logger/logger.js';
 import Bluebird from 'bluebird';
+import { fileUtils } from '@restura/internal';
 
 export interface ICustomApi {
 	name: string;
@@ -15,8 +16,8 @@ class CustomApiFactory {
 		for (const apiVersion of apiVersions) {
 			const apiVersionFolderPath = path.join(baseFolderPath, apiVersion);
 
-			const directory = await fs.promises.readdir(apiVersionFolderPath).catch(() => Promise.resolve(null));
-			if (!directory) continue;
+			const directoryExists = await fileUtils.existDir(apiVersionFolderPath);
+			if (!directoryExists) continue;
 			await this.addDirectory(apiVersionFolderPath, apiVersion);
 		}
 	}
@@ -29,10 +30,13 @@ class CustomApiFactory {
 		const entries = await fs.promises.readdir(directoryPath, {
 			withFileTypes: true
 		});
-
+		const isTsx = process.argv[1]?.endsWith('.ts');
+		const isTsNode = process.env.TS_NODE_DEV || process.env.TS_NODE_PROJECT;
+		const extension = isTsx || isTsNode ? 'ts' : 'js';
+		const shouldEndWith = `.api.${apiVersion}.${extension}`;
 		await Bluebird.map(entries, async (entry) => {
 			if (entry.isFile()) {
-				if (entry.name.endsWith(`.api.${apiVersion}.ts`) === false) return;
+				if (entry.name.endsWith(shouldEndWith) === false) return;
 
 				// The following try / catch block fixes an issue when looking for the map file giving an exception thrown
 				try {

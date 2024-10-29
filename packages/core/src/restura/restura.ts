@@ -34,13 +34,16 @@ import type { RsRequest, RsResponse } from './types/customExpress.types.js';
 import type { AuthenticateHandler } from './types/restura.types.js';
 import validateRequestParams, { ValidationDictionary } from './validateRequestParams.js';
 import compareSchema from './compareSchema.js';
-import multerCommonUpload from './middleware/multerCommonUpload.js';
+import { getMulterUploadSingleton } from './middleware/getMulterUploadSingleton.js';
 import { RequestHandler } from 'express';
+import multer from 'multer';
+import TempCache from './utils/TempCache.js';
 const { types } = pg;
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
 	resturaConfig!: ResturaConfigSchema;
 
+	private multerCommonUpload!: multer.Multer;
 	private resturaRouter!: express.Router;
 	private publicEndpoints: { GET: string[]; POST: string[]; PUT: string[]; PATCH: string[]; DELETE: string[] } = {
 		GET: [],
@@ -71,6 +74,8 @@ class ResturaEngine {
 		// Try to load config first. If it fails, we can't continue.
 		this.resturaConfig = config.validate('restura', resturaConfigSchema) as ResturaConfigSchema;
 
+		this.multerCommonUpload = getMulterUploadSingleton(this.resturaConfig.fileTempCachePath);
+		new TempCache(this.resturaConfig.fileTempCachePath);
 		this.psqlConnectionPool = psqlConnectionPool;
 		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool, true);
 		setupPgReturnTypes();
@@ -349,8 +354,8 @@ class ResturaEngine {
 
 		const multerFileUploadFunction: RequestHandler =
 			routeData.fileUploadType === 'MULTIPLE'
-				? multerCommonUpload.array('files')
-				: multerCommonUpload.single('file');
+				? this.multerCommonUpload.array('files')
+				: this.multerCommonUpload.single('file');
 
 		return new Promise<void>((resolve, reject) => {
 			multerFileUploadFunction(req as unknown as express.Request, res, (err: unknown) => {
