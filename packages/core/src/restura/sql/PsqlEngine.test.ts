@@ -180,7 +180,7 @@ const sampleSchema: ResturaSchema = {
 					type: 'ENUM',
 					isNullable: false,
 					value: "'banned','view_only','active'",
-					default: '"view_only"'
+					default: "'view_only'"
 				},
 				{
 					roles: [],
@@ -195,7 +195,7 @@ const sampleSchema: ResturaSchema = {
 					type: 'ENUM',
 					isNullable: false,
 					value: "'verify_email','complete'",
-					default: '"verify_email"'
+					default: "'verify_email'"
 				},
 				{
 					roles: [],
@@ -862,9 +862,9 @@ CREATE TABLE "user"
 	"passwordResetGuid" VARCHAR(100) NULL, 
 	"verifyEmailPin" INT NULL, 
 	"verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, 
-	"accountStatus" "user_accountStatus_enum" NOT NULL DEFAULT "view_only", 
+	"accountStatus" "user_accountStatus_enum" NOT NULL DEFAULT 'view_only', 
 	"passwordResetExpiresOn" TIMESTAMPTZ NULL, 
-	"onboardingStatus" "user_onboardingStatus_enum" NOT NULL DEFAULT "verify_email", 
+	"onboardingStatus" "user_onboardingStatus_enum" NOT NULL DEFAULT 'verify_email', 
 	"pendingEmail" VARCHAR(100) NULL
 );
 

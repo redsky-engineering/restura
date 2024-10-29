@@ -185,16 +185,20 @@ export class PsqlEngine extends SqlEngine {
 	}
 
 	private async getScratchPool(): Promise<PsqlPool> {
-		await this.psqlConnectionPool.runQuery(
-			`DROP DATABASE IF EXISTS ${this.psqlConnectionPool.poolConfig.database}_scratch`,
+		const response = await this.psqlConnectionPool.runQuery<DynamicObject>(
+			`SELECT * FROM pg_database
+      WHERE datname = '${this.psqlConnectionPool.poolConfig.database}_scratch'`,
 			[],
 			systemUser
 		);
-		await this.psqlConnectionPool.runQuery(
-			`CREATE DATABASE ${this.psqlConnectionPool.poolConfig.database}_scratch;`,
-			[],
-			systemUser
-		);
+		if (response.length === 0) {
+			await this.psqlConnectionPool.runQuery(
+				`CREATE DATABASE ${this.psqlConnectionPool.poolConfig.database}_scratch;`,
+				[],
+				systemUser
+			);
+		}
+
 		const scratchPool = new PsqlPool({
 			host: this.psqlConnectionPool.poolConfig.host,
 			port: this.psqlConnectionPool.poolConfig.port,
@@ -205,6 +209,8 @@ export class PsqlEngine extends SqlEngine {
 			idleTimeoutMillis: this.psqlConnectionPool.poolConfig.idleTimeoutMillis,
 			connectionTimeoutMillis: this.psqlConnectionPool.poolConfig.connectionTimeoutMillis
 		});
+		await scratchPool.runQuery(`drop schema public cascade;`, [], systemUser);
+		await scratchPool.runQuery(`create schema public;`, [], systemUser);
 		return scratchPool;
 	}
 
@@ -226,21 +232,15 @@ export class PsqlEngine extends SqlEngine {
 			host: this.psqlConnectionPool.poolConfig.host,
 			port: this.psqlConnectionPool.poolConfig.port
 		});
+		const promises = [originalClient.connect(), scratchClient.connect()];
+		await Promise.all(promises);
 
-		await originalClient.connect();
-		await scratchClient.connect();
-
-		const info1 = await pgInfo({
-			client: originalClient
-		});
-
-		const info2 = await pgInfo({
-			client: scratchClient
-		});
+		const infoPromises = [pgInfo({ client: originalClient }), pgInfo({ client: scratchClient })];
+		const [info1, info2] = await Promise.all(infoPromises);
 
 		const diff = getDiff(info1, info2);
-		await originalClient.end();
-		await scratchClient.end();
+		const endPromises = [originalClient.end(), scratchClient.end()];
+		await Promise.all(endPromises);
 		return diff.join('\n');
 	}
 
@@ -401,7 +401,7 @@ export class PsqlEngine extends SqlEngine {
 			const totalQuery = `SELECT COUNT(${
 				routeData.groupBy ? `DISTINCT ${routeData.groupBy.tableName}.${routeData.groupBy.columnName}` : '*'
 			}) AS total\n ${sqlStatement};`;
-			const totalPromise = await this.psqlConnectionPool.runQuery<{ total: number }>(
+			const totalPromise = this.psqlConnectionPool.runQuery<{ total: number }>(
 				totalQuery,
 				sqlParams,
 				req.requesterDetails
