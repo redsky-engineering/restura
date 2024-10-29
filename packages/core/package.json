@@ -1,6 +1,6 @@
 {
 	"name": "@restura/core",
-	"version": "0.1.0-alpha.19",
+	"version": "0.1.0-alpha.20",
 	"description": "Restura core utilities for No Code APIs",
 	"types": "./dist/index.d.ts",
 	"repository": "https://github.com/redsky-engineering/restura",
@@ -40,6 +40,7 @@
 		"jsonschema": "^1.4.1",
 		"lodash.clonedeep": "^4.5.0",
 		"logform": "^2.6.1",
+		"multer": "1.4.5-lts.1",
 		"mysql": "^2.18.1",
 		"pegjs": "^0.10.0",
 		"pg": "^8.13.0",
@@ -58,6 +59,7 @@
 		"@types/cors": "^2.8.17",
 		"@types/express": "^4.17.21",
 		"@types/lodash.clonedeep": "^4.5.6",
+		"@types/multer": "^1.4.12",
 		"@types/mysql": "^2.15.26",
 		"@types/pegjs": "^0.10.6",
 		"@types/pg": "^8.11.10",
