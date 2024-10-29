@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../logger/logger.js';
+import Bluebird from 'bluebird';
+import { fileUtils } from '@restura/internal';
 
 export interface ICustomApi {
 	name: string;
@@ -13,8 +15,9 @@ class CustomApiFactory {
 		const apiVersions = ['v1'];
 		for (const apiVersion of apiVersions) {
 			const apiVersionFolderPath = path.join(baseFolderPath, apiVersion);
-			if (!fs.existsSync(apiVersionFolderPath)) continue;
 
+			const directoryExists = await fileUtils.existDir(apiVersionFolderPath);
+			if (!directoryExists) continue;
 			await this.addDirectory(apiVersionFolderPath, apiVersion);
 		}
 	}
@@ -24,13 +27,16 @@ class CustomApiFactory {
 	}
 
 	private async addDirectory(directoryPath: string, apiVersion: string) {
-		const entries = fs.readdirSync(directoryPath, {
+		const entries = await fs.promises.readdir(directoryPath, {
 			withFileTypes: true
 		});
-
-		for (const entry of entries) {
+		const isTsx = process.argv[1]?.endsWith('.ts');
+		const isTsNode = process.env.TS_NODE_DEV || process.env.TS_NODE_PROJECT;
+		const extension = isTsx || isTsNode ? 'ts' : 'js';
+		const shouldEndWith = `.api.${apiVersion}.${extension}`;
+		await Bluebird.map(entries, async (entry) => {
 			if (entry.isFile()) {
-				if (entry.name.endsWith(`.api.${apiVersion}.js`) === false) continue;
+				if (entry.name.endsWith(shouldEndWith) === false) return;
 
 				// The following try / catch block fixes an issue when looking for the map file giving an exception thrown
 				try {
@@ -44,7 +50,7 @@ class CustomApiFactory {
 					console.error(e);
 				}
 			}
-		}
+		});
 	}
 
 	private bindMethodsToInstance<T extends object>(instance: T): void {

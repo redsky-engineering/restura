@@ -130,6 +130,17 @@
 			"baseUrl": "/api/v1",
 			"routes": [
 				{
+					"type": "CUSTOM_ONE",
+					"responseType": "boolean",
+					"request": [],
+					"method": "POST",
+					"name": "/user/me/avatar",
+					"description": "Uploading a users avatar and updating the user",
+					"path": "/user/me/avatar",
+					"roles": ["admin", "user"],
+					"fileUploadType": "SINGLE"
+				},
+				{
 					"type": "ONE",
 					"method": "GET",
 					"name": "get my user",
