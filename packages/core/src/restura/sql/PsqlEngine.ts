@@ -210,7 +210,7 @@ export class PsqlEngine extends SqlEngine {
 			connectionTimeoutMillis: this.psqlConnectionPool.poolConfig.connectionTimeoutMillis
 		});
 		await scratchPool.runQuery(`drop schema public cascade;`, [], systemUser);
-		await scratchPool.runQuery(`create schema public;`, [], systemUser);
+		await scratchPool.runQuery(`create schema public authorization ${this.psqlConnectionPool.poolConfig.user};`, [], systemUser);
 		return scratchPool;
 	}
 
