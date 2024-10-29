@@ -1,4 +1,4 @@
-/** Auto generated file from Schema Hash (72b4082c058dba63abf27a414faeb6c17a1f0d4152c36647777d9a79a1fb53d0). DO NOT MODIFY **/
+/** Auto generated file from Schema Hash (8119cdb3218f4ad310d01448b9617e80529c081a05dee287b41111d66647fc7e). DO NOT MODIFY **/
 declare namespace Api {
 	// V1
 	// V1 Endpoints

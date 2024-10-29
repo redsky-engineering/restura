@@ -3,7 +3,14 @@
 		{
 			"name": "company",
 			"columns": [
-				{ "name": "id", "hasAutoIncrement": true, "isNullable": false, "roles": [], "type": "BIGINT" },
+				{
+					"name": "id",
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"roles": [],
+					"type": "BIGINT",
+					"isPrimary": true
+				},
 				{ "name": "createdOn", "isNullable": false, "default": "now()", "roles": [], "type": "DATETIME" },
 				{ "name": "modifiedOn", "isNullable": false, "default": "now()", "roles": [], "type": "DATETIME" },
 				{ "roles": [], "name": "name", "type": "VARCHAR", "length": 255, "isNullable": true }
@@ -18,7 +25,14 @@
 		{
 			"name": "user",
 			"columns": [
-				{ "name": "id", "hasAutoIncrement": true, "isNullable": false, "roles": [], "type": "BIGINT" },
+				{
+					"name": "id",
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"roles": [],
+					"type": "BIGINT",
+					"isPrimary": true
+				},
 				{ "name": "createdOn", "isNullable": false, "default": "now()", "roles": [], "type": "DATETIME" },
 				{ "name": "modifiedOn", "isNullable": false, "default": "now()", "roles": [], "type": "DATETIME" },
 				{ "roles": [], "name": "firstName", "type": "VARCHAR", "length": 30, "isNullable": false },
@@ -33,7 +47,7 @@
 				{ "roles": [], "name": "password", "type": "VARCHAR", "length": 70, "isNullable": false },
 				{ "roles": [], "name": "email", "type": "VARCHAR", "length": 100, "isNullable": false },
 				{ "roles": [], "name": "role", "type": "ENUM", "isNullable": false, "value": "'admin','user'" },
-				{ "roles": [], "name": "permissionLogin", "type": "BOOLEAN", "isNullable": false, "default": "1" },
+				{ "roles": [], "name": "permissionLogin", "type": "BOOLEAN", "isNullable": false, "default": "true" },
 				{ "roles": [], "name": "lastLoginOn", "type": "DATETIME", "isNullable": true },
 				{ "roles": [], "name": "phone", "type": "VARCHAR", "length": 30, "isNullable": true },
 				{
@@ -52,7 +66,7 @@
 					"type": "ENUM",
 					"isNullable": false,
 					"value": "'banned','view_only','active'",
-					"default": "\"view_only\""
+					"default": "'view_only'"
 				},
 				{
 					"roles": [],
@@ -67,7 +81,7 @@
 					"type": "ENUM",
 					"isNullable": false,
 					"value": "'verify_email','complete'",
-					"default": "\"verify_email\""
+					"default": "'verify_email'"
 				},
 				{ "roles": [], "name": "pendingEmail", "type": "VARCHAR", "length": 100, "isNullable": true }
 			],
