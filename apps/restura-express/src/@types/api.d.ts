@@ -1,4 +1,4 @@
-/** Auto generated file from Schema Hash (bdffeb514215bec9744a4036f1524b9e3e8b4ea5d5e72d77743371e1b447cd89). DO NOT MODIFY **/
+/** Auto generated file from Schema Hash (8119cdb3218f4ad310d01448b9617e80529c081a05dee287b41111d66647fc7e). DO NOT MODIFY **/
 declare namespace Api {
 	// V1
 	// V1 Endpoints
@@ -59,6 +59,14 @@ declare namespace Api {
 						lastName: string;
 						email: string;
 						phone: string | null;
+					}
+				}
+				export namespace Avatar {
+					// /user/me/avatar
+					// Uploading a users avatar and updating the user
+					export namespace Post {
+						export interface Req {}
+						export type Res = boolean;
 					}
 				}
 			}
