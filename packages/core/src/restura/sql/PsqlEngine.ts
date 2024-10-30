@@ -95,7 +95,6 @@ export class PsqlEngine extends SqlEngine {
 
 	generateDatabaseSchemaFromSchema(schema: ResturaSchema): string {
 		const sqlStatements = [];
-		const enums = [];
 		const indexes = [];
 		const triggers = [];
 
@@ -108,10 +107,8 @@ export class PsqlEngine extends SqlEngine {
 			const tableColumns = [];
 			for (const column of table.columns) {
 				let columnSql = '';
-				if (column.type === 'ENUM') {
-					enums.push(`CREATE TYPE ${schemaToPsqlType(column, table.name)} AS ENUM (${column.value});`);
-				}
-				columnSql += `\t"${column.name}" ${schemaToPsqlType(column, table.name)}`;
+
+				columnSql += `\t"${column.name}" ${schemaToPsqlType(column)}`;
 				let value = column.value;
 				// JSON's value is used only for typescript not for the database
 				if (column.type === 'JSON') value = '';
@@ -133,6 +130,9 @@ export class PsqlEngine extends SqlEngine {
 				if (column.isNullable) columnSql += ' NULL';
 				else columnSql += ' NOT NULL';
 				if (column.default) columnSql += ` DEFAULT ${column.default}`;
+				if (value && column.type === 'ENUM') {
+					columnSql += ` CHECK ("${column.name}" IN (${value}))`;
+				}
 				tableColumns.push(columnSql);
 			}
 			sql += tableColumns.join(', \n');
@@ -181,17 +181,18 @@ export class PsqlEngine extends SqlEngine {
 		}
 		sqlStatements.push(indexes.join('\n'));
 		sqlStatements.push(triggers.join('\n'));
-		return enums.join('\n') + '\n' + sqlStatements.join('\n\n');
+		return sqlStatements.join('\n\n');
 	}
 
 	private async getScratchPool(): Promise<PsqlPool> {
-		const response = await this.psqlConnectionPool.runQuery<DynamicObject>(
-			`SELECT * FROM pg_database
-      WHERE datname = '${this.psqlConnectionPool.poolConfig.database}_scratch'`,
+		const scratchDbExists = await this.psqlConnectionPool.runQuery<DynamicObject>(
+			`SELECT *
+             FROM pg_database
+             WHERE datname = '${this.psqlConnectionPool.poolConfig.database}_scratch';`,
 			[],
 			systemUser
 		);
-		if (response.length === 0) {
+		if (scratchDbExists.length === 0) {
 			await this.psqlConnectionPool.runQuery(
 				`CREATE DATABASE ${this.psqlConnectionPool.poolConfig.database}_scratch;`,
 				[],
@@ -209,12 +210,27 @@ export class PsqlEngine extends SqlEngine {
 			idleTimeoutMillis: this.psqlConnectionPool.poolConfig.idleTimeoutMillis,
 			connectionTimeoutMillis: this.psqlConnectionPool.poolConfig.connectionTimeoutMillis
 		});
-		await scratchPool.runQuery(`drop schema public cascade;`, [], systemUser);
+		await scratchPool.runQuery(`DROP SCHEMA public CASCADE;`, [], systemUser);
 		await scratchPool.runQuery(
-			`create schema public authorization ${this.psqlConnectionPool.poolConfig.user};`,
+			`CREATE SCHEMA public AUTHORIZATION ${this.psqlConnectionPool.poolConfig.user};`,
 			[],
 			systemUser
 		);
+		const schemaComment = await this.psqlConnectionPool.runQuery<{ description: string }>(
+			`SELECT pg_description.description
+                                                                                               FROM pg_description
+                                                                                                        JOIN pg_namespace ON pg_namespace.oid = pg_description.objoid
+                                                                                   WHERE pg_namespace.nspname = 'public';`,
+			[],
+			systemUser
+		);
+		if (schemaComment[0]?.description) {
+			await scratchPool.runQuery(
+				`COMMENT ON SCHEMA public IS '${schemaComment[0]?.description}';`,
+				[],
+				systemUser
+			);
+		}
 		return scratchPool;
 	}
 
@@ -677,9 +693,9 @@ EXECUTE FUNCTION notify_${tableName}_insert();
 	}
 }
 
-function schemaToPsqlType(column: ColumnData, tableName: string) {
+function schemaToPsqlType(column: ColumnData) {
 	if (column.hasAutoIncrement) return 'BIGSERIAL';
-	if (column.type === 'ENUM') return `"${tableName}_${column.name}_enum"`;
+	if (column.type === 'ENUM') return `TEXT`;
 	if (column.type === 'DATETIME') return 'TIMESTAMPTZ';
 	if (column.type === 'MEDIUMINT') return 'INT';
 	return column.type;

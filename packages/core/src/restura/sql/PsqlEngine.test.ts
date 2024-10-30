@@ -143,7 +143,14 @@ const sampleSchema: ResturaSchema = {
 					length: 100,
 					isNullable: false
 				},
-				{ roles: [], name: 'role', type: 'ENUM', isNullable: false, value: "'admin','user'" },
+				{
+					roles: [],
+					name: 'role',
+					type: 'ENUM',
+					isNullable: false,
+					value: "'admin','user'",
+					default: "'user'"
+				},
 				{
 					roles: [],
 					name: 'permissionLogin',
@@ -825,10 +832,7 @@ describe('PsqlEngine', function () {
 			const ddl = psqlEngine.generateDatabaseSchemaFromSchema(sampleSchema);
 			const ddlNoSpace = trimRedundantWhitespace(ddl);
 			expect(ddlNoSpace).to.equal(
-				trimRedundantWhitespace(`CREATE TYPE "user_role_enum" AS ENUM ('admin','user');
-CREATE TYPE "user_accountStatus_enum" AS ENUM ('banned','view_only','active');
-CREATE TYPE "user_onboardingStatus_enum" AS ENUM ('verify_email','complete');
-CREATE TABLE "company"
+				trimRedundantWhitespace(`CREATE TABLE "company"
 	   ( 	"id" BIGSERIAL PRIMARY KEY  NOT NULL, 
 	"createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
 	"modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
@@ -843,10 +847,11 @@ CREATE TABLE "order"
 
 CREATE TABLE "item"
 ( "id" BIGSERIAL PRIMARY KEY NOT NULL,
-  "orderId" BIGINT NOT NULL );
+  "orderId" BIGINT NOT NULL 
+);
 
 CREATE TABLE "user"
-	   ( 	"id" BIGSERIAL NOT NULL, 
+(  "id" BIGSERIAL NOT NULL, 
 	"createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
 	"modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
 	"firstName" VARCHAR(30) NOT NULL, 
@@ -854,7 +859,7 @@ CREATE TABLE "user"
 	"companyId" BIGINT NOT NULL, 
 	"password" VARCHAR(70) NOT NULL, 
 	"email" VARCHAR(100) NOT NULL, 
-	"role" "user_role_enum" NOT NULL, 
+	"role" TEXT NOT NULL DEFAULT 'user' CHECK ("role" IN ('admin','user')), 
 	"permissionLogin" BOOLEAN NOT NULL DEFAULT true, 
 	"lastLoginOn" TIMESTAMPTZ NULL, 
 	"phone" VARCHAR(30) NULL, 
@@ -862,9 +867,9 @@ CREATE TABLE "user"
 	"passwordResetGuid" VARCHAR(100) NULL, 
 	"verifyEmailPin" INT NULL, 
 	"verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, 
-	"accountStatus" "user_accountStatus_enum" NOT NULL DEFAULT 'view_only', 
+	"accountStatus" TEXT NOT NULL DEFAULT 'view_only' CHECK ("accountStatus" IN ('banned','view_only','active')), 
 	"passwordResetExpiresOn" TIMESTAMPTZ NULL, 
-	"onboardingStatus" "user_onboardingStatus_enum" NOT NULL DEFAULT 'verify_email', 
+	"onboardingStatus" TEXT NOT NULL DEFAULT 'verify_email' CHECK ("onboardingStatus" IN ('verify_email','complete')), 
 	"pendingEmail" VARCHAR(100) NULL
 );
 
