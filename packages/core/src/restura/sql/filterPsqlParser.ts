@@ -75,7 +75,7 @@ column = left:text "." right:text { return  \`\${quoteSqlIdentity(left)}.\${quot
     text:text { return quoteSqlIdentity(text); } 
     
 
-text = text:[a-z0-9-_:@]i+ { return text.join("");}
+text = text:[a-z0-9 \\t\\r\\n\\-_:@]i+ { return text.join(""); }
 
 type = "type:" type:typeString { return type; }
 typeString = text:"startsWith" { return function(column, value) { return \`\${column} ILIKE '\${format.literal(value).slice(1,-1)}%'\`; } } /
