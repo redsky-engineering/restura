@@ -54,13 +54,15 @@ const filterSqlGrammar = `
 
 start = expressionList
 
+_ = [ \\t\\r\\n]*  // Matches spaces, tabs, and line breaks
+
 expressionList =
-        leftExpression:expression operator:operator rightExpression:expressionList 
+    leftExpression:expression _ operator:operator _ rightExpression:expressionList 
     { return \`\${leftExpression} \${operator} \${rightExpression}\`;}
     / expression
 
 expression = 
-    negate:negate?"(" "column:" column:column ","? value:value? ","? type:type? ")" 
+    negate:negate? _ "(" _ "column" _ ":"  column:column _ ","? _ value:value? ","? _ type:type? _ ")"_
     {return \`\${negate? " NOT " : ""}(\${type?  type(column, value) : \`\${column\} = \${format.literal(value)}\`})\`;}
     /
     negate:negate?"("expression:expressionList")" { return \`\${negate? " NOT " : ""}(\${expression})\`; }
@@ -77,7 +79,7 @@ column = left:text "." right:text { return  \`\${quoteSqlIdentity(left)}.\${quot
 
 text = text:[a-z0-9 \\t\\r\\n\\-_:@]i+ { return text.join(""); }
 
-type = "type:" type:typeString { return type; }
+type = "type" _ ":" _ type:typeString { return type; }
 typeString = text:"startsWith" { return function(column, value) { return \`\${column} ILIKE '\${format.literal(value).slice(1,-1)}%'\`; } } /
     text:"endsWith"  { return function(column, value) { return \`\${column} ILIKE '%\${format.literal(value).slice(1,-1)}'\`; } } /
     text:"contains" { return function(column, value) { return \`\${column} ILIKE '%\${format.literal(value).slice(1,-1)}%'\`; } } /
@@ -87,8 +89,9 @@ typeString = text:"startsWith" { return function(column, value) { return \`\${co
     text:"lessThanEqual" { return function(column, value) { return \`\${column} <= '\${format.literal(value).slice(1,-1)}'\`; } } /
     text:"lessThan" { return function(column, value) { return \`\${column} < '\${format.literal(value).slice(1,-1)}'\`; } } / 
     text:"isNull"   { return function(column, value) { return \`isNull(\${column})\`; } } 
-    
-value = "value:" value:text { return value; } 
+
+value = "value" _ ":" value:text { return value; }
+
 
 `;
 

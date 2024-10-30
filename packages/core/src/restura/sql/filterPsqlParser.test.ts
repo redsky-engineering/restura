@@ -28,6 +28,7 @@ describe('Filter Psql Parsing test', function () {
 		test('!(column:id,value:4504055,type:contains)', ` NOT ("id" ILIKE '%4504055%')`);
 		test('!(column:id,value:4504055,type:startsWith)', ` NOT ("id" ILIKE '4504055%')`);
 		test('(column:id,value:Tanner B,type:startsWith)', `("id" ILIKE 'Tanner B%')`, 'allow space');
+		test('(column: id ,value: Tanner B ,type:startsWith)', `(" id " ILIKE ' Tanner B %')`, 'allow space');
 		test('(column:id,value:Tanner  B,type:startsWith)', `("id" ILIKE 'Tanner  B%')`, 'allow spaces');
 		test(`(column:id,value:Tanner	B,type:startsWith)`, `("id" ILIKE 'Tanner	B%')`, 'allow tab');
 		test(
@@ -41,6 +42,27 @@ B%')`,
 			'!(column:id,value:4504055,type:contains)and!(column:name,value:jim,type:endsWith)',
 			` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`
 		);
+		test(
+			'!(column:id,value:4504055,type:contains)   and!(column:name,value:jim,type:endsWith)',
+			` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`,
+			'allow but trim whitespace'
+		);
+		test(
+			'! ( column :id, value :4504055,  type: contains )   and ! ( column :name, value :jim, type : endsWith ) ',
+			` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`,
+			'allow but trim whitespace'
+		);
+		test(
+			'!(column:id,value:4504055,type :contains)   and!(column:name,value:jim,type:endsWith)',
+			` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`,
+			'allow but trim whitespace'
+		);
+		test(
+			'!(column:id,value:4504055 ,  type:contains)   and!(column:name,value:jim,type:endsWith)',
+			` NOT ("id" ILIKE '%4504055 %') and  NOT ("name" ILIKE '%jim')`,
+			'allow but trim whitespace'
+		);
+
 		test('(((column:id,value:4504055,type:contains)))', `((("id" ILIKE '%4504055%')))`);
 
 		test('(column:id,value:15234,type:exact)', `("id" = '15234')`);
