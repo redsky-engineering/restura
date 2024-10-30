@@ -189,7 +189,7 @@ class EventManager {
 const eventManager = new EventManager();
 export default eventManager;
 
-const changedValues = (record: DynamicObject, previousRecord: DynamicObject) => {
+function changedValues(record: DynamicObject, previousRecord: DynamicObject) {
 	const changed: DynamicObject = {};
 	for (const i in previousRecord) {
 		if (previousRecord[i] !== record[i]) {
@@ -204,4 +204,4 @@ const changedValues = (record: DynamicObject, previousRecord: DynamicObject) => 
 		}
 	}
 	return changed;
-};
+}
