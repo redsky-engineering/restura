@@ -39,6 +39,7 @@ export interface ActionRowDeleteFilter {
 
 export interface ActionColumnChangeFilter {
 	tableName: string;
+	columns: string[];
 }
 
 export type TriggerResult = {
@@ -169,13 +170,15 @@ class EventManager {
 				case 'DATABASE_COLUMN_UPDATE':
 					const filterColumnChange = filter as ActionColumnChangeFilter;
 					if (filterColumnChange.tableName !== filter.tableName) return false;
-					// if ( // TODO: implement this
-					// 	!filterColumnChange.columns.some((item) => {
-					// 		let updatedColumns = Object.keys(triggerResult.record);
-					// 		return updatedColumns.includes(item);
-					// 	})
-					// )
-					// 	return false;
+					if (
+						!filterColumnChange.columns.some((item) => {
+							const updatedColumns = Object.keys(
+								changedValues(triggerResult.record, triggerResult.previousRecord)
+							);
+							return updatedColumns.includes(item);
+						})
+					)
+						return false;
 					break;
 			}
 		}
@@ -185,3 +188,20 @@ class EventManager {
 
 const eventManager = new EventManager();
 export default eventManager;
+
+function changedValues(record: DynamicObject, previousRecord: DynamicObject) {
+	const changed: DynamicObject = {};
+	for (const i in previousRecord) {
+		if (previousRecord[i] !== record[i]) {
+			if (typeof previousRecord[i] === 'object' && typeof record[i] === 'object') {
+				const nestedChanged = changedValues(record[i] as DynamicObject, previousRecord[i] as DynamicObject);
+				if (Object.keys(nestedChanged).length > 0) {
+					changed[i] = record[i];
+				}
+			} else {
+				changed[i] = record[i];
+			}
+		}
+	}
+	return changed;
+}

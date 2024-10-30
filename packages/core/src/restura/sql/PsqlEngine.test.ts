@@ -1156,7 +1156,7 @@ EXECUTE FUNCTION notify_user_delete();
 						}
 						done();
 					},
-					{ tableName: 'user' }
+					{ tableName: 'user', columns: ['firstName'] }
 				);
 
 				const updateRequest: RsRequest = {
