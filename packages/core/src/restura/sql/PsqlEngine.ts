@@ -50,7 +50,6 @@ export class PsqlEngine extends SqlEngine {
 	}
 
 	private async listenForDbTriggers() {
-		console.log('listenerId', this.psqlConnectionPool.instanceId);
 		this.triggerClient = new Client({
 			user: this.psqlConnectionPool.poolConfig.user,
 			host: this.psqlConnectionPool.poolConfig.host,
