@@ -8,7 +8,7 @@ import crypto, { UUID } from 'crypto';
 import { QueryMetadata } from '../eventManager.js';
 
 export abstract class PsqlConnection {
-	readonly instanceId!: UUID;
+	readonly instanceId: UUID;
 	protected constructor() {
 		this.instanceId = crypto.randomUUID();
 	}
