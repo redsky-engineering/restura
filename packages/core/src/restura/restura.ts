@@ -505,7 +505,7 @@ class ResturaEngine {
 		return route;
 	}
 }
-const setupPgReturnTypes = () => {
+function setupPgReturnTypes() {
 	// OID for timestamptz in Postgres
 	const TIMESTAMPTZ_OID = 1184;
 	// Set a custom parser for timestamptz to return an ISO string
@@ -517,7 +517,7 @@ const setupPgReturnTypes = () => {
 	types.setTypeParser(BIGINT_OID, (val) => {
 		return val === null ? null : Number(val);
 	});
-};
+}
 setupPgReturnTypes();
 
 const restura = new ResturaEngine();
