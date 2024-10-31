@@ -1098,10 +1098,10 @@ EXECUTE FUNCTION notify_user_delete();
 				async function (data) {
 					if (doneCalled) return;
 					try {
-						expect(data.requesterDetails.role).to.equal('admin');
-						expect(data.requesterDetails.host).to.equal('google.com');
-						expect(data.requesterDetails.ipAddress).to.equal('1.1.1.1');
-						expect(data.requesterDetails.userId).to.equal(1);
+						expect(data.queryMetadata.role).to.equal('admin');
+						expect(data.queryMetadata.host).to.equal('google.com');
+						expect(data.queryMetadata.ipAddress).to.equal('1.1.1.1');
+						expect(data.queryMetadata.userId).to.equal(1);
 						expect(data.insertObject.email).to.equal(email);
 						expect(data.tableName).to.equal('user');
 					} catch (e) {
@@ -1144,10 +1144,10 @@ EXECUTE FUNCTION notify_user_delete();
 						if (calledHandler) return;
 						calledHandler = true;
 						try {
-							expect(data.requesterDetails.role).to.equal('admin');
-							expect(data.requesterDetails.host).to.equal('google.com');
-							expect(data.requesterDetails.ipAddress).to.equal('1.1.1.1');
-							expect(data.requesterDetails.userId).to.equal(1);
+							expect(data.queryMetadata.role).to.equal('admin');
+							expect(data.queryMetadata.host).to.equal('google.com');
+							expect(data.queryMetadata.ipAddress).to.equal('1.1.1.1');
+							expect(data.queryMetadata.userId).to.equal(1);
 							expect(data.tableName).to.equal('user');
 							expect(data.newData.firstName).to.equal('Billy');
 						} catch (e) {
@@ -1252,10 +1252,10 @@ EXECUTE FUNCTION notify_user_delete();
 					async function (data) {
 						if (doneCalled) return;
 						try {
-							expect(data.requesterDetails.role).to.equal('admin');
-							expect(data.requesterDetails.host).to.equal('google.com');
-							expect(data.requesterDetails.ipAddress).to.equal('1.1.1.1');
-							expect(data.requesterDetails.userId).to.equal(1);
+							expect(data.queryMetadata.role).to.equal('admin');
+							expect(data.queryMetadata.host).to.equal('google.com');
+							expect(data.queryMetadata.ipAddress).to.equal('1.1.1.1');
+							expect(data.queryMetadata.userId).to.equal(1);
 							expect(data.deletedRow.amountCents).to.equal(100);
 							expect(data.deletedRow.userId).to.equal(1);
 							expect(data.tableName).to.equal('order');

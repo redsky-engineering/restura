@@ -1,16 +1,17 @@
 import { DynamicObject, RequesterDetails } from './types/customExpress.types.js';
 import Bluebird from 'bluebird';
+import { UUID } from 'crypto';
 
 export type EventType = 'DATABASE_ROW_DELETE' | 'DATABASE_ROW_INSERT' | 'DATABASE_COLUMN_UPDATE' | 'WEBHOOK';
 export type MutationType = 'INSERT' | 'UPDATE' | 'DELETE';
 export interface SqlMutationData {
 	mutationType: MutationType;
-	requesterDetails: RequesterDetails;
+	queryMetadata: QueryMetadata;
 }
 
 export interface DatabaseActionData {
 	tableName: string;
-	requesterDetails: RequesterDetails;
+	queryMetadata: QueryMetadata;
 }
 
 export interface ActionRowInsertData<T = DynamicObject> extends DatabaseActionData {
@@ -51,18 +52,22 @@ export type TriggerResult = {
 	requesterId: number;
 };
 
+export type QueryMetadata = RequesterDetails & {
+	connectionInstanceId: UUID;
+};
+
 class EventManager {
 	private actionHandlers: {
 		DATABASE_ROW_DELETE: {
-			callback: (data: ActionRowDeleteData, requesterDetails: RequesterDetails) => Promise<void>;
+			callback: (data: ActionRowDeleteData, queryMetadata: QueryMetadata) => Promise<void>;
 			filter?: ActionRowDeleteFilter;
 		}[];
 		DATABASE_ROW_INSERT: {
-			callback: (data: ActionRowInsertData, requesterDetails: RequesterDetails) => Promise<void>;
+			callback: (data: ActionRowInsertData, queryMetadata: QueryMetadata) => Promise<void>;
 			filter?: ActionRowInsertFilter;
 		}[];
 		DATABASE_COLUMN_UPDATE: {
-			callback: (data: ActionColumnChangeData, requesterDetails: RequesterDetails) => Promise<void>;
+			callback: (data: ActionColumnChangeData, queryMetadata: QueryMetadata) => Promise<void>;
 			filter?: ActionColumnChangeFilter;
 		}[];
 	} = {
@@ -116,9 +121,9 @@ class EventManager {
 					tableName: triggerResult.table,
 					insertId: triggerResult.record.id as number,
 					insertObject: triggerResult.record,
-					requesterDetails: data.requesterDetails
+					queryMetadata: data.queryMetadata
 				};
-				callback(insertData, data.requesterDetails);
+				callback(insertData, data.queryMetadata);
 			},
 			{ concurrency: 10 }
 		);
@@ -131,9 +136,9 @@ class EventManager {
 				const deleteData: ActionRowDeleteData = {
 					tableName: triggerResult.table,
 					deletedRow: triggerResult.previousRecord,
-					requesterDetails: data.requesterDetails
+					queryMetadata: data.queryMetadata
 				};
-				callback(deleteData, data.requesterDetails);
+				callback(deleteData, data.queryMetadata);
 			},
 			{ concurrency: 10 }
 		);
@@ -148,9 +153,9 @@ class EventManager {
 					rowId: triggerResult.record.id as number,
 					newData: triggerResult.record,
 					oldData: triggerResult.previousRecord,
-					requesterDetails: data.requesterDetails
+					queryMetadata: data.queryMetadata
 				};
-				callback(columnChangeData, data.requesterDetails);
+				callback(columnChangeData, data.queryMetadata);
 			},
 			{ concurrency: 10 }
 		);

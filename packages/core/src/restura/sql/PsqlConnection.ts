@@ -4,9 +4,14 @@ import { logger } from '../../logger/logger.js';
 import { RsError } from '../errors.js';
 import { RequesterDetails } from '../types/customExpress.types.js';
 import { questionMarksToOrderedParams } from './PsqlUtils.js';
+import crypto, { UUID } from 'crypto';
+import { QueryMetadata } from '../eventManager.js';
 
 export abstract class PsqlConnection {
-	protected constructor() {}
+	readonly instanceId: UUID;
+	protected constructor() {
+		this.instanceId = crypto.randomUUID();
+	}
 
 	protected abstract query<R extends QueryResultRow = QueryResultRow, T extends Array<unknown> = unknown[]>(
 		query: string,
@@ -16,8 +21,9 @@ export abstract class PsqlConnection {
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 	async queryOne<T>(query: string, options: any[], requesterDetails: RequesterDetails): Promise<T> {
 		const formattedQuery = questionMarksToOrderedParams(query);
-		this.logSqlStatement(formattedQuery, options, requesterDetails);
-		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(requesterDetails)})\n`;
+		const meta: QueryMetadata = { connectionInstanceId: this.instanceId, ...requesterDetails };
+		this.logSqlStatement(formattedQuery, options, meta);
+		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(meta)})\n`;
 
 		try {
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
@@ -42,8 +48,9 @@ export abstract class PsqlConnection {
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 	async runQuery<T>(query: string, options: any[], requesterDetails: RequesterDetails): Promise<T[]> {
 		const formattedQuery = questionMarksToOrderedParams(query);
-		this.logSqlStatement(formattedQuery, options, requesterDetails);
-		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(requesterDetails)})\n`;
+		const meta: QueryMetadata = { connectionInstanceId: this.instanceId, ...requesterDetails };
+		this.logSqlStatement(formattedQuery, options, meta);
+		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(meta)})\n`;
 		try {
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<any>);
@@ -62,7 +69,7 @@ export abstract class PsqlConnection {
 		query: string,
 		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		options: any[],
-		requesterDetails: RequesterDetails,
+		queryMetadata: QueryMetadata,
 		prefix: string = ''
 	) {
 		if (logger.level !== 'silly') return;
@@ -81,9 +88,9 @@ export abstract class PsqlConnection {
 		}
 
 		let initiator = 'Anonymous';
-		if ('userId' in requesterDetails && requesterDetails.userId)
-			initiator = `User Id (${requesterDetails.userId.toString()})`;
-		if ('isSystemUser' in requesterDetails && requesterDetails.isSystemUser) initiator = 'SYSTEM';
+		if ('userId' in queryMetadata && queryMetadata.userId)
+			initiator = `User Id (${queryMetadata.userId.toString()})`;
+		if ('isSystemUser' in queryMetadata && queryMetadata.isSystemUser) initiator = 'SYSTEM';
 
 		logger.silly(`${prefix}query by ${initiator}, Query ->\n ${sqlStatement}`);
 	}

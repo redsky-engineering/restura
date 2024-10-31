@@ -20,7 +20,7 @@ import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './P
 import SqlEngine from './SqlEngine';
 import { SqlUtils } from './SqlUtils';
 import filterPsqlParser from './filterPsqlParser.js';
-import eventManager, { MutationType, TriggerResult } from '../eventManager.js';
+import eventManager, { MutationType, QueryMetadata, TriggerResult } from '../eventManager.js';
 import { boundMethod } from 'autobind-decorator';
 const { Client } = pg;
 
@@ -78,12 +78,15 @@ export class PsqlEngine extends SqlEngine {
 	@boundMethod
 	private async handleTrigger(payload: TriggerResult, mutationType: MutationType) {
 		const findRequesterDetailsRegex = /^--QUERY_METADATA\(\{.*\}\)/; //only looking at the beginning of the query
-		let requesterDetails = {} as RequesterDetails;
 		const match = payload.query.match(findRequesterDetailsRegex);
 		if (match) {
 			const jsonString = match[0].slice(match[0].indexOf('{'), match[0].lastIndexOf('}') + 1);
-			requesterDetails = ObjectUtils.safeParse<RequesterDetails>(jsonString) as RequesterDetails;
-			await eventManager.fireActionFromDbTrigger({ requesterDetails, mutationType }, payload);
+			const queryMetadata = ObjectUtils.safeParse<QueryMetadata>(jsonString) as QueryMetadata;
+			const triggerFromThisInstance = queryMetadata.connectionInstanceId === this.psqlConnectionPool.instanceId;
+			if (!triggerFromThisInstance) {
+				return;
+			}
+			await eventManager.fireActionFromDbTrigger({ queryMetadata, mutationType }, payload);
 		}
 	}
 
