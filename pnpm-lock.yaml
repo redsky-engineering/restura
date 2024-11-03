@@ -223,6 +223,9 @@ importers:
             '@restura/internal':
                 specifier: workspace:*
                 version: link:../internal
+            '@types/node-sql-parser':
+                specifier: ^1.1.0
+                version: 1.1.0
             '@types/tmp':
                 specifier: ^0.2.6
                 version: 0.2.6
@@ -2606,6 +2609,13 @@ packages:
             {
                 integrity: sha512-DSLCOXhkvfS5WNNPbfn2KdICAmk8lLc+/PNvnPnF7gOdMZCxopXduqv0OQ13y/yA/zXTSikZZqVgybUxOEg6YQ==
             }
+
+    '@types/node-sql-parser@1.1.0':
+        resolution:
+            {
+                integrity: sha512-Y5hmrXH9+tVA/tJkel12XVMPPgv07UQv44oAt/8l/TI3raKlxbyFYPDLqo71HTQSN4hEbqlXA/ZAZy0AASsz6w==
+            }
+        deprecated: This is a stub types definition. node-sql-parser provides its own type definitions, so you do not need this installed.
 
     '@types/node@14.18.63':
         resolution:
@@ -11030,6 +11040,10 @@ snapshots:
     '@types/mysql@2.15.26':
         dependencies:
             '@types/node': 22.7.5
+
+    '@types/node-sql-parser@1.1.0':
+        dependencies:
+            node-sql-parser: 5.3.3
 
     '@types/node@14.18.63': {}
 
