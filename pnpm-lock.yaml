@@ -265,6 +265,9 @@ importers:
             mysql:
                 specifier: ^2.18.1
                 version: 2.18.1
+            node-sql-parser:
+                specifier: ^5.3.3
+                version: 5.3.3
             pegjs:
                 specifier: ^0.10.0
                 version: 0.10.0
@@ -3482,6 +3485,13 @@ packages:
             {
                 integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==
             }
+
+    big-integer@1.6.52:
+        resolution:
+            {
+                integrity: sha512-QxD8cf2eVqJOOz63z6JIN9BzvVs/dlySa5HGSBH5xtR8dPteIRQnBxxKqkNTiT6jbDTF6jAfrd4oMcND9RGbQg==
+            }
+        engines: { node: '>=0.6' }
 
     big.js@5.2.2:
         resolution:
@@ -7036,6 +7046,13 @@ packages:
             {
                 integrity: sha512-d9VeXT4SJ7ZeOqGX6R5EM022wpL+eWPooLI+5UpWn2jCT1aosUQEhQP214x33Wkwx3JQMvIm+tIoVOdodFS40g==
             }
+
+    node-sql-parser@5.3.3:
+        resolution:
+            {
+                integrity: sha512-KRVnneHhy5zaylFmtojHxpXqjmThFSOn7n6x1J/38gTE6NL5Wj/yY7hjbFqpYcpPwIpXM7sFDnvV3ejxmoPAJQ==
+            }
+        engines: { node: '>=8' }
 
     noop-logger@0.1.1:
         resolution:
@@ -11647,6 +11664,8 @@ snapshots:
 
     base64-js@1.5.1: {}
 
+    big-integer@1.6.52: {}
+
     big.js@5.2.2: {}
 
     bignumber.js@9.0.0: {}
@@ -13927,6 +13946,11 @@ snapshots:
     node-machine-id@1.1.12: {}
 
     node-releases@2.0.18: {}
+
+    node-sql-parser@5.3.3:
+        dependencies:
+            '@types/pegjs': 0.10.6
+            big-integer: 1.6.52
 
     noop-logger@0.1.1: {}
 

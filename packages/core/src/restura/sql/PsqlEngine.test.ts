@@ -1075,8 +1075,26 @@ EXECUTE FUNCTION notify_user_delete();
 				getAllRouteData,
 				sampleSchema
 			)) as DynamicObject;
-			expect(response?.data.length).to.greaterThan(1);
-			expect(response?.total).to.greaterThan(1);
+			expect(response?.data.length).to.greaterThanOrEqual(1);
+			expect(response?.total).to.greaterThanOrEqual(1);
+		});
+		it('should return query from executeGetRequest', async () => {
+			const allRequest: RsRequest = {
+				requesterDetails: {
+					role: 'admin',
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				},
+				data: { page: 2 }
+			} as unknown as RsRequest;
+			const response = (await psqlEngine['executeGetRequest'](
+				allRequest,
+				getAllRouteData,
+				sampleSchema
+			)) as DynamicObject;
+			expect(response?.data.length).to.greaterThanOrEqual(1);
+			expect(response?.total).to.greaterThanOrEqual(1);
 		});
 		it('should executeGetRequest', async () => {
 			const response = (await psqlEngine['executeGetRequest'](

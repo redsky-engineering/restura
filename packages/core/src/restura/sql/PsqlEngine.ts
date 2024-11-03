@@ -22,6 +22,7 @@ import { SqlUtils } from './SqlUtils';
 import filterPsqlParser from './filterPsqlParser.js';
 import eventManager, { MutationType, TriggerResult } from '../eventManager.js';
 import { boundMethod } from 'autobind-decorator';
+import { psqlParser } from './psqlParser.js';
 const { Client } = pg;
 
 const systemUser: RequesterDetails = {
@@ -349,12 +350,11 @@ export class PsqlEngine extends SqlEngine {
 		return this.executeGetRequest(req, { ...routeData, where: whereData }, schema) as Promise<DynamicObject>;
 	}
 
-	protected async executeGetRequest(
+	protected executeGetRequestRawSql(
 		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
 		schema: ResturaSchema
-		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	): Promise<DynamicObject | any[]> {
+	): { select: string; sql: string; groupBy: string; orderBy: string; limit: string; sqlParams: string[] } {
 		const DEFAULT_PAGED_PAGE_NUMBER = 0;
 		const DEFAULT_PAGED_PER_PAGE_NUMBER = 25;
 		const sqlParams: string[] = [];
@@ -393,34 +393,38 @@ export class PsqlEngine extends SqlEngine {
 
 		sqlStatement += this.generateWhereClause(req, routeData.where, routeData, sqlParams);
 
-		let groupByOrderByStatement = this.generateGroupBy(routeData);
-		groupByOrderByStatement += this.generateOrderBy(req, routeData);
-
-		if (routeData.type === 'ONE') {
-			return this.psqlConnectionPool.queryOne(
-				`${selectStatement}${sqlStatement}${groupByOrderByStatement};`,
-				sqlParams,
-				req.requesterDetails
-			);
-		} else if (routeData.type === 'ARRAY') {
-			// Array
-			return this.psqlConnectionPool.runQuery(
-				`${selectStatement}${sqlStatement}${groupByOrderByStatement};`,
-				sqlParams,
-				req.requesterDetails
-			);
-		} else if (routeData.type === 'PAGED') {
+		const groupBy = this.generateGroupBy(routeData);
+		const orderBy = this.generateOrderBy(req, routeData);
+		let limit = '';
+		if (routeData.type === 'PAGED') {
 			const data = req.data as PageQuery;
+			limit = SQL`LIMIT ${data.perPage || DEFAULT_PAGED_PER_PAGE_NUMBER} OFFSET ${(data.page - 1) * data.perPage || DEFAULT_PAGED_PAGE_NUMBER};`;
+		}
+		return { select: selectStatement, sql: sqlStatement, groupBy, orderBy, limit, sqlParams };
+	}
+	protected async executeGetRequest(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		schema: ResturaSchema
+		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+	): Promise<DynamicObject | any[]> {
+		const { select, sql, groupBy, orderBy, sqlParams, limit } = this.executeGetRequestRawSql(
+			req,
+			routeData,
+			schema
+		);
+		const query = `${select} ${sql} ${groupBy} ${orderBy} ${limit};`;
+		if (routeData.type === 'ONE') {
+			return this.psqlConnectionPool.queryOne(query, sqlParams, req.requesterDetails);
+		} else if (routeData.type === 'ARRAY') {
+			return this.psqlConnectionPool.runQuery(query, sqlParams, req.requesterDetails);
+		} else if (routeData.type === 'PAGED') {
 			// The COUNT() does not work with group by and order by, so we need to catch that case and act accordingly
-			const pagePromise = this.psqlConnectionPool.runQuery(
-				`${selectStatement}${sqlStatement}${groupByOrderByStatement}` +
-					SQL`LIMIT ${data.perPage || DEFAULT_PAGED_PER_PAGE_NUMBER} OFFSET ${(data.page - 1) * data.perPage || DEFAULT_PAGED_PAGE_NUMBER};`,
-				sqlParams,
-				req.requesterDetails
-			);
-			const totalQuery = `SELECT COUNT(${
+			const pagePromise = this.psqlConnectionPool.runQuery(query, sqlParams, req.requesterDetails);
+			const totalSelect = `SELECT COUNT(${
 				routeData.groupBy ? `DISTINCT ${routeData.groupBy.tableName}.${routeData.groupBy.columnName}` : '*'
-			}) AS total\n ${sqlStatement};`;
+			}) AS total`;
+			const totalQuery = psqlParser.toTotalQuery(query, totalSelect);
 			const totalPromise = this.psqlConnectionPool.runQuery<{ total: number }>(
 				totalQuery,
 				sqlParams,
