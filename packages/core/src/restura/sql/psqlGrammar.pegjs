@@ -4,8 +4,9 @@
   }
 }
 
-start
-  = select:selectClause from:fromClause joins:joinClause? where:whereClause? groupBy:groupByClause? orderBy:orderByClause? limit:limitClause? {
+start = query
+
+query = select:selectClause from:fromClause joins:joinClause? where:whereClause? groupBy:groupByClause? orderBy:orderByClause? limit:limitClause? {
       return {
         select,
         from,
@@ -23,17 +24,27 @@ selectClause
     }
 
 
-
 fieldsList
-  = fields:field+   {
+  = fields:field+  {
         return fields.join(",")
     }
 
+column = field / subQuery
 
 field
-  = id:identifier (_","_)?  {
-    return id
+  = id:identifier alias:(" AS "i  aliasOptions)? (_","_)? {
+    return id + (alias?  (' ' + alias.map(x=>x.trim()).join(' ')): '')
   }
+
+subQuery
+  = id:(_"("_) query (_")"_) alias:(" AS "i  aliasOptions)? (_","_)? {
+    return id + (alias?  (' ' + alias.map(x=>x.trim()).join(' ')): '')
+  }
+
+aliasOptions
+  = chars:[a-zA-Z0-9_\"]+ {
+      return chars.join("");
+    }
 
 fromClause
   = _ "FROM"i _ table:identifier _ {
@@ -72,10 +83,18 @@ condition
     }
 
 identifier
-  = chars:[a-zA-Z0-9_\.\"\(\)\*]+ {
-      return chars.join("");
+  =  ident
+
+ident
+  = chars:$[a-zA-Z0-9_\.\"\(\)\*]+ {
+      return chars
     }
 
 _ "whitespace"
   = [ \t\n\r]*
 
+__ "whitespaceRequired"
+  = [ \t\n\r]+
+
+reservedWord
+  = "(" / ")" / "SELECT"i / "UPDATE"i / "INSERT"i / "DELETE"i / "AS"i / "ORDER"i / "BY"i / "GROUP"i / "LIMIT"i / "INNER"i / "LEFT"i / "RIGHT"i / "JOIN"i

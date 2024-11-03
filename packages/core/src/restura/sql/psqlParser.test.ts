@@ -4,11 +4,10 @@ import psqlParser from './psqlParser.js';
 
 function test(inputString: string, testName?: string) {
 	const result: string = psqlParser.parse(inputString);
-	console.log(JSON.stringify(result, null, 1));
 	const { select, from, joins, where, groupBy, orderBy, limit } = result;
 	const query =
 		`${select} ${from} ${joins || ''} ${where || ''} ${groupBy || ''} ${orderBy || ''} ${limit || ''}`.trim();
-	console.log(query);
+
 	try {
 		expect(query).to.exist.with.length.greaterThan(0).and.is.equal(inputString);
 	} catch (e) {
@@ -18,11 +17,9 @@ function test(inputString: string, testName?: string) {
 }
 function testRemoveSpace(inputString: string, testName?: string) {
 	const result: string = psqlParser.parse(inputString);
-	console.log(JSON.stringify(result, null, 1));
 	const { select, from, joins, where, groupBy, orderBy, limit } = result;
 	const query =
 		`${select} ${from} ${joins || ''} ${where || ''} ${groupBy || ''} ${orderBy || ''} ${limit || ''}`.trim();
-	console.log(query);
 	try {
 		expect(query.toLowerCase().replace(/\n/g, '').replace(/ /g, ''))
 			.to.exist.with.length.greaterThan(0)
@@ -39,9 +36,8 @@ describe('Psql Parsing test', function () {
 			'SELECT name FROM users LEFT JOIN orders ON users.id = orders.user_id WHERE age > 18 GROUP BY name ORDER BY age LIMIT 10',
 			'single column select'
 		);
-
 		test(
-			'SELECT users.name,date,age FROM users LEFT JOIN orders ON users.id = orders.user_id WHERE age > 18 GROUP BY name ORDER BY age LIMIT 10',
+			'SELECT "user".name,date,age FROM "user" LEFT JOIN orders ON users.id = orders.user_id WHERE age > 18 GROUP BY name ORDER BY age LIMIT 10',
 			'multi column select'
 		);
 		test('SELECT "users".name,"users".date,age FROM users', 'quote support');
@@ -63,8 +59,31 @@ group by company.id`,
 from company
          join "user" on company.id = "user"."companyId"
 group by company.id`,
-			''
+			'aggregate select'
 		);
+		testRemoveSpace(
+			`select company.name AS num_users from company
+         join "user" on company.id = "user"."companyId"
+group by company.id`,
+			'alias'
+		);
+		testRemoveSpace(
+			`select company.name AS "numUsers" from company
+         join "user" on company.id = "user"."companyId"
+group by company.id`,
+			'quoted alias'
+		);
+		testRemoveSpace(
+			`select count("user".id) AS "numUsers" from company
+         join "user" on company.id = "user"."companyId"
+group by company.id`,
+			'quoted alias with aggregate'
+		);
+
+		// testRemoveSpace(
+		// 	`select ( select user.id from users ) AS total from company`,
+		// 	'subQuery'
+		// );
 
 		done();
 	});

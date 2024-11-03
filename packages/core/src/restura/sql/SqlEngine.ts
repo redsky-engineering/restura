@@ -9,7 +9,7 @@ import {
 	TableData,
 	WhereData
 } from '../restura.schema.js';
-import { DynamicObject, RsRequest } from '../types/customExpress.types.js';
+import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpress.types.js';
 
 export default abstract class SqlEngine {
 	async runQueryForRoute(
@@ -120,20 +120,20 @@ export default abstract class SqlEngine {
 		sqlParams: string[]
 	): string | number {
 		let returnValue = value;
-		returnValue = this.replaceLocalParamKeywords(returnValue, routeData, req, sqlParams);
-		returnValue = this.replaceGlobalParamKeywords(returnValue, routeData, req, sqlParams);
+		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+		returnValue = this.replaceLocalParamKeywords(returnValue, routeData, req.data as DynamicObject<any>, sqlParams);
+		returnValue = this.replaceGlobalParamKeywords(returnValue, routeData, req.requesterDetails, sqlParams);
 		return returnValue;
 	}
 
 	protected replaceLocalParamKeywords(
 		value: string | number,
 		routeData: RouteData,
-		req: RsRequest<unknown>,
+		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
+		reqData: DynamicObject<any>,
 		sqlParams: string[]
 	): string | number {
 		if (!routeData.request) return value;
-		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-		const data = req.data as DynamicObject<any>;
 		if (typeof value === 'string') {
 			// Match any value that starts with a $
 			value.match(/\$[a-zA-Z][a-zA-Z0-9_]+/g)?.forEach((param) => {
@@ -142,7 +142,7 @@ export default abstract class SqlEngine {
 				});
 				if (!requestParam)
 					throw new RsError('SCHEMA_ERROR', `Invalid route keyword in route ${routeData.name}`);
-				sqlParams.push(data[requestParam.name]); // pass by reference
+				sqlParams.push(reqData[requestParam.name]); // pass by reference
 			});
 			return value.replace(new RegExp(/\$[a-zA-Z][a-zA-Z0-9_]+/g), '?');
 		}
@@ -152,7 +152,7 @@ export default abstract class SqlEngine {
 	protected replaceGlobalParamKeywords(
 		value: string | number,
 		routeData: RouteData,
-		req: RsRequest<unknown>,
+		requesterDetails: RequesterDetails,
 		sqlParams: string[]
 	): string | number {
 		if (typeof value === 'string') {
@@ -160,7 +160,7 @@ export default abstract class SqlEngine {
 			value.match(/#[a-zA-Z][a-zA-Z0-9_]+/g)?.forEach((param) => {
 				param = param.replace('#', '');
 				// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-				const globalParamValue = (req.requesterDetails as any)[param];
+				const globalParamValue = (requesterDetails as any)[param];
 				if (!globalParamValue)
 					throw new RsError(
 						'SCHEMA_ERROR',
