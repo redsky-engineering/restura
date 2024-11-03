@@ -15,6 +15,13 @@ describe('Psql Parsing test', function () {
 		);
 		expect(
 			psqlParser.toTotalQuery(`SELECT id
+                                        from user`)
+		).to.equal(
+			trimRedundantWhitespace(`SELECT COUNT(*) AS "total"
+             FROM "user"`)
+		);
+		expect(
+			psqlParser.toTotalQuery(`SELECT id
                                         from user
                                         group by user.id
                                         order by user.id
