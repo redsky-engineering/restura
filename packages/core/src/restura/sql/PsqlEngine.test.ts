@@ -1088,13 +1088,17 @@ EXECUTE FUNCTION notify_user_delete();
 				},
 				data: { page: 2 }
 			} as unknown as RsRequest;
-			const response = (await psqlEngine['executeGetRequest'](
+			const query = (await psqlEngine['executeGetRequestRawSql'](
 				allRequest,
 				getAllRouteData,
 				sampleSchema
 			)) as DynamicObject;
-			expect(response?.data.length).to.greaterThanOrEqual(1);
-			expect(response?.total).to.greaterThanOrEqual(1);
+			expect(query.select).to.equal(`SELECT 
+\t"user"."id" AS "id",
+\t"user"."firstName" AS "firstName",
+\t"user"."lastName" AS "lastName",
+\t"user"."email" AS "email"
+`);
 		});
 		it('should executeGetRequest', async () => {
 			const response = (await psqlEngine['executeGetRequest'](
