@@ -408,12 +408,21 @@ export class PsqlEngine extends SqlEngine {
 		schema: ResturaSchema
 		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 	): Promise<DynamicObject | any[]> {
-		const { select, sql, groupBy, orderBy, sqlParams, limit } = this.executeGetRequestRawSql(
-			req,
-			routeData,
-			schema
-		);
-		const query = `${select} ${sql} ${groupBy} ${orderBy} ${limit};`;
+		let query = routeData.rawQuery;
+		let sqlParams: string[] = [];
+		if (!query) {
+			const {
+				select,
+				sql,
+				groupBy,
+				orderBy,
+				sqlParams: params,
+				limit
+			} = this.executeGetRequestRawSql(req, routeData, schema);
+			sqlParams = params;
+			query = `${select} ${sql} ${groupBy} ${orderBy} ${limit};`;
+		}
+
 		if (routeData.type === 'ONE') {
 			return this.psqlConnectionPool.queryOne(query, sqlParams, req.requesterDetails);
 		} else if (routeData.type === 'ARRAY') {

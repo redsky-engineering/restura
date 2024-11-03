@@ -1111,6 +1111,17 @@ EXECUTE FUNCTION notify_user_delete();
 			expect(response?.lastName).to.equal('Burton');
 			expect(response?.email).to.equal('tanner@plvr.com');
 		});
+		it('should executeGetRequest with raw query', async () => {
+			const response = (await psqlEngine['executeGetRequest'](
+				basicRequest,
+				{ ...patchUserRouteData, rawQuery: 'SELECT * FROM "user" WHERE id = 1;' },
+				sampleSchema
+			)) as DynamicObject;
+			expect(response?.id).to.equal(1);
+			expect(response?.firstName).to.equal('Tanner');
+			expect(response?.lastName).to.equal('Burton');
+			expect(response?.email).to.equal('tanner@plvr.com');
+		});
 	});
 	describe('PsqlEngine events', () => {
 		it('should receive notification of user row being inserted', function (done) {

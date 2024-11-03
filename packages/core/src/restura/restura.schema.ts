@@ -111,7 +111,8 @@ const standardRouteSchema = routeDataBaseSchema
 		request: z.array(requestDataSchema),
 		response: z.array(responseDataSchema),
 		groupBy: groupBySchema.optional(),
-		orderBy: orderBySchema.optional()
+		orderBy: orderBySchema.optional(),
+		rawQuery: z.string().optional()
 	})
 	.strict();
 
