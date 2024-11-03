@@ -17,7 +17,11 @@ function test(inputString: string, expected: string, testName?: string) {
 describe('Column Parsing test', function () {
 	it('Should parse valid columns', function (done: Done) {
 		test('name,age,date', 'name,age,date', 'single column select');
-
+		test('name,age,date', 'name,age,date', 'single column select');
+		test('name,age, date', 'name,age,date', 'spaces');
+		test('name,age , date', 'name,age,date', 'spaces');
+		test('name,age AS "AGE", date', 'name,age AS "AGE",date', 'alias');
+		test('name,user.age AS "AGE", date', 'name,user.age AS "AGE",date', 'alias');
 		done();
 	});
 	it('Should reject invalid strings', function (done: Done) {
