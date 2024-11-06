@@ -6,7 +6,9 @@ export function authenticateUser(applicationAuthenticateHandler: AuthenticateHan
 	return (req: RsRequest, res: RsResponse, next: NextFunction) => {
 		// Call the custom function from the main application
 		applicationAuthenticateHandler(req, res, (userDetails: AuthenticationUserDetails) => {
-			// @ts-expect-error - We allow the requesterDetails to be updated with extra details not defined in the RequesterDetails interface
+			req.requesterDetails.host = req.hostname;
+			req.requesterDetails.ipAddress = req.ip || '';
+			// @ts-expect-error - We allow the requesterDetails to be updated because restura doesn't know role, and we allow extra details to be added
 			req.requesterDetails = { ...req.requesterDetails, ...userDetails };
 			next();
 		});
