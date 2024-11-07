@@ -4,12 +4,9 @@ import type { AuthenticateHandler, AuthenticationUserDetails } from '../types/re
 
 export function authenticateUser(applicationAuthenticateHandler: AuthenticateHandler) {
 	return (req: RsRequest, res: RsResponse, next: NextFunction) => {
-		// Call the custom function from the main application
+		// Call the custom function from the main application and get the role and other details
 		applicationAuthenticateHandler(req, res, (userDetails: AuthenticationUserDetails) => {
-			req.requesterDetails.host = req.hostname;
-			req.requesterDetails.ipAddress = req.ip || '';
-			// @ts-expect-error - We allow the requesterDetails to be updated because restura doesn't know role, and we allow extra details to be added
-			req.requesterDetails = { ...req.requesterDetails, ...userDetails };
+			req.requesterDetails = { host: req.hostname, ipAddress: req.ip || '', ...userDetails };
 			next();
 		});
 	};

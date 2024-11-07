@@ -18,7 +18,7 @@ export type RequesterDetails<T extends object = {}> = {
 	isSystemUser?: boolean;
 } & T;
 
-export interface RsRequest<T = unknown, U extends object = Record<string, never>> extends express.Request {
+export interface RsRequest<T = unknown, U extends object = Record<string, unknown>> extends express.Request {
 	requesterDetails: RequesterDetails<U>;
 	data: T;
 }
