@@ -1,9 +1,11 @@
 import { ObjectUtils } from '@redskytech/core-utils';
 import getDiff from '@wmfs/pg-diff-sync';
 import pgInfo from '@wmfs/pg-info';
-import pg from 'pg';
+import { boundMethod } from 'autobind-decorator';
 import type { Client as ClientType } from 'pg';
+import pg from 'pg';
 import { RsError } from '../errors';
+import eventManager, { MutationType, QueryMetadata, TriggerResult } from '../eventManager.js';
 import {
 	CustomRouteData,
 	JoinData,
@@ -20,8 +22,6 @@ import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './P
 import SqlEngine from './SqlEngine';
 import { SqlUtils } from './SqlUtils';
 import filterPsqlParser from './filterPsqlParser.js';
-import eventManager, { MutationType, QueryMetadata, TriggerResult } from '../eventManager.js';
-import { boundMethod } from 'autobind-decorator';
 const { Client } = pg;
 
 const systemUser: RequesterDetails = {
@@ -56,7 +56,7 @@ export class PsqlEngine extends SqlEngine {
 			database: this.psqlConnectionPool.poolConfig.database,
 			password: this.psqlConnectionPool.poolConfig.password,
 			port: this.psqlConnectionPool.poolConfig.port,
-			connectionTimeoutMillis: 2000
+			connectionTimeoutMillis: this.psqlConnectionPool.poolConfig.connectionTimeoutMillis
 		});
 
 		await this.triggerClient.connect();
