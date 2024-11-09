@@ -56,7 +56,7 @@ export class PsqlEngine extends SqlEngine {
 			database: this.psqlConnectionPool.poolConfig.database,
 			password: this.psqlConnectionPool.poolConfig.password,
 			port: this.psqlConnectionPool.poolConfig.port,
-			connectionTimeoutMillis: 2000
+			connectionTimeoutMillis: this.psqlConnectionPool.poolConfig.connectionTimeoutMillis
 		});
 
 		await this.triggerClient.connect();
