@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { logger } from '../logger/logger';
-import { validatorDataSchema } from './types/validation.types';
+import { logger } from '../../logger/logger';
+import { validatorDataSchema } from './validatorDataSchema';
 
 // Zod schemas with strict mode
 const orderBySchema = z
@@ -304,7 +304,7 @@ const endpointDataSchema = z
 export type EndpointData = z.infer<typeof endpointDataSchema>;
 
 // The full Schema schema
-export const resturaZodSchema = z
+export const resturaSchema = z
 	.object({
 		database: z.array(tableDataSchema),
 		endpoints: z.array(endpointDataSchema),
@@ -314,11 +314,11 @@ export const resturaZodSchema = z
 	})
 	.strict();
 
-export type ResturaSchema = z.infer<typeof resturaZodSchema>;
+export type ResturaSchema = z.infer<typeof resturaSchema>;
 
 export async function isSchemaValid(schemaToCheck: unknown): Promise<boolean> {
 	try {
-		resturaZodSchema.parse(schemaToCheck);
+		resturaSchema.parse(schemaToCheck);
 		return true;
 	} catch (error) {
 		logger.error(error);

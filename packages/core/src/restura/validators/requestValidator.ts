@@ -2,17 +2,17 @@ import { ObjectUtils } from '@redskytech/core-utils';
 import jsonschema, { Schema } from 'jsonschema';
 import { Definition } from 'typescript-json-schema';
 import { z } from 'zod';
-import { RsError } from './errors';
-import { RequestData, RouteData } from './restura.schema.js';
-import type { DynamicObject, RsRequest } from './types/customExpress.types.js';
-import { ValidatorData, ValidatorDataSchemeValue, validatorDataSchemeValue } from './types/validation.types';
-import addQuotesToStrings from './utils/addQuotesToStrings';
+import { RsError } from '../RsError';
+import { RequestData, RouteData } from '../schemas/resturaSchema.js';
+import { ValidatorData, ValidatorDataSchemeValue, validatorDataSchemeValue } from '../schemas/validatorDataSchema.js';
+import type { DynamicObject, RsRequest } from '../types/customExpressTypes.js';
+import addQuotesToStrings from '../utils/addQuotesToStrings';
 
 export interface ValidationDictionary {
 	[Key: string]: Definition;
 }
 
-export default function validateRequestParams(
+export default function requestValidator(
 	req: RsRequest<unknown>,
 	routeData: RouteData,
 	validationSchema: ValidationDictionary
@@ -41,8 +41,7 @@ export default function validateRequestParams(
 	}
 
 	// Make sure all passed in params are defined in the schema
-	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	Object.keys(req.data as any[]).forEach((requestParamName) => {
+	Object.keys(req.data as object).forEach((requestParamName) => {
 		const requestParam = routeData.request!.find((param) => param.name === requestParamName);
 		if (!requestParam) {
 			throw new RsError('BAD_REQUEST', `Request param (${requestParamName}) is not allowed`);

@@ -1,4 +1,4 @@
-import type { RsRequest, RsResponse } from './customExpress.types.js';
+import type { RsRequest, RsResponse } from './customExpressTypes.js';
 
 export interface SchemaChangeValue {
 	name: string;
@@ -11,30 +11,6 @@ export interface SchemaPreview {
 	globalParams: SchemaChangeValue[];
 	roles: SchemaChangeValue[];
 	customTypes: boolean;
-}
-
-export interface LoginDetails {
-	token: string;
-	refreshToken: string;
-	expiresOn: string;
-	user: {
-		firstName: string;
-		lastName: string;
-		email: string;
-	};
-}
-
-// The `string` type is to handle for enums
-export type ValidatorString = 'boolean' | 'string' | 'number' | 'object' | 'any';
-
-export interface ResponseType {
-	isOptional?: boolean;
-	isArray?: boolean;
-	validator: ValidatorString | ResponseTypeMap | string[];
-}
-
-export interface ResponseTypeMap {
-	[property: string]: ResponseType;
 }
 
 export type StandardOrderTypes = 'ASC' | 'DESC' | 'RAND' | 'NONE';

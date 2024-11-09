@@ -1,8 +1,8 @@
 import { boundMethod } from 'autobind-decorator';
 import cloneDeep from 'lodash.clonedeep';
-import { ResturaSchema, RouteData } from './restura.schema.js';
-import { SchemaChangeValue, SchemaPreview } from './types/restura.types.js';
+import { ResturaSchema, RouteData } from './schemas/resturaSchema.js';
 import { PsqlEngine } from './sql/PsqlEngine.js';
+import { SchemaChangeValue, SchemaPreview } from './types/resturaTypes.js';
 
 class CompareSchema {
 	@boundMethod

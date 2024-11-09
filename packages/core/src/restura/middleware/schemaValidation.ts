@@ -1,15 +1,15 @@
 import type { NextFunction } from 'express';
 import { logger } from '../../logger/logger.js';
-import { HtmlStatusCodes } from '../errors.js';
-import { resturaZodSchema } from '../restura.schema.js';
-import type { RsRequest, RsResponse } from '../types/customExpress.types.js';
-import { getRequestData } from '../validateRequestParams.js';
+import { HtmlStatusCodes } from '../RsError.js';
+import { resturaSchema } from '../schemas/resturaSchema.js';
+import type { RsRequest, RsResponse } from '../types/customExpressTypes.js';
+import { getRequestData } from '../validators/requestValidator.js';
 
 export async function schemaValidation(req: RsRequest<unknown>, res: RsResponse<unknown>, next: NextFunction) {
 	req.data = getRequestData(req as RsRequest<unknown>);
 
 	try {
-		resturaZodSchema.parse(req.data);
+		resturaSchema.parse(req.data);
 		next();
 	} catch (error) {
 		logger.error(error);

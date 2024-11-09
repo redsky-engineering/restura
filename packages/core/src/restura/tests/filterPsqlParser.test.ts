@@ -1,6 +1,7 @@
 import { expect, assert } from 'chai';
 import { Done } from 'mocha';
-import filterPsqlParser from './filterPsqlParser.js';
+import filterPsqlParser from '../sql/filterPsqlParser.js';
+
 function test(inputString: string, expectedString: string, testName?: string) {
 	const result: string = filterPsqlParser.parse(inputString);
 	try {
@@ -15,9 +16,8 @@ function testBadInput(inputString: string, testName?: string) {
 	try {
 		filterPsqlParser.parse(inputString);
 		assert.fail(`The parsing should have failed on ${inputString} ` + testName);
-		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	} catch (e: any) {
-		if (e.name !== 'SyntaxError') {
+	} catch (e: unknown) {
+		if (e instanceof Error && e.name !== 'SyntaxError') {
 			throw e;
 		}
 	}

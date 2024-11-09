@@ -1,6 +1,6 @@
-import { DynamicObject, RequesterDetails } from './types/customExpress.types.js';
 import Bluebird from 'bluebird';
 import { UUID } from 'crypto';
+import { DynamicObject, RequesterDetails } from './types/customExpressTypes.js';
 
 export type EventType = 'DATABASE_ROW_DELETE' | 'DATABASE_ROW_INSERT' | 'DATABASE_COLUMN_UPDATE' | 'WEBHOOK';
 export type MutationType = 'INSERT' | 'UPDATE' | 'DELETE';

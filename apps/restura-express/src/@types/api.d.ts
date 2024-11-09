@@ -1,4 +1,5 @@
-/** Auto generated file from Schema Hash (8119cdb3218f4ad310d01448b9617e80529c081a05dee287b41111d66647fc7e). DO NOT MODIFY **/
+/** Auto generated file. DO NOT MODIFY **/
+
 declare namespace Api {
 	// V1
 	// V1 Endpoints
@@ -245,5 +246,9 @@ declare namespace CustomTypes {
 		windDirection: string;
 		tomorrowHighF: number;
 		tomorrowLowF: number;
+	}
+
+	export interface Test extends Restura.PageQuery {
+		test: string;
 	}
 }

@@ -1,15 +1,27 @@
-import { RsError } from './errors.js';
+import { RsError } from '../RsError.js';
 
-import type { ResponseType, ResponseTypeMap, ValidatorString } from './types/restura.types.js';
-import { SqlUtils } from './sql/SqlUtils.js';
 import {
 	CustomRouteData,
+	ResponseData,
 	ResturaSchema,
 	RouteData,
 	StandardRouteData,
-	ResponseData,
 	TableData
-} from './restura.schema.js';
+} from '../schemas/resturaSchema.js';
+import { SqlUtils } from '../sql/SqlUtils.js';
+
+// The `string` type is to handle for enums
+export type ValidatorString = 'boolean' | 'string' | 'number' | 'object' | 'any';
+
+interface ResponseType {
+	isOptional?: boolean;
+	isArray?: boolean;
+	validator: ValidatorString | ResponseTypeMap | string[];
+}
+
+interface ResponseTypeMap {
+	[property: string]: ResponseType;
+}
 
 export default class ResponseValidator {
 	private readonly rootMap: ResponseTypeMap;
