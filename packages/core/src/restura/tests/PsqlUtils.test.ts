@@ -1,5 +1,5 @@
-import { insertObjectQuery, questionMarksToOrderedParams, SQL, updateObjectQuery } from './PsqlUtils.js';
 import { expect } from 'chai';
+import { insertObjectQuery, questionMarksToOrderedParams, SQL, updateObjectQuery } from '../sql/PsqlUtils.js';
 
 describe('PsqlUtils', () => {
 	it('should convert an object to an insert statement', () => {

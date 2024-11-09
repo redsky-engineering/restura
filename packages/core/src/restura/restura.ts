@@ -4,41 +4,42 @@ import { boundMethod } from 'autobind-decorator';
 import bodyParser from 'body-parser';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import { createHash } from 'crypto';
 import * as express from 'express';
+import { RequestHandler } from 'express';
 import fs from 'fs';
+import multer from 'multer';
 import path from 'path';
 import pg from 'pg';
 import * as prettier from 'prettier';
-import { resturaConfigSchema, type ResturaConfigSchema } from '../config.schema.js';
 import { logger } from '../logger/logger.js';
-import ResponseValidator from './ResponseValidator.js';
-import apiGenerator from './apiGenerator.js';
+import { RsError } from './RsError.js';
+import compareSchema from './compareSchema.js';
 import customApiFactory from './customApiFactory.js';
-import customTypeValidationGenerator from './customTypeValidationGenerator.js';
-import { RsError } from './errors.js';
+import apiGenerator from './generators/apiGenerator.js';
+import customTypeValidationGenerator from './generators/customTypeValidationGenerator.js';
+import modelGenerator from './generators/modelGenerator.js';
+import resturaGlobalTypesGenerator from './generators/resturaGlobalTypesGenerator.js';
 import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
 import { authenticateUser } from './middleware/authenticateUser.js';
+import { getMulterUpload } from './middleware/getMulterUpload.js';
 import { schemaValidation } from './middleware/schemaValidation.js';
-import modelGenerator from './modelGenerator.js';
+import { resturaConfigSchema, type ResturaConfigSchema } from './schemas/resturaConfigSchema.js';
 import {
 	isSchemaValid,
 	StandardRouteData,
 	type CustomRouteData,
 	type ResturaSchema,
 	type RouteData
-} from './restura.schema.js';
+} from './schemas/resturaSchema.js';
 import { PsqlEngine } from './sql/PsqlEngine.js';
 import { PsqlPool } from './sql/PsqlPool.js';
-import type { RsRequest, RsResponse } from './types/customExpress.types.js';
-import type { AuthenticateHandler } from './types/restura.types.js';
-import validateRequestParams, { ValidationDictionary } from './validateRequestParams.js';
-import compareSchema from './compareSchema.js';
-import { getMulterUploadSingleton } from './middleware/getMulterUploadSingleton.js';
-import { RequestHandler } from 'express';
-import multer from 'multer';
+import type { RsRequest, RsResponse } from './types/customExpressTypes.js';
+import type { AuthenticateHandler } from './types/resturaTypes.js';
 import TempCache from './utils/TempCache.js';
+import ResponseValidator from './validators/ResponseValidator.js';
+import requestValidator, { ValidationDictionary } from './validators/requestValidator.js';
 const { types } = pg;
+
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
 	resturaConfig!: ResturaConfigSchema;
@@ -74,7 +75,7 @@ class ResturaEngine {
 		// Try to load config first. If it fails, we can't continue.
 		this.resturaConfig = config.validate('restura', resturaConfigSchema) as ResturaConfigSchema;
 
-		this.multerCommonUpload = getMulterUploadSingleton(this.resturaConfig.fileTempCachePath);
+		this.multerCommonUpload = getMulterUpload(this.resturaConfig.fileTempCachePath);
 		new TempCache(this.resturaConfig.fileTempCachePath);
 		this.psqlConnectionPool = psqlConnectionPool;
 		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool, true);
@@ -156,10 +157,7 @@ class ResturaEngine {
 	 * @returns A promise that resolves when the API has been successfully generated and written to the output file.
 	 */
 	async generateApiFromSchema(outputFile: string, providedSchema: ResturaSchema): Promise<void> {
-		fs.writeFileSync(
-			outputFile,
-			await apiGenerator(providedSchema, await this.generateHashForSchema(providedSchema))
-		);
+		fs.writeFileSync(outputFile, await apiGenerator(providedSchema));
 	}
 
 	/**
@@ -170,10 +168,16 @@ class ResturaEngine {
 	 * @returns A promise that resolves when the model has been successfully written to the output file.
 	 */
 	async generateModelFromSchema(outputFile: string, providedSchema: ResturaSchema): Promise<void> {
-		fs.writeFileSync(
-			outputFile,
-			await modelGenerator(providedSchema, await this.generateHashForSchema(providedSchema))
-		);
+		fs.writeFileSync(outputFile, await modelGenerator(providedSchema));
+	}
+
+	/**
+	 * Generates the ambient module declaration for Restura global types and writes it to the specified output file.
+	 * These types are used sometimes in the CustomTypes
+	 * @param outputFile
+	 */
+	generateResturaGlobalTypes(outputFile: string): void {
+		fs.writeFileSync(outputFile, resturaGlobalTypesGenerator());
 	}
 
 	/**
@@ -196,32 +200,6 @@ class ResturaEngine {
 			throw new Error('Schema is not valid');
 		}
 		return schema;
-	}
-
-	/**
-	 * Asynchronously generates and retrieves hashes for the provided schema and related generated files.
-	 *
-	 * @param providedSchema - The schema for which hashes need to be generated.
-	 * @returns A promise that resolves to an object containing:
-	 * - `schemaHash`: The hash of the provided schema.
-	 * - `apiCreatedSchemaHash`: The hash extracted from the generated `api.d.ts` file.
-	 * - `modelCreatedSchemaHash`: The hash extracted from the generated `models.d.ts` file.
-	 */
-	async getHashes(providedSchema: ResturaSchema): Promise<{
-		schemaHash: string;
-		apiCreatedSchemaHash: string;
-		modelCreatedSchemaHash: string;
-	}> {
-		const schemaHash = await this.generateHashForSchema(providedSchema);
-		const apiFile = fs.readFileSync(path.join(this.resturaConfig.generatedTypesPath, 'api.d.ts'));
-		const apiCreatedSchemaHash = apiFile.toString().match(/\((.*)\)/)?.[1] ?? '';
-		const modelFile = fs.readFileSync(path.join(this.resturaConfig.generatedTypesPath, 'models.d.ts'));
-		const modelCreatedSchemaHash = modelFile.toString().match(/\((.*)\)/)?.[1] ?? '';
-		return {
-			schemaHash,
-			apiCreatedSchemaHash,
-			modelCreatedSchemaHash
-		};
 	}
 
 	private async reloadEndpoints() {
@@ -261,30 +239,7 @@ class ResturaEngine {
 			fs.mkdirSync(this.resturaConfig.generatedTypesPath, { recursive: true });
 		}
 
-		const hasApiFile = fs.existsSync(path.join(this.resturaConfig.generatedTypesPath, 'api.d.ts'));
-		const hasModelsFile = fs.existsSync(path.join(this.resturaConfig.generatedTypesPath, 'models.d.ts'));
-
-		if (!hasApiFile) {
-			await this.generateApiFromSchema(path.join(this.resturaConfig.generatedTypesPath, 'api.d.ts'), this.schema);
-		}
-		if (!hasModelsFile) {
-			await this.generateModelFromSchema(
-				path.join(this.resturaConfig.generatedTypesPath, 'models.d.ts'),
-				this.schema
-			);
-		}
-
-		// Now get the hashes for the schema and the generated files and regenerate if needed
-		const hashes = await this.getHashes(this.schema);
-		if (hashes.schemaHash !== hashes.apiCreatedSchemaHash) {
-			await this.generateApiFromSchema(path.join(this.resturaConfig.generatedTypesPath, 'api.d.ts'), this.schema);
-		}
-		if (hashes.schemaHash !== hashes.modelCreatedSchemaHash) {
-			await this.generateModelFromSchema(
-				path.join(this.resturaConfig.generatedTypesPath, 'models.d.ts'),
-				this.schema
-			);
-		}
+		this.updateTypes();
 	}
 
 	@boundMethod
@@ -323,6 +278,7 @@ class ResturaEngine {
 			path.join(this.resturaConfig.generatedTypesPath, 'models.d.ts'),
 			this.schema
 		);
+		this.generateResturaGlobalTypes(path.join(this.resturaConfig.generatedTypesPath, 'restura.d.ts'));
 	}
 
 	@boundMethod
@@ -334,9 +290,8 @@ class ResturaEngine {
 	private async getSchemaAndTypes(req: express.Request, res: express.Response) {
 		try {
 			const schema = await this.getLatestFileSystemSchema();
-			const schemaHash = await this.generateHashForSchema(schema);
-			const apiText = await apiGenerator(schema, schemaHash);
-			const modelsText = await modelGenerator(schema, schemaHash);
+			const apiText = await apiGenerator(schema);
+			const modelsText = await modelGenerator(schema);
 			res.send({ schema, api: apiText, models: modelsText });
 		} catch (err) {
 			res.status(400).send({ error: err });
@@ -382,7 +337,7 @@ class ResturaEngine {
 			await this.getMulterFilesIfAny(req, res, routeData);
 
 			// Validate the request and assign to req.data
-			validateRequestParams(req as RsRequest<unknown>, routeData, this.customTypeValidation);
+			requestValidator(req as RsRequest<unknown>, routeData, this.customTypeValidation);
 
 			// Check for custom logic
 			if (this.isCustomRoute(routeData)) {
@@ -446,21 +401,6 @@ class ResturaEngine {
 		await customFunction(req, res, routeData);
 	}
 
-	private async generateHashForSchema(providedSchema: ResturaSchema): Promise<string> {
-		const schemaPrettyStr = await prettier.format(JSON.stringify(providedSchema), {
-			parser: 'json',
-			...{
-				trailingComma: 'none',
-				tabWidth: 4,
-				useTabs: true,
-				endOfLine: 'lf',
-				printWidth: 120,
-				singleQuote: true
-			}
-		});
-		return createHash('sha256').update(schemaPrettyStr).digest('hex');
-	}
-
 	private async storeFileSystemSchema() {
 		const schemaPrettyStr = await prettier.format(JSON.stringify(this.schema), {
 			parser: 'json',
@@ -505,6 +445,7 @@ class ResturaEngine {
 		return route;
 	}
 }
+
 function setupPgReturnTypes() {
 	// OID for timestamptz in Postgres
 	const TIMESTAMPTZ_OID = 1184;

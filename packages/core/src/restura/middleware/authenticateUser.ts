@@ -1,6 +1,6 @@
 import type { NextFunction } from 'express';
-import type { RsRequest, RsResponse } from '../types/customExpress.types.js';
-import type { AuthenticateHandler, AuthenticationUserDetails } from '../types/restura.types.js';
+import type { RsRequest, RsResponse } from '../types/customExpressTypes.js';
+import type { AuthenticateHandler, AuthenticationUserDetails } from '../types/resturaTypes.js';
 
 export function authenticateUser(applicationAuthenticateHandler: AuthenticateHandler) {
 	return (req: RsRequest, res: RsResponse, next: NextFunction) => {

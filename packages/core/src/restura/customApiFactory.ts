@@ -1,15 +1,11 @@
+import { fileUtils } from '@restura/internal';
+import Bluebird from 'bluebird';
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../logger/logger.js';
-import Bluebird from 'bluebird';
-import { fileUtils } from '@restura/internal';
-
-export interface ICustomApi {
-	name: string;
-}
 
 class CustomApiFactory {
-	private customApis: { [key: string]: ICustomApi } = {};
+	private customApis: { [key: string]: { name: string } } = {};
 
 	async loadApiFiles(baseFolderPath: string) {
 		const apiVersions = ['v1'];
@@ -22,7 +18,7 @@ class CustomApiFactory {
 		}
 	}
 
-	getCustomApi(customApiName: string): ICustomApi {
+	getCustomApi(customApiName: string): { name: string } {
 		return this.customApis[customApiName];
 	}
 

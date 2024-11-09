@@ -1,6 +1,6 @@
-import { expect, assert } from 'chai';
+import { assert, expect } from 'chai';
 import { Done } from 'mocha';
-import filterMySqlParser from './filterMySqlParser.js';
+import filterMySqlParser from '../sql/filterMySqlParser.js';
 
 function test(inputString: string, expectedString: string) {
 	const result: string = filterMySqlParser.parse(inputString);
@@ -11,9 +11,8 @@ function testBadInput(inputString: string) {
 	try {
 		filterMySqlParser.parse(inputString);
 		assert.fail(`The parsing should have failed on ${inputString}`);
-		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	} catch (e: any) {
-		if (e.name !== 'SyntaxError') {
+	} catch (e: unknown) {
+		if (e instanceof Error && e.name !== 'SyntaxError') {
 			throw e;
 		}
 	}

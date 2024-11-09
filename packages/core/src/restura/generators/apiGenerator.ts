@@ -1,8 +1,8 @@
 import { ObjectUtils, StringUtils } from '@redskytech/core-utils';
 import prettier from 'prettier';
-import ResponseValidator from './ResponseValidator.js';
-import type { EndpointData, ResponseData, ResturaSchema, RouteData, TableData } from './restura.schema.js';
-import { SqlUtils } from './sql/SqlUtils.js';
+import type { EndpointData, ResponseData, ResturaSchema, RouteData, TableData } from '../schemas/resturaSchema.js';
+import { SqlUtils } from '../sql/SqlUtils.js';
+import ResponseValidator from '../validators/ResponseValidator.js';
 
 type TreeData = RouteData | EndpointData;
 
@@ -201,8 +201,8 @@ function pathToNamespaces(path: string): string[] {
 		.filter((e) => e);
 }
 
-export default function apiGenerator(schema: ResturaSchema, schemaHash: string): Promise<string> {
-	let apiString = `/** Auto generated file from Schema Hash (${schemaHash}). DO NOT MODIFY **/`;
+export default function apiGenerator(schema: ResturaSchema): Promise<string> {
+	let apiString = `/** Auto generated file. DO NOT MODIFY **/\n`;
 	const rootNamespace = ApiTree.createRootNode(schema.database);
 	for (const endpoint of schema.endpoints) {
 		const endpointNamespaces = pathToNamespaces(endpoint.baseUrl);

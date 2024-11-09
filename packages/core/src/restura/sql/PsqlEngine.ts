@@ -4,7 +4,7 @@ import pgInfo from '@wmfs/pg-info';
 import { boundMethod } from 'autobind-decorator';
 import type { Client as ClientType } from 'pg';
 import pg from 'pg';
-import { RsError } from '../errors';
+import { RsError } from '../RsError';
 import eventManager, { MutationType, QueryMetadata, TriggerResult } from '../eventManager.js';
 import {
 	CustomRouteData,
@@ -14,9 +14,9 @@ import {
 	StandardRouteData,
 	WhereData,
 	type ColumnData
-} from '../restura.schema.js';
-import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpress.types.js';
-import { PageQuery } from '../types/restura.types.js';
+} from '../schemas/resturaSchema.js';
+import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpressTypes.js';
+import { PageQuery } from '../types/resturaTypes.js';
 import { PsqlPool } from './PsqlPool.js';
 import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
 import SqlEngine from './SqlEngine';

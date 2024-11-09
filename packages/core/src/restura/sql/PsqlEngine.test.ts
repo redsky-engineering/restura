@@ -1,5 +1,7 @@
 import { expect } from 'chai';
+import cloneDeep from 'lodash.clonedeep';
 import { types } from 'pg';
+import eventManager from '../eventManager.js';
 import {
 	CustomRouteData,
 	JoinData,
@@ -8,12 +10,10 @@ import {
 	RouteData,
 	StandardRouteData,
 	WhereData
-} from '../restura.schema.js';
-import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpress.types.js';
+} from '../schemas/resturaSchema.js';
+import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpressTypes.js';
 import { PsqlEngine } from './PsqlEngine.js';
 import { PsqlPool } from './PsqlPool.js';
-import eventManager from '../eventManager.js';
-import cloneDeep from 'lodash.clonedeep';
 import { PsqlTransaction } from './PsqlTransaction.js';
 
 const sampleSchema: ResturaSchema = {

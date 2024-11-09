@@ -79,8 +79,7 @@ export class RsError {
 		return htmlStatusMap[code];
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	static isRsError(error: any): error is RsError {
+	static isRsError(error: unknown): error is RsError {
 		return error instanceof RsError;
 	}
 }

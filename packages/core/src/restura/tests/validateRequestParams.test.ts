@@ -1,7 +1,7 @@
 import { expect } from 'chai';
-import { RouteData } from './restura.schema.js';
-import { RsRequest } from './types/customExpress.types.js';
-import validateRequestParams, { performTypeCheck, ValidationDictionary } from './validateRequestParams.js';
+import { RouteData } from '../schemas/resturaSchema.js';
+import { RsRequest } from '../types/customExpressTypes.js';
+import requestValidator, { performTypeCheck, ValidationDictionary } from '../validators/requestValidator.js';
 
 describe('validateRequestParams', () => {
 	const sampleRouteData: RouteData = {
@@ -145,7 +145,7 @@ describe('validateRequestParams', () => {
 
 	it('should fail if unknown params are passed', () => {
 		try {
-			validateRequestParams(
+			requestValidator(
 				{
 					query: { a: '123' },
 					method: 'GET'

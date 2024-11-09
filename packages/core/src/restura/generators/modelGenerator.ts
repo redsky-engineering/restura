@@ -1,10 +1,10 @@
 import { StringUtils } from '@redskytech/core-utils';
 import prettier from 'prettier';
-import type { ResturaSchema, TableData } from './restura.schema.js';
-import { SqlUtils } from './sql/SqlUtils';
+import type { ResturaSchema, TableData } from '../schemas/resturaSchema.js';
+import { SqlUtils } from '../sql/SqlUtils';
 
-export default function modelGenerator(schema: ResturaSchema, schemaHash: string): Promise<string> {
-	let modelString = `/** Auto generated file from Schema Hash (${schemaHash}). DO NOT MODIFY **/\n`;
+export default function modelGenerator(schema: ResturaSchema): Promise<string> {
+	let modelString = `/** Auto generated file. DO NOT MODIFY **/\n\n`;
 	modelString += `declare namespace Model {\n`;
 	for (const table of schema.database) {
 		modelString += convertTable(table);

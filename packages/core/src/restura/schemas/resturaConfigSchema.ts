@@ -1,10 +1,5 @@
 import { z } from 'zod';
 
-export const loggerConfigSchema = z.object({
-	level: z.enum(['info', 'warn', 'error', 'debug', 'silly']).default('info')
-});
-export type LoggerConfigSchema = z.infer<typeof loggerConfigSchema>;
-
 const isTsx = process.argv[1]?.endsWith('.ts');
 const isTsNode = process.env.TS_NODE_DEV || process.env.TS_NODE_PROJECT;
 const customApiFolderPath = isTsx || isTsNode ? '/src/api' : '/dist/api';
