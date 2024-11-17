@@ -1,18 +1,18 @@
-import * as React from 'react';
-import './EndpointListMenu.scss';
 import { Box, Button, Icon, InputText, Label, popupController, rsToastify } from '@redskytech/framework/ui';
-import themes from '../../themes/themes.scss?export';
-import { useRecoilState } from 'recoil';
-import globalState from '../../state/globalState.js';
-import { useEffect, useState } from 'react';
 import classNames from 'classnames';
 import cloneDeep from 'lodash.clonedeep';
-import { SelectedRoute } from '../../services/schema/SchemaService';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
+import { useRecoilState } from 'recoil';
 import ConfirmationPopup, { ConfirmationPopupProps } from '../../popups/confirmationPopup/ConfirmationPopup';
+import { SelectedRoute } from '../../services/schema/SchemaService';
+import globalState from '../../state/globalState.js';
+import themes from '../../themes/themes.scss?export';
+import './EndpointListMenu.scss';
 
 interface EndpointListMenuProps {}
 
-const EndpointListMenu: React.FC<EndpointListMenuProps> = (props) => {
+const EndpointListMenu: React.FC<EndpointListMenuProps> = (_props) => {
 	const [schema, setSchema] = useRecoilState<Restura.Schema | undefined>(globalState.schema);
 	const [selectedRoute, setSelectedRoute] = useRecoilState<SelectedRoute | undefined>(globalState.selectedRoute);
 	const [filterValue, setFilterValue] = useState<string>('');
@@ -21,7 +21,7 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (props) => {
 		// Auto select first route if none selected
 		if (!schema || selectedRoute) return;
 		if (schema.endpoints.length > 0 && schema.endpoints[0].routes.length > 0) {
-			let firstRouteAlphabetically = schema.endpoints[0].routes
+			const firstRouteAlphabetically = schema.endpoints[0].routes
 				.slice()
 				.sort((a, b) => a.path.localeCompare(b.path))[0];
 			setSelectedRoute({
@@ -34,7 +34,7 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (props) => {
 
 	function handleAddNewRoute() {
 		if (!schema) return;
-		let updatedSchema = cloneDeep(schema);
+		const updatedSchema = cloneDeep(schema);
 		let currentEndpoint: Restura.EndpointData | undefined;
 		if (selectedRoute)
 			currentEndpoint = updatedSchema.endpoints.find((item) => item.baseUrl === selectedRoute.baseUrl);
@@ -44,7 +44,7 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (props) => {
 			return;
 		}
 
-		let randomPath = '/new/' + Math.random().toString(36).substring(2, 6).toUpperCase();
+		const randomPath = '/_new/' + Math.random().toString(36).substring(2, 6).toUpperCase();
 		currentEndpoint.routes.push({
 			method: 'GET',
 			name: 'New Route',
@@ -75,8 +75,8 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (props) => {
 			rejectLabel: 'Cancel',
 			onAccept: () => {
 				if (!schema || !selectedRoute) return;
-				let updatedSchema = cloneDeep(schema);
-				let currentEndpoint = updatedSchema.endpoints.find((item) => item.baseUrl === selectedRoute.baseUrl);
+				const updatedSchema = cloneDeep(schema);
+				const currentEndpoint = updatedSchema.endpoints.find((item) => item.baseUrl === selectedRoute.baseUrl);
 				if (!currentEndpoint) return;
 
 				if (routeData.path === selectedRoute.path && routeData.method === selectedRoute.method) {
@@ -92,11 +92,11 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (props) => {
 
 	function handleDuplicateRoute(routeData: Restura.RouteData) {
 		if (!schema || !selectedRoute) return;
-		let updatedSchema = cloneDeep(schema);
-		let currentEndpoint = updatedSchema.endpoints.find((item) => item.baseUrl === selectedRoute.baseUrl);
+		const updatedSchema = cloneDeep(schema);
+		const currentEndpoint = updatedSchema.endpoints.find((item) => item.baseUrl === selectedRoute.baseUrl);
 		if (!currentEndpoint) return;
 
-		let newRoute = cloneDeep(routeData);
+		const newRoute = cloneDeep(routeData);
 		newRoute.path += '/copy-' + Math.random().toString(36).substring(2, 6).toUpperCase();
 		currentEndpoint.routes.push(newRoute);
 		setSchema(updatedSchema);
@@ -146,7 +146,7 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (props) => {
 
 	function renderEndpoints() {
 		if (!schema || !selectedRoute) return <></>;
-		let endpoints = schema.endpoints.find((endpoint) => endpoint.baseUrl === selectedRoute.baseUrl);
+		const endpoints = schema.endpoints.find((endpoint) => endpoint.baseUrl === selectedRoute.baseUrl);
 		if (!endpoints) return <></>;
 		return [...endpoints.routes]
 			.sort((a, b) => a.path.localeCompare(b.path))
@@ -155,7 +155,7 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (props) => {
 				return route.path.includes(filterValue);
 			})
 			.map((route) => {
-				let isPublic = route.roles.length === 0;
+				const isPublic = route.roles.length === 0;
 				return (
 					<Box
 						key={`${route.method}_${route.path}`}

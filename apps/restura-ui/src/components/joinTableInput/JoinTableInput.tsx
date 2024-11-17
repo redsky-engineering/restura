@@ -1,12 +1,10 @@
+import { Box, Button, Icon, Label, popupController, rsToastify, Select } from '@redskytech/framework/ui';
 import * as React from 'react';
-import './JoinTableInput.scss';
-import { Box, Button, Icon, Label, popupController, Select } from '@redskytech/framework/ui';
-import serviceFactory from '../../services/serviceFactory';
-import SchemaService from '../../services/schema/SchemaService';
-import JoinSelectorPopup, { JoinSelectorPopupProps } from '../../popups/joinSelectorPopup/JoinSelectorPopup';
 import { useRecoilValue } from 'recoil';
+import JoinSelectorPopup, { JoinSelectorPopupProps } from '../../popups/joinSelectorPopup/JoinSelectorPopup';
 import globalState from '../../state/globalState';
 import AutoComplete from '../autoComplete/AutoComplete';
+import './JoinTableInput.scss';
 import JoinData = Restura.JoinData;
 
 interface JoinTableInputProps {
@@ -25,12 +23,27 @@ const JoinTableInput: React.FC<JoinTableInputProps> = (props) => {
 		popupController.open<JoinSelectorPopupProps>(JoinSelectorPopup, {
 			baseTable: props.baseTableName,
 			onSelect: (type, localColumn, foreignTable, foreignColumn) => {
-				let newJoin: Restura.JoinData = {
+				// Check if there is already a join that has the same table and columns
+				// If so, don't add the join
+				if (
+					props.joins.some(
+						(joinData) =>
+							joinData.table === foreignTable &&
+							joinData.localColumnName === localColumn &&
+							joinData.foreignColumnName === foreignColumn
+					)
+				) {
+					rsToastify.error('Duplicate Join', 'Join already exists');
+					return;
+				}
+
+				const newJoin: Restura.JoinData = {
 					type: 'INNER',
 					table: foreignTable,
 					...(type === 'STANDARD' && {
 						foreignColumnName: foreignColumn,
-						localColumnName: localColumn
+						localColumnName: localColumn,
+						alias: `${localColumn}_${foreignTable}`
 					}),
 					...(type === 'CUSTOM' && {
 						custom: `${props.baseTableName}.${localColumn} = ${foreignTable}.${foreignColumn}`
@@ -52,7 +65,9 @@ const JoinTableInput: React.FC<JoinTableInputProps> = (props) => {
 		return props.joins.map((joinData: Restura.JoinData, joinIndex) => {
 			return (
 				// Use a random key since we don't have a unique identifier for each join statement
-				<Box key={props.routeData!.path + '_' + joinData.table} className={'joinItem'}>
+				// For example they might have the same table and columns but different aliases
+				// But they might not have set the aliases yet which gets us into a bad state with the key
+				<Box key={Math.random() * 10000} className={'joinItem'}>
 					<Icon
 						iconImg={'icon-delete'}
 						fontSize={16}
@@ -84,7 +99,7 @@ const JoinTableInput: React.FC<JoinTableInputProps> = (props) => {
 								fontSize={16}
 								cursorPointer
 								onClick={() => {
-									let updatedJoinData = { ...joinData };
+									const updatedJoinData = { ...joinData };
 									updatedJoinData.custom = `${props.baseTableName}.${joinData.localColumnName} = ${joinData.table}.${joinData.foreignColumnName}`;
 									delete updatedJoinData.localColumnName;
 									delete updatedJoinData.foreignColumnName;
@@ -94,12 +109,10 @@ const JoinTableInput: React.FC<JoinTableInputProps> = (props) => {
 						</Box>
 					) : (
 						<AutoComplete
-							options={
-								[
-									...schema.globalParams.map((param) => `#${param}`),
-									...props.routeData.request.map((request) => `$${request.name}`)
-								] || []
-							}
+							options={[
+								...schema.globalParams.map((param) => `#${param}`),
+								...props.routeData.request.map((request) => `$${request.name}`)
+							]}
 							startSymbols={['$', '#']}
 							value={joinData.custom || ''}
 							maxDisplay={5}
