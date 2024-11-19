@@ -7,10 +7,31 @@ export function escapeColumnName(columnName: string | undefined): string {
 	return `"${columnName.replace(/"/g, '')}"`.replace('.', '"."');
 }
 
+/**
+ * Converts a query with question marks to a query with numbered parameters,
+ * however it ignores question marks inside single or double quotes.
+ * @param query PostgreSQL query with question marks
+ * @returns A string with numbered parameters such as $1, $2 in replacement of question marks
+ */
 export function questionMarksToOrderedParams(query: string) {
 	let count = 1;
+	let inSingleQuote = false;
+	let inDoubleQuote = false;
 
-	return query.replace(/'\?'|\?/g, () => `$${count++}`);
+	return query.replace(/('|"|\?)/g, (char) => {
+		if (char === "'") {
+			inSingleQuote = !inSingleQuote && !inDoubleQuote;
+			return char;
+		}
+		if (char === '"') {
+			inDoubleQuote = !inDoubleQuote && !inSingleQuote;
+			return char;
+		}
+		if (char === '?' && !inSingleQuote && !inDoubleQuote) {
+			return `$${count++}`;
+		}
+		return char; // Return ? unchanged if inside quotes
+	});
 }
 
 export function insertObjectQuery(table: string, obj: DynamicObject): string {

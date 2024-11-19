@@ -11,10 +11,10 @@ import {
 	StandardRouteData,
 	WhereData
 } from '../schemas/resturaSchema.js';
+import { PsqlEngine } from '../sql/PsqlEngine.js';
+import { PsqlPool } from '../sql/PsqlPool.js';
+import { PsqlTransaction } from '../sql/PsqlTransaction.js';
 import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpressTypes.js';
-import { PsqlEngine } from './PsqlEngine.js';
-import { PsqlPool } from './PsqlPool.js';
-import { PsqlTransaction } from './PsqlTransaction.js';
 
 const sampleSchema: ResturaSchema = {
 	database: [
@@ -816,7 +816,7 @@ describe('PsqlEngine', function () {
 	describe('db transaction', () => {
 		it('db transaction', async () => {
 			const psqlTransaction = new PsqlTransaction(clientConfig);
-			const user = await psqlTransaction.queryOne(
+			const user = await psqlTransaction.queryOne<{ id: number }>(
 				`SELECT * FROM "user" WHERE id = 1;`,
 				[],
 				{} as RequesterDetails
@@ -1070,11 +1070,10 @@ EXECUTE FUNCTION notify_user_delete();
 				},
 				data: { page: 2 }
 			} as unknown as RsRequest;
-			const response = (await psqlEngine['executeGetRequest'](
-				allRequest,
-				getAllRouteData,
-				sampleSchema
-			)) as DynamicObject;
+			const response = (await psqlEngine['executeGetRequest'](allRequest, getAllRouteData, sampleSchema)) as {
+				data: DynamicObject[];
+				total: number;
+			};
 			expect(response?.data.length).to.greaterThan(1);
 			expect(response?.total).to.greaterThan(1);
 		});
@@ -1094,7 +1093,7 @@ EXECUTE FUNCTION notify_user_delete();
 		it('should receive notification of user row being inserted', function (done) {
 			const email = `${Date.now()}@plvr.com`;
 			let doneCalled = false;
-			eventManager.addRowInsertHandler(
+			eventManager.addRowInsertHandler<{ email: string }>(
 				async function (data) {
 					if (doneCalled) return;
 					try {
@@ -1128,7 +1127,7 @@ EXECUTE FUNCTION notify_user_delete();
 				requesterDetails,
 				data: getData()
 			} as unknown as RsRequest;
-			getEventPsqlEngine().setupTriggerListeners.then(() => {
+			getEventPsqlEngine().setupTriggerListeners!.then(() => {
 				getEventPsqlEngine()['executeCreateRequest'](
 					cloneDeep(createRequest),
 					patchUserRouteData,
@@ -1139,7 +1138,7 @@ EXECUTE FUNCTION notify_user_delete();
 		it('should receive notification of user row being updated', function (done) {
 			(async () => {
 				let calledHandler = false;
-				await eventManager.addColumnChangeHandler(
+				eventManager.addColumnChangeHandler(
 					async function (data) {
 						if (calledHandler) return;
 						calledHandler = true;
@@ -1183,7 +1182,7 @@ EXECUTE FUNCTION notify_user_delete();
 					...updateRequest,
 					body: { id: 1, firstName: 'Tanner', permissionLogin: true }
 				} as unknown as RsRequest;
-				await psqlEngine['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
+				await getEventPsqlEngine()['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
 			})();
 		});
 	});

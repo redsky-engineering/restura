@@ -19,15 +19,15 @@ export interface ActionRowInsertData<T = DynamicObject> extends DatabaseActionDa
 	insertObject: T;
 }
 
-export interface ActionRowDeleteData extends DatabaseActionData {
-	deletedRow: DynamicObject;
+export interface ActionRowDeleteData<T = DynamicObject> extends DatabaseActionData {
+	deletedRow: T;
 }
 
-export interface ActionColumnChangeData extends DatabaseActionData {
+export interface ActionColumnChangeData<T = DynamicObject> extends DatabaseActionData {
 	tableName: string;
 	rowId: number;
-	newData: DynamicObject;
-	oldData: DynamicObject;
+	newData: T;
+	oldData: T;
 }
 
 export interface ActionRowInsertFilter {
@@ -63,7 +63,7 @@ class EventManager {
 			filter?: ActionRowDeleteFilter;
 		}[];
 		DATABASE_ROW_INSERT: {
-			callback: (data: ActionRowInsertData, queryMetadata: QueryMetadata) => Promise<void>;
+			callback: (data: ActionRowInsertData, queryMetadata: QueryMetadata) => Promise<void>; // Non-generic here
 			filter?: ActionRowInsertFilter;
 		}[];
 		DATABASE_COLUMN_UPDATE: {
@@ -76,28 +76,32 @@ class EventManager {
 		DATABASE_COLUMN_UPDATE: []
 	};
 
-	addRowInsertHandler(
-		onInsert: (data: ActionRowInsertData<unknown>) => Promise<void>,
+	addRowInsertHandler<T extends DynamicObject>(
+		onInsert: (data: ActionRowInsertData<T>, queryMetadata: QueryMetadata) => Promise<void>,
 		filter?: ActionRowInsertFilter
 	) {
 		this.actionHandlers.DATABASE_ROW_INSERT.push({
-			callback: onInsert,
-			filter
-		});
-	}
-	addColumnChangeHandler(
-		onUpdate: (data: ActionColumnChangeData) => Promise<void>,
-		filter: ActionColumnChangeFilter
-	) {
-		this.actionHandlers.DATABASE_COLUMN_UPDATE.push({
-			callback: onUpdate,
+			callback: onInsert as (data: ActionRowInsertData, queryMetadata: QueryMetadata) => Promise<void>,
 			filter
 		});
 	}
 
-	addRowDeleteHandler(onDelete: (data: ActionRowDeleteData) => Promise<void>, filter?: ActionRowDeleteFilter) {
+	addColumnChangeHandler<T extends DynamicObject>(
+		onUpdate: (data: ActionColumnChangeData<T>, queryMetadata: QueryMetadata) => Promise<void>,
+		filter: ActionColumnChangeFilter
+	) {
+		this.actionHandlers.DATABASE_COLUMN_UPDATE.push({
+			callback: onUpdate as (data: ActionColumnChangeData, queryMetadata: QueryMetadata) => Promise<void>,
+			filter
+		});
+	}
+
+	addRowDeleteHandler<T extends DynamicObject>(
+		onDelete: (data: ActionRowDeleteData<T>, queryMetadata: QueryMetadata) => Promise<void>,
+		filter?: ActionRowDeleteFilter
+	) {
 		this.actionHandlers.DATABASE_ROW_DELETE.push({
-			callback: onDelete,
+			callback: onDelete as (data: ActionRowDeleteData, queryMetadata: QueryMetadata) => Promise<void>,
 			filter
 		});
 	}

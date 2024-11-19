@@ -65,15 +65,26 @@ describe('PsqlUtils', () => {
 	});
 	it('should replace ? with numbered params', () => {
 		const query = questionMarksToOrderedParams(`UPDATE "USER"
-                                                SET "firstName" ='?',
-                                                    "isActive"  ='?'
-                                                WHERE "id" = '?'
+                                                SET "firstName" =?,
+                                                    "isActive"  =?
+                                                WHERE "id" = ?
                                                 RETURNING *`);
 		const expectedQuery = `UPDATE "USER"
                            SET "firstName" =$1,
                                "isActive"  =$2
                            WHERE "id" = $3
                            RETURNING *`;
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
+	});
+	it('should replace ? with numbered params and handle the issue of string literals that might have ? inside them', () => {
+		const query = questionMarksToOrderedParams(`UPDATE "USER"
+												SET "firstName" ='Jimmy?'
+												WHERE "id" = ?
+												RETURNING *`);
+		const expectedQuery = `UPDATE "USER"
+						   SET "firstName" ='Jimmy?'
+						   WHERE "id" = $1
+						   RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
 });
