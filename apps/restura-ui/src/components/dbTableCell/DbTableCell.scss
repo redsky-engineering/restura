@@ -26,4 +26,12 @@
 	.rsSelect {
 		max-width: 300px;
 	}
+
+	.editableTextCell {
+		overflow: hidden;
+		max-height: 50px;
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		-webkit-box-orient: vertical;
+	}
 }
