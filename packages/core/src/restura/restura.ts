@@ -9,7 +9,6 @@ import { RequestHandler } from 'express';
 import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
-import pg from 'pg';
 import * as prettier from 'prettier';
 import { logger } from '../logger/logger.js';
 import { RsError } from './RsError.js';
@@ -36,9 +35,9 @@ import { PsqlPool } from './sql/PsqlPool.js';
 import type { RsRequest, RsResponse } from './types/customExpressTypes.js';
 import type { AuthenticateHandler } from './types/resturaTypes.js';
 import TempCache from './utils/TempCache.js';
+import { sortObjectKeysAlphabetically } from './utils/utils.js';
 import ResponseValidator from './validators/ResponseValidator.js';
 import requestValidator, { ValidationDictionary } from './validators/requestValidator.js';
-const { types } = pg;
 
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
@@ -79,7 +78,6 @@ class ResturaEngine {
 		new TempCache(this.resturaConfig.fileTempCachePath);
 		this.psqlConnectionPool = psqlConnectionPool;
 		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool, true);
-		setupPgReturnTypes();
 
 		await customApiFactory.loadApiFiles(this.resturaConfig.customApiFolderPath);
 
@@ -261,7 +259,7 @@ class ResturaEngine {
 	@boundMethod
 	private async updateSchema(req: RsRequest<ResturaSchema>, res: express.Response) {
 		try {
-			this.schema = req.data;
+			this.schema = sortObjectKeysAlphabetically(req.data);
 			await this.storeFileSystemSchema();
 			await this.reloadEndpoints();
 			await this.updateTypes();
@@ -445,21 +443,6 @@ class ResturaEngine {
 		return route;
 	}
 }
-
-function setupPgReturnTypes() {
-	// OID for timestamptz in Postgres
-	const TIMESTAMPTZ_OID = 1184;
-	// Set a custom parser for timestamptz to return an ISO string
-	types.setTypeParser(TIMESTAMPTZ_OID, (val) => {
-		return val === null ? null : new Date(val).toISOString();
-	});
-	const BIGINT_OID = 20;
-	// Set a custom parser for BIGINT to return a JavaScript Number
-	types.setTypeParser(BIGINT_OID, (val) => {
-		return val === null ? null : Number(val);
-	});
-}
-setupPgReturnTypes();
 
 const restura = new ResturaEngine();
 export { restura };

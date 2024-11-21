@@ -6,7 +6,7 @@ declare namespace Api {
 	export namespace V1 {
 		export namespace User {
 			// Create User
-			// Creates a user
+			// Creates a user.
 			export namespace Post {
 				export interface Req {
 					firstName: string;

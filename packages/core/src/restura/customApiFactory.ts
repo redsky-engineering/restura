@@ -1,8 +1,8 @@
-import { fileUtils } from '@restura/internal';
 import Bluebird from 'bluebird';
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../logger/logger.js';
+import { FileUtils } from '@restura/internal';
 
 class CustomApiFactory {
 	private customApis: { [key: string]: { name: string } } = {};
@@ -12,7 +12,7 @@ class CustomApiFactory {
 		for (const apiVersion of apiVersions) {
 			const apiVersionFolderPath = path.join(baseFolderPath, apiVersion);
 
-			const directoryExists = await fileUtils.existDir(apiVersionFolderPath);
+			const directoryExists = await FileUtils.existDir(apiVersionFolderPath);
 			if (!directoryExists) continue;
 			await this.addDirectory(apiVersionFolderPath, apiVersion);
 		}

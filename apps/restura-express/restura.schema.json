@@ -1,155 +1,154 @@
 {
+	"customTypes": "export interface FilteredUser {\n    id: number;\n\tcompanyId: number;\n\tfirstName: string;\n\tlastName: string;\n\temail: string;\n\trole: string;\n\tphone: string;\n\tlastLoginOn: string;\n}\n\nexport interface AuthResponse {\n    token: string;\n    tokenExp: string;\n    refreshToken: string;\n    refreshTokenExp: string;\n}\n\nexport interface WeatherResponse {\n    currentTemperatureF: number;\n    sunrise: string;\n    sunset: string;\n    pressure: number;\n    humidityPercent: number;\n    windSpeedMph: number;\n    windDirection: string;\n    tomorrowHighF: number;\n    tomorrowLowF: number;\n}\n\nexport interface Test extends Restura.PageQuery {\n    test: string;\n}",
 	"database": [
 		{
-			"name": "company",
+			"checkConstraints": [],
 			"columns": [
 				{
-					"name": "id",
 					"hasAutoIncrement": true,
 					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
 					"roles": [],
-					"type": "BIGINT",
-					"isPrimary": true
+					"type": "BIGINT"
 				},
-				{ "name": "createdOn", "isNullable": false, "default": "now()", "roles": [], "type": "DATETIME" },
-				{ "name": "modifiedOn", "isNullable": false, "default": "now()", "roles": [], "type": "DATETIME" },
-				{ "roles": [], "name": "name", "type": "VARCHAR", "length": 255, "isNullable": true }
+				{ "default": "now()", "isNullable": false, "name": "createdOn", "roles": [], "type": "DATETIME" },
+				{ "default": "now()", "isNullable": false, "name": "modifiedOn", "roles": [], "type": "DATETIME" },
+				{ "isNullable": true, "length": 255, "name": "name", "roles": [], "type": "VARCHAR" }
 			],
-			"checkConstraints": [],
 			"foreignKeys": [],
 			"indexes": [
-				{ "name": "PRIMARY", "columns": ["id"], "isUnique": true, "isPrimaryKey": true, "order": "ASC" }
+				{ "columns": ["id"], "isPrimaryKey": true, "isUnique": true, "name": "PRIMARY", "order": "ASC" }
 			],
+			"name": "company",
 			"roles": []
 		},
 		{
-			"name": "user",
+			"checkConstraints": [],
 			"columns": [
 				{
-					"name": "id",
 					"hasAutoIncrement": true,
 					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
 					"roles": [],
-					"type": "BIGINT",
-					"isPrimary": true
+					"type": "BIGINT"
 				},
-				{ "name": "createdOn", "isNullable": false, "default": "now()", "roles": [], "type": "DATETIME" },
-				{ "name": "modifiedOn", "isNullable": false, "default": "now()", "roles": [], "type": "DATETIME" },
-				{ "roles": [], "name": "firstName", "type": "VARCHAR", "length": 30, "isNullable": false },
-				{ "roles": [], "name": "lastName", "type": "VARCHAR", "length": 30, "isNullable": false },
+				{ "default": "now()", "isNullable": false, "name": "createdOn", "roles": [], "type": "DATETIME" },
+				{ "default": "now()", "isNullable": false, "name": "modifiedOn", "roles": [], "type": "DATETIME" },
+				{ "isNullable": false, "length": 30, "name": "firstName", "roles": [], "type": "VARCHAR" },
+				{ "isNullable": false, "length": 30, "name": "lastName", "roles": [], "type": "VARCHAR" },
 				{
-					"roles": [],
+					"comment": "Foreign key to company(id)",
+					"isNullable": false,
 					"name": "companyId",
-					"type": "BIGINT",
-					"isNullable": false,
-					"comment": "Foreign key to company(id)"
-				},
-				{ "roles": [], "name": "password", "type": "VARCHAR", "length": 70, "isNullable": false },
-				{ "roles": [], "name": "email", "type": "VARCHAR", "length": 100, "isNullable": false },
-				{ "roles": [], "name": "role", "type": "ENUM", "isNullable": false, "value": "'admin','user'" },
-				{ "roles": [], "name": "permissionLogin", "type": "BOOLEAN", "isNullable": false, "default": "true" },
-				{ "roles": [], "name": "lastLoginOn", "type": "DATETIME", "isNullable": true },
-				{ "roles": [], "name": "phone", "type": "VARCHAR", "length": 30, "isNullable": true },
-				{
 					"roles": [],
+					"type": "BIGINT"
+				},
+				{ "isNullable": false, "length": 70, "name": "password", "roles": [], "type": "VARCHAR" },
+				{ "isNullable": false, "length": 100, "name": "email", "roles": [], "type": "VARCHAR" },
+				{ "isNullable": false, "name": "role", "roles": [], "type": "ENUM", "value": "'admin','user'" },
+				{ "default": "true", "isNullable": false, "name": "permissionLogin", "roles": [], "type": "BOOLEAN" },
+				{ "isNullable": true, "name": "lastLoginOn", "roles": [], "type": "DATETIME" },
+				{ "isNullable": true, "length": 30, "name": "phone", "roles": [], "type": "VARCHAR" },
+				{
+					"comment": "When user was disabled",
+					"isNullable": true,
 					"name": "loginDisabledOn",
-					"type": "DATETIME",
-					"isNullable": true,
-					"comment": "When user was disabled"
-				},
-				{ "roles": [], "name": "passwordResetGuid", "type": "VARCHAR", "length": 100, "isNullable": true },
-				{ "roles": [], "name": "verifyEmailPin", "type": "MEDIUMINT", "isNullable": true },
-				{ "roles": [], "name": "verifyEmailPinExpiresOn", "type": "DATETIME", "isNullable": true },
-				{
 					"roles": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": true, "length": 100, "name": "passwordResetGuid", "roles": [], "type": "VARCHAR" },
+				{ "isNullable": true, "name": "verifyEmailPin", "roles": [], "type": "MEDIUMINT" },
+				{ "isNullable": true, "name": "verifyEmailPinExpiresOn", "roles": [], "type": "DATETIME" },
+				{
+					"default": "'view_only'",
+					"isNullable": false,
 					"name": "accountStatus",
+					"roles": [],
 					"type": "ENUM",
-					"isNullable": false,
-					"value": "'banned','view_only','active'",
-					"default": "'view_only'"
+					"value": "'banned','view_only','active'"
 				},
 				{
-					"roles": [],
-					"name": "passwordResetExpiresOn",
-					"type": "DATETIME",
+					"comment": "When guid is no longer valid",
 					"isNullable": true,
-					"comment": "When guid is no longer valid"
+					"name": "passwordResetExpiresOn",
+					"roles": [],
+					"type": "DATETIME"
 				},
 				{
-					"roles": [],
-					"name": "onboardingStatus",
-					"type": "ENUM",
+					"default": "'verify_email'",
 					"isNullable": false,
-					"value": "'verify_email','complete'",
-					"default": "'verify_email'"
+					"name": "onboardingStatus",
+					"roles": [],
+					"type": "ENUM",
+					"value": "'verify_email','complete'"
 				},
-				{ "roles": [], "name": "pendingEmail", "type": "VARCHAR", "length": 100, "isNullable": true }
+				{ "isNullable": true, "length": 100, "name": "pendingEmail", "roles": [], "type": "VARCHAR" }
 			],
-			"checkConstraints": [],
 			"foreignKeys": [
 				{
+					"column": "companyId",
 					"name": "user_companyId_company_id_fk",
 					"onDelete": "NO ACTION",
 					"onUpdate": "NO ACTION",
-					"column": "companyId",
-					"refTable": "company",
-					"refColumn": "id"
+					"refColumn": "id",
+					"refTable": "company"
 				}
 			],
 			"indexes": [
-				{ "name": "PRIMARY", "columns": ["id"], "isUnique": true, "isPrimaryKey": true, "order": "ASC" },
+				{ "columns": ["id"], "isPrimaryKey": true, "isUnique": true, "name": "PRIMARY", "order": "ASC" },
 				{
 					"columns": ["companyId"],
-					"isUnique": false,
 					"isPrimaryKey": false,
-					"order": "ASC",
-					"name": "user_companyId_index"
+					"isUnique": false,
+					"name": "user_companyId_index",
+					"order": "ASC"
 				},
 				{
-					"name": "user_email_unique_index",
 					"columns": ["email"],
-					"order": "ASC",
 					"isPrimaryKey": false,
-					"isUnique": true
+					"isUnique": true,
+					"name": "user_email_unique_index",
+					"order": "ASC"
 				},
 				{
-					"name": "user_passwordResetGuid_index",
-					"isUnique": false,
-					"order": "ASC",
 					"columns": ["passwordResetGuid"],
-					"isPrimaryKey": false
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "user_passwordResetGuid_index",
+					"order": "ASC"
 				}
 			],
+			"name": "user",
 			"roles": []
 		}
 	],
 	"endpoints": [
 		{
-			"name": "V1",
-			"description": "V1 Endpoints",
 			"baseUrl": "/api/v1",
+			"description": "V1 Endpoints",
+			"name": "V1",
 			"routes": [
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
-					"request": [],
+					"description": "Uploading a users avatar and updating the user",
+					"fileUploadType": "SINGLE",
 					"method": "POST",
 					"name": "/user/me/avatar",
-					"description": "Uploading a users avatar and updating the user",
 					"path": "/user/me/avatar",
+					"request": [],
+					"responseType": "boolean",
 					"roles": ["admin", "user"],
-					"fileUploadType": "SINGLE"
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "ONE",
+					"assignments": [],
+					"description": "Get my user",
+					"joins": [],
 					"method": "GET",
 					"name": "get my user",
-					"description": "Get my user",
 					"path": "/user/me",
-					"table": "user",
-					"roles": ["user", "admin"],
 					"request": [],
-					"joins": [],
 					"response": [
 						{ "name": "id", "selector": "user.id" },
 						{ "name": "firstName", "selector": "user.firstName" },
@@ -157,16 +156,16 @@
 						{ "name": "email", "selector": "user.email" },
 						{ "name": "phone", "selector": "user.phone" }
 					],
-					"assignments": [],
-					"where": [{ "tableName": "user", "columnName": "id", "operator": "=", "value": "#userId" }]
+					"roles": ["user", "admin"],
+					"table": "user",
+					"type": "ONE",
+					"where": [{ "columnName": "id", "operator": "=", "tableName": "user", "value": "#userId" }]
 				},
 				{
-					"type": "CUSTOM_ONE",
+					"description": "User login endpoint",
 					"method": "POST",
 					"name": "Login",
-					"description": "User login endpoint",
 					"path": "/user/login",
-					"roles": [],
 					"request": [
 						{
 							"name": "username",
@@ -179,21 +178,25 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"responseType": "AuthResponse"
+					"responseType": "AuthResponse",
+					"roles": [],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "AuthResponse",
-					"request": [],
+					"description": "Refresh an old, possibly expired token and returns a new token.",
 					"method": "POST",
 					"name": "Refreshes a Token",
-					"description": "Refresh an old, possibly expired token and returns a new token.",
 					"path": "/user/refresh-token",
-					"roles": []
+					"request": [],
+					"responseType": "AuthResponse",
+					"roles": [],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
+					"description": "Request to change email. Sends a verification email with pin",
+					"method": "POST",
+					"name": "Change Email Request",
+					"path": "/user/change-email",
 					"request": [
 						{
 							"name": "newEmail",
@@ -201,27 +204,27 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"method": "POST",
-					"name": "Change Email Request",
-					"description": "Request to change email. Sends a verification email with pin",
-					"path": "/user/change-email",
-					"roles": ["admin", "user"]
+					"responseType": "boolean",
+					"roles": ["admin", "user"],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
+					"description": "Commits an email change with a pin",
+					"method": "PATCH",
+					"name": "Commit Email Change",
+					"path": "/user/change-email/commit",
 					"request": [
 						{ "name": "pin", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
 					],
-					"method": "PATCH",
-					"name": "Commit Email Change",
-					"description": "Commits an email change with a pin",
-					"path": "/user/change-email/commit",
-					"roles": ["admin", "user"]
+					"responseType": "boolean",
+					"roles": ["admin", "user"],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "FilteredUser",
+					"description": "Creates a user.",
+					"method": "POST",
+					"name": "Create User",
+					"path": "/user",
 					"request": [
 						{
 							"name": "firstName",
@@ -254,15 +257,15 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"method": "POST",
-					"name": "Create User",
-					"description": "Creates a user",
-					"path": "/user",
-					"roles": ["admin"]
+					"responseType": "FilteredUser",
+					"roles": ["admin"],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "FilteredUser",
+					"description": "Update an existing user.",
+					"method": "PATCH",
+					"name": "Update User",
+					"path": "/user",
 					"request": [
 						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] },
 						{
@@ -291,25 +294,25 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"method": "PATCH",
-					"name": "Update User",
-					"description": "Update an existing user.",
-					"path": "/user",
-					"roles": ["admin"]
+					"responseType": "FilteredUser",
+					"roles": ["admin"],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
+					"description": "User logout endpoint",
 					"method": "POST",
 					"name": "Logout",
-					"description": "User logout endpoint",
 					"path": "/user/logout",
-					"roles": ["admin", "user"],
 					"request": [],
-					"responseType": "boolean"
+					"responseType": "boolean",
+					"roles": ["admin", "user"],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
+					"description": "Checks if a given username or email or both are available or not",
+					"method": "POST",
+					"name": "Check Available",
+					"path": "/user/check-available",
 					"request": [
 						{
 							"name": "username",
@@ -322,15 +325,15 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"method": "POST",
-					"name": "Check Available",
-					"description": "Checks if a given username or email or both are available or not",
-					"path": "/user/check-available",
-					"roles": []
+					"responseType": "boolean",
+					"roles": [],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
+					"description": "Verifies a user password to get past security checkpoints",
+					"method": "POST",
+					"name": "Verify User Password",
+					"path": "/user/verify-password",
 					"request": [
 						{
 							"name": "password",
@@ -338,25 +341,25 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"method": "POST",
-					"name": "Verify User Password",
-					"description": "Verifies a user password to get past security checkpoints",
-					"path": "/user/verify-password",
-					"roles": ["admin", "athlete", "fan", "recruiter"]
+					"responseType": "boolean",
+					"roles": ["admin", "athlete", "fan", "recruiter"],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
-					"request": [],
+					"description": "Resend the email that sends out the verify email pin",
 					"method": "POST",
 					"name": "Resend Verify Email Pin",
-					"description": "Resend the email that sends out the verify email pin",
 					"path": "/user/resend-verify-email",
-					"roles": ["admin", "athlete", "fan", "recruiter"]
+					"request": [],
+					"responseType": "boolean",
+					"roles": ["admin", "athlete", "fan", "recruiter"],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
+					"description": "Sends a forgot password request",
+					"method": "POST",
+					"name": "Forgot Password",
+					"path": "/user/forgot-password",
 					"request": [
 						{
 							"name": "email",
@@ -364,15 +367,15 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"method": "POST",
-					"name": "Forgot Password",
-					"description": "Sends a forgot password request",
-					"path": "/user/forgot-password",
-					"roles": []
+					"responseType": "boolean",
+					"roles": [],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
+					"description": "Changes a password of the user",
+					"method": "POST",
+					"name": "Change Password",
+					"path": "/user/change-password",
 					"request": [
 						{
 							"name": "oldPassword",
@@ -385,15 +388,15 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"method": "POST",
-					"name": "Change Password",
-					"description": "Changes a password of the user",
-					"path": "/user/change-password",
-					"roles": ["admin", "user"]
+					"responseType": "boolean",
+					"roles": ["admin", "user"],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
+					"description": "Resets a password using a reset password guid",
+					"method": "POST",
+					"name": "Reset Password",
+					"path": "/user/reset-password",
 					"request": [
 						{
 							"name": "guid",
@@ -406,27 +409,27 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"method": "POST",
-					"name": "Reset Password",
-					"description": "Resets a password using a reset password guid",
-					"path": "/user/reset-password",
-					"roles": []
+					"responseType": "boolean",
+					"roles": [],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
+					"description": "Verifies an email given a pin",
+					"method": "POST",
+					"name": "Verify Email",
+					"path": "/user/verify-email",
 					"request": [
 						{ "name": "pin", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
 					],
-					"method": "POST",
-					"name": "Verify Email",
-					"description": "Verifies an email given a pin",
-					"path": "/user/verify-email",
-					"roles": ["admin", "user"]
+					"responseType": "boolean",
+					"roles": ["admin", "user"],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "boolean",
+					"description": "Deletes the user that calls this. This is a post so we don't show password on url.",
+					"method": "POST",
+					"name": "Delete Me",
+					"path": "/user/delete/me",
 					"request": [
 						{
 							"name": "password",
@@ -434,20 +437,17 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"method": "POST",
-					"name": "Delete Me",
-					"description": "Deletes the user that calls this. This is a post so we don't show password on url.",
-					"path": "/user/delete/me",
-					"roles": ["admin", "user"]
+					"responseType": "boolean",
+					"roles": ["admin", "user"],
+					"type": "CUSTOM_ONE"
 				},
 				{
-					"type": "ONE",
+					"assignments": [],
+					"description": "Update my user",
+					"joins": [],
 					"method": "PATCH",
 					"name": "Update my user",
-					"description": "Update my user",
 					"path": "/user/me",
-					"table": "user",
-					"roles": ["user", "admin"],
 					"request": [
 						{
 							"name": "firstName",
@@ -465,9 +465,9 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						},
 						{
+							"isNullable": true,
 							"name": "phone",
 							"required": false,
-							"isNullable": true,
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						},
 						{
@@ -476,7 +476,6 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
 						}
 					],
-					"joins": [],
 					"response": [
 						{ "name": "id", "selector": "user.id" },
 						{ "name": "firstName", "selector": "user.firstName" },
@@ -484,12 +483,16 @@
 						{ "name": "email", "selector": "user.email" },
 						{ "name": "phone", "selector": "user.phone" }
 					],
-					"assignments": [],
-					"where": [{ "tableName": "user", "columnName": "id", "operator": "=", "value": "#userId" }]
+					"roles": ["user", "admin"],
+					"table": "user",
+					"type": "ONE",
+					"where": [{ "columnName": "id", "operator": "=", "tableName": "user", "value": "#userId" }]
 				},
 				{
-					"type": "CUSTOM_ONE",
-					"responseType": "WeatherResponse",
+					"description": "Gets the weather data from openweather.org",
+					"method": "GET",
+					"name": "Get Weather Data",
+					"path": "/weather",
 					"request": [
 						{
 							"name": "token",
@@ -507,16 +510,13 @@
 							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
 						}
 					],
-					"method": "GET",
-					"name": "Get Weather Data",
-					"description": "Gets the weather data from openweather.org",
-					"path": "/weather",
-					"roles": ["user", "admin"]
+					"responseType": "WeatherResponse",
+					"roles": ["user", "admin"],
+					"type": "CUSTOM_ONE"
 				}
 			]
 		}
 	],
 	"globalParams": ["companyId", "userId"],
-	"roles": ["admin", "user", "anonymous"],
-	"customTypes": "export interface FilteredUser {\n    id: number;\n\tcompanyId: number;\n\tfirstName: string;\n\tlastName: string;\n\temail: string;\n\trole: string;\n\tphone: string;\n\tlastLoginOn: string;\n}\n\nexport interface AuthResponse {\n    token: string;\n    tokenExp: string;\n    refreshToken: string;\n    refreshTokenExp: string;\n}\n\nexport interface WeatherResponse {\n    currentTemperatureF: number;\n    sunrise: string;\n    sunset: string;\n    pressure: number;\n    humidityPercent: number;\n    windSpeedMph: number;\n    windDirection: string;\n    tomorrowHighF: number;\n    tomorrowLowF: number;\n}\n\nexport interface Test extends Restura.PageQuery {\n    test: string;\n}"
+	"roles": ["admin", "user", "anonymous"]
 }
