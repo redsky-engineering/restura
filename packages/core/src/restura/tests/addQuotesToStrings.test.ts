@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import addQuotesToStrings from '../utils/addQuotesToStrings.js';
+import { addQuotesToStrings } from '../utils/utils.js';
 
 describe('addQuotesToStrings', () => {
 	it('should not add quotes to numbers', () => {
