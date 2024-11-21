@@ -2,10 +2,10 @@ import fs from 'fs';
 import path from 'path';
 
 import { DateUtils } from '@redskytech/core-utils';
-import { logger } from '../../logger/logger.js';
+import { FileUtils } from '@restura/internal';
 import Bluebird from 'bluebird';
 import * as os from 'os';
-import { fileUtils } from '@restura/internal';
+import { logger } from '../../logger/logger.js';
 
 export default class TempCache {
 	location: string;
@@ -13,7 +13,7 @@ export default class TempCache {
 
 	constructor(location?: string) {
 		this.location = location || os.tmpdir();
-		fileUtils.ensureDir(this.location).catch((e) => {
+		FileUtils.ensureDir(this.location).catch((e) => {
 			throw e;
 		});
 	}

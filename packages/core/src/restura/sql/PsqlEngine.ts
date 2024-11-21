@@ -22,7 +22,7 @@ import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './P
 import SqlEngine from './SqlEngine';
 import { SqlUtils } from './SqlUtils';
 import filterPsqlParser from './filterPsqlParser.js';
-const { Client } = pg;
+const { Client, types } = pg;
 
 const systemUser: RequesterDetails = {
 	role: '',
@@ -34,11 +34,14 @@ const systemUser: RequesterDetails = {
 export class PsqlEngine extends SqlEngine {
 	setupTriggerListeners: Promise<void> | undefined;
 	private triggerClient: ClientType | undefined;
+
 	constructor(
 		private psqlConnectionPool: PsqlPool,
 		shouldListenForDbTriggers: boolean = false
 	) {
 		super();
+
+		this.setupPgReturnTypes();
 		if (shouldListenForDbTriggers) {
 			this.setupTriggerListeners = this.listenForDbTriggers();
 		}
@@ -47,6 +50,20 @@ export class PsqlEngine extends SqlEngine {
 		if (this.triggerClient) {
 			await this.triggerClient.end();
 		}
+	}
+
+	private setupPgReturnTypes() {
+		// OID for timestamptz in Postgres
+		const TIMESTAMPTZ_OID = 1184;
+		// Set a custom parser for timestamptz to return an ISO string
+		types.setTypeParser(TIMESTAMPTZ_OID, (val) => {
+			return val === null ? null : new Date(val).toISOString();
+		});
+		const BIGINT_OID = 20;
+		// Set a custom parser for BIGINT to return a JavaScript Number
+		types.setTypeParser(BIGINT_OID, (val) => {
+			return val === null ? null : Number(val);
+		});
 	}
 
 	private async listenForDbTriggers() {
@@ -75,7 +92,6 @@ export class PsqlEngine extends SqlEngine {
 		});
 	}
 
-	@boundMethod
 	private async handleTrigger(payload: TriggerResult, mutationType: MutationType) {
 		const findRequesterDetailsRegex = /^--QUERY_METADATA\(\{.*\}\)/; //only looking at the beginning of the query
 		const match = payload.query.match(findRequesterDetailsRegex);
@@ -111,7 +127,7 @@ export class PsqlEngine extends SqlEngine {
 			for (const column of table.columns) {
 				let columnSql = '';
 
-				columnSql += `\t"${column.name}" ${schemaToPsqlType(column)}`;
+				columnSql += `\t"${column.name}" ${this.schemaToPsqlType(column)}`;
 				let value = column.value;
 				// JSON's value is used only for typescript not for the database
 				if (column.type === 'JSON') value = '';
@@ -643,6 +659,7 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 
 		return whereClause;
 	}
+
 	@boundMethod
 	private createUpdateTrigger(tableName: string) {
 		return ` 
@@ -660,6 +677,7 @@ CREATE OR REPLACE TRIGGER ${tableName}_update
 EXECUTE FUNCTION notify_${tableName}_update();
 		`;
 	}
+
 	@boundMethod
 	private createDeleteTrigger(tableName: string) {
 		return `
@@ -677,6 +695,7 @@ CREATE OR REPLACE TRIGGER "${tableName}_delete"
 EXECUTE FUNCTION notify_${tableName}_delete();
 		`;
 	}
+
 	@boundMethod
 	private createInsertTriggers(tableName: string) {
 		return `
@@ -694,12 +713,12 @@ CREATE TRIGGER "${tableName}_insert"
 EXECUTE FUNCTION notify_${tableName}_insert();
 		`;
 	}
-}
 
-function schemaToPsqlType(column: ColumnData) {
-	if (column.hasAutoIncrement) return 'BIGSERIAL';
-	if (column.type === 'ENUM') return `TEXT`;
-	if (column.type === 'DATETIME') return 'TIMESTAMPTZ';
-	if (column.type === 'MEDIUMINT') return 'INT';
-	return column.type;
+	private schemaToPsqlType(column: ColumnData) {
+		if (column.hasAutoIncrement) return 'BIGSERIAL';
+		if (column.type === 'ENUM') return `TEXT`;
+		if (column.type === 'DATETIME') return 'TIMESTAMPTZ';
+		if (column.type === 'MEDIUMINT') return 'INT';
+		return column.type;
+	}
 }
