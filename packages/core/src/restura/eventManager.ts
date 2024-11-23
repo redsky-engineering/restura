@@ -178,7 +178,9 @@ class EventManager {
 					break;
 				case 'DATABASE_COLUMN_UPDATE':
 					const filterColumnChange = filter as ActionColumnChangeFilter;
-					if (filterColumnChange.tableName !== filter.tableName) return false;
+
+					if (filterColumnChange.tableName !== triggerResult.table) return false;
+
 					if (
 						!filterColumnChange.columns.some((item) => {
 							const updatedColumns = Object.keys(

@@ -1148,7 +1148,7 @@ EXECUTE FUNCTION notify_user_delete();
 							expect(data.queryMetadata.ipAddress).to.equal('1.1.1.1');
 							expect(data.queryMetadata.userId).to.equal(1);
 							expect(data.tableName).to.equal('user');
-							expect(data.newData.firstName).to.equal('Billy');
+							expect((data.newData as Record<string, unknown>).firstName).to.equal('Billy');
 						} catch (e) {
 							console.log(e);
 							return done(e);
@@ -1178,11 +1178,6 @@ EXECUTE FUNCTION notify_user_delete();
 				expect(response?.lastName).to.equal('Burton');
 				expect(response?.permissionLogin).to.equal(false);
 				expect(response?.email).to.equal('tanner@plvr.com');
-				const resetUserRequest = {
-					...updateRequest,
-					body: { id: 1, firstName: 'Tanner', permissionLogin: true }
-				} as unknown as RsRequest;
-				await getEventPsqlEngine()['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
 			})();
 		});
 	});
