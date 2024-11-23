@@ -181,6 +181,11 @@ class EventManager {
 
 					if (filterColumnChange.tableName !== triggerResult.table) return false;
 
+					if (filterColumnChange.columns.length === 1) {
+						const firstColumn = filterColumnChange.columns[0];
+						if (firstColumn === '*') return true;
+					}
+
 					if (
 						!filterColumnChange.columns.some((item) => {
 							const updatedColumns = Object.keys(
