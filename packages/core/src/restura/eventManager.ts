@@ -76,7 +76,7 @@ class EventManager {
 		DATABASE_COLUMN_UPDATE: []
 	};
 
-	addRowInsertHandler<T extends DynamicObject>(
+	addRowInsertHandler<T>(
 		onInsert: (data: ActionRowInsertData<T>, queryMetadata: QueryMetadata) => Promise<void>,
 		filter?: ActionRowInsertFilter
 	) {
@@ -86,7 +86,7 @@ class EventManager {
 		});
 	}
 
-	addColumnChangeHandler<T extends DynamicObject>(
+	addColumnChangeHandler<T>(
 		onUpdate: (data: ActionColumnChangeData<T>, queryMetadata: QueryMetadata) => Promise<void>,
 		filter: ActionColumnChangeFilter
 	) {
@@ -96,7 +96,7 @@ class EventManager {
 		});
 	}
 
-	addRowDeleteHandler<T extends DynamicObject>(
+	addRowDeleteHandler<T>(
 		onDelete: (data: ActionRowDeleteData<T>, queryMetadata: QueryMetadata) => Promise<void>,
 		filter?: ActionRowDeleteFilter
 	) {

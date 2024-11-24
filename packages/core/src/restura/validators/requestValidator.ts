@@ -6,7 +6,7 @@ import { RsError } from '../RsError';
 import { RequestData, RouteData } from '../schemas/resturaSchema.js';
 import { ValidatorData, ValidatorDataSchemeValue, validatorDataSchemeValue } from '../schemas/validatorDataSchema.js';
 import type { DynamicObject, RsRequest } from '../types/customExpressTypes.js';
-import addQuotesToStrings from '../utils/addQuotesToStrings';
+import { addQuotesToStrings } from '../utils/utils.js';
 
 export interface ValidationDictionary {
 	[Key: string]: Definition;
