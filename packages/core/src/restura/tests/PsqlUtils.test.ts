@@ -1,5 +1,11 @@
 import { expect } from 'chai';
-import { insertObjectQuery, questionMarksToOrderedParams, SQL, updateObjectQuery } from '../sql/PsqlUtils.js';
+import {
+	escapeColumnName,
+	insertObjectQuery,
+	questionMarksToOrderedParams,
+	SQL,
+	updateObjectQuery
+} from '../sql/PsqlUtils.js';
 
 describe('PsqlUtils', () => {
 	it('should convert an object to an insert statement', () => {
@@ -17,6 +23,21 @@ describe('PsqlUtils', () => {
                            WHERE "id" = 1
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
+	});
+	it('should escape a column name that is simple', () => {
+		const columnName = 'id';
+		const escapedColumnName = escapeColumnName(columnName);
+		expect(escapedColumnName).to.equal('"id"');
+	});
+	it('should escape a column name that is has sql injection', () => {
+		const columnName = '""; drop db;';
+		const escapedColumnName = escapeColumnName(columnName);
+		expect(escapedColumnName).to.equal('"; drop db;"');
+	});
+	it('should escape a column that has a period in it', () => {
+		const columnName = 'user.id';
+		const escapedColumnName = escapeColumnName(columnName);
+		expect(escapedColumnName).to.equal('"user"."id"');
 	});
 	it('should format a query and escape user input', () => {
 		const firstName = 'bob';
@@ -59,6 +80,19 @@ describe('PsqlUtils', () => {
 		const expectedQuery = `UPDATE "USER"
                            SET "firstName" ='''; drop db;',
                                "isActive"  = true
+                           WHERE "id" = 1
+                           RETURNING *`;
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
+	});
+	it('should format a query and properly parse JSON root array as an escaped JSON string', () => {
+		const issues = [{ key: "'; SELECT 1; --" }];
+		const id = 1;
+		const query = SQL`UPDATE "component"
+                      SET "issues" =${issues}
+                      WHERE "id" = ${id}
+                      RETURNING *`;
+		const expectedQuery = `UPDATE "component"
+                           SET "issues" ='[{"key":"''; SELECT 1; --"}]'::jsonb
                            WHERE "id" = 1
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
