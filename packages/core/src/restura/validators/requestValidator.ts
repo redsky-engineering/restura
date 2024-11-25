@@ -199,9 +199,15 @@ export function getRequestData(req: RsRequest<unknown>): DynamicObject {
 					bodyData[attr] = attrList;
 				}
 			} else {
-				bodyData[attr] = ObjectUtils.safeParse(bodyData[attr]);
-				if (isNaN(Number(bodyData[attr]))) continue;
-				bodyData[attr] = Number(bodyData[attr]);
+				if (bodyData[attr] === 'true') {
+					bodyData[attr] = true;
+				} else if (bodyData[attr] === 'false') {
+					bodyData[attr] = false;
+				} else {
+					bodyData[attr] = ObjectUtils.safeParse(bodyData[attr]);
+					if (isNaN(Number(bodyData[attr]))) continue;
+					bodyData[attr] = Number(bodyData[attr]);
+				}
 			}
 		}
 	}
