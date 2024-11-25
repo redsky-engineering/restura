@@ -1179,7 +1179,7 @@ EXECUTE FUNCTION notify_user_delete();
 				expect(response?.lastName).to.equal('Burton');
 				expect(response?.permissionLogin).to.equal(false);
 				expect(response?.email).to.equal('tanner@plvr.com');
-				await MiscUtils.sleep(10); //TODO optimize - Give time for the event to be processed
+				await MiscUtils.sleep(10); //TODO optimize - Give time for the event to be processed on slower machines
 				const resetUserRequest = {
 					...updateRequest,
 					body: { id: 1, firstName: 'Tanner', permissionLogin: true }
