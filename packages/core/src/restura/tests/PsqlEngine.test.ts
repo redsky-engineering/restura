@@ -1,3 +1,4 @@
+import { MiscUtils } from '@redskytech/core-utils';
 import { expect } from 'chai';
 import cloneDeep from 'lodash.clonedeep';
 import { types } from 'pg';
@@ -1178,6 +1179,12 @@ EXECUTE FUNCTION notify_user_delete();
 				expect(response?.lastName).to.equal('Burton');
 				expect(response?.permissionLogin).to.equal(false);
 				expect(response?.email).to.equal('tanner@plvr.com');
+				await MiscUtils.sleep(10); //TODO optimize - Give time for the event to be processed
+				const resetUserRequest = {
+					...updateRequest,
+					body: { id: 1, firstName: 'Tanner', permissionLogin: true }
+				} as unknown as RsRequest;
+				await getEventPsqlEngine()['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
 			})();
 		});
 	});
