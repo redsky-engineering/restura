@@ -194,7 +194,7 @@ declare namespace Restura {
 		endpoints: EndpointData[];
 		globalParams: string[];
 		roles: string[];
-		customTypes: string;
+		customTypes: string[];
 	}
 
 	export interface SchemaChangeValue {

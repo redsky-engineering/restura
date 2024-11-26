@@ -605,8 +605,9 @@ const sampleSchema: ResturaSchema = {
 	],
 	globalParams: ['companyId', 'userId'],
 	roles: ['admin', 'user', 'anonymous'],
-	customTypes:
-		'export interface FilteredUser {    id: number;	companyId: number;	firstName: string;	lastName: string;	email: string;	role: string;	phone: string;	lastLoginOn: string;}export interface AuthResponse {    token: string;    tokenExp: string;    refreshToken: string;    refreshTokenExp: string;}export interface WeatherResponse {    currentTemperatureF: number;    sunrise: string;    sunset: string;    pressure: number;    humidityPercent: number;    windSpeedMph: number;    windDirection: string;    tomorrowHighF: number;    tomorrowLowF: number;}'
+	customTypes: [
+		'export interface FilteredUser {    id: number;\tcompanyId: number;\tfirstName: string;\tlastName: string;\temail: string;\trole: string;\tphone: string;\tlastLoginOn: string;}export interface AuthResponse {    token: string;    tokenExp: string;    refreshToken: string;    refreshTokenExp: string;}export interface WeatherResponse {    currentTemperatureF: number;    sunrise: string;    sunset: string;    pressure: number;    humidityPercent: number;    windSpeedMph: number;    windDirection: string;    tomorrowHighF: number;    tomorrowLowF: number;}'
+	]
 };
 
 const patchUserRouteData: RouteData = {
@@ -1139,7 +1140,7 @@ EXECUTE FUNCTION notify_user_delete();
 		it('should receive notification of user row being updated', function (done) {
 			(async () => {
 				let calledHandler = false;
-				eventManager.addColumnChangeHandler(
+				eventManager.addColumnChangeHandler<{ firstName: string }>(
 					async function (data) {
 						if (calledHandler) return;
 						calledHandler = true;
@@ -1249,7 +1250,7 @@ EXECUTE FUNCTION notify_user_delete();
 		it('should executeDelete and listen for events', function (done) {
 			(async () => {
 				let doneCalled = false;
-				eventManager.addRowDeleteHandler(
+				eventManager.addRowDeleteHandler<{ amountCents: number; userId: number }>(
 					async function (data) {
 						if (doneCalled) return;
 						try {

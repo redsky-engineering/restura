@@ -1,5 +1,10 @@
 {
-	"customTypes": "export interface FilteredUser {\n    id: number;\n\tcompanyId: number;\n\tfirstName: string;\n\tlastName: string;\n\temail: string;\n\trole: string;\n\tphone: string;\n\tlastLoginOn: string;\n}\n\nexport interface AuthResponse {\n    token: string;\n    tokenExp: string;\n    refreshToken: string;\n    refreshTokenExp: string;\n}\n\nexport interface WeatherResponse {\n    currentTemperatureF: number;\n    sunrise: string;\n    sunset: string;\n    pressure: number;\n    humidityPercent: number;\n    windSpeedMph: number;\n    windDirection: string;\n    tomorrowHighF: number;\n    tomorrowLowF: number;\n}\n\nexport interface Test extends Restura.PageQuery {\n    test: string;\n}",
+	"customTypes": [
+		"export interface FilteredUser {\n    id: number;\n\tcompanyId: number;\n\tfirstName: string;\n\tlastName: string;\n\temail: string;\n\trole: string;\n\tphone: string;\n\tlastLoginOn: string;\n}",
+		"export interface AuthResponse {\n    token: string;\n    tokenExp: string;\n    refreshToken: string;\n    refreshTokenExp: string;\n}",
+		"export interface WeatherResponse {\n    currentTemperatureF: number;\n    sunrise: string;\n    sunset: string;\n    pressure: number;\n    humidityPercent: number;\n    windSpeedMph: number;\n    windDirection: string;\n    tomorrowHighF: number;\n    tomorrowLowF: number;\n}",
+		"export interface Test extends Restura.PageQuery {\n    test: string;\n}"
+	],
 	"database": [
 		{
 			"checkConstraints": [],

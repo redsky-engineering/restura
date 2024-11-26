@@ -216,7 +216,7 @@ export default function apiGenerator(schema: ResturaSchema): Promise<string> {
 	if (schema.customTypes.length > 0) {
 		apiString += `\n
 		declare namespace CustomTypes {
-			${schema.customTypes}
+			${schema.customTypes.join('\n')}
 		}`;
 	}
 
