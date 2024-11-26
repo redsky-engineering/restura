@@ -125,7 +125,9 @@ const WhereClauseInput: React.FC<WhereClauseInputProps> = (props) => {
 									{ label: 'IN', value: 'IN' },
 									{ label: 'NOT IN', value: 'NOT IN' },
 									{ label: 'STARTS WITH', value: 'STARTS WITH' },
-									{ label: 'ENDS WITH', value: 'ENDS WITH' }
+									{ label: 'ENDS WITH', value: 'ENDS WITH' },
+									{ label: 'IS', value: 'IS' },
+									{ label: 'IS NOT', value: 'IS NOT' }
 								]}
 								onChange={(newValue) => {
 									if (!newValue) return;
