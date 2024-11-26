@@ -90,6 +90,7 @@ declare namespace Restura {
 		name: string;
 		required: boolean;
 		validator: ValidatorData[];
+		isNullable?: boolean;
 	}
 
 	export interface JoinData {

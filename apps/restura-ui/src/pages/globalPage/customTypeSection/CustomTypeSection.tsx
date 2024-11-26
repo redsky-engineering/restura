@@ -15,6 +15,7 @@ interface CustomTypeSectionProps {}
 
 const CustomTypeSection: React.FC<CustomTypeSectionProps> = (_props) => {
 	const [schema, setSchema] = useRecoilState<Restura.Schema | undefined>(globalState.schema);
+	const [customTypesAsString, setCustomTypesAsString] = React.useState(schema?.customTypes.join('\n\n') || '');
 
 	function splitTopLevelDefinitions(typeString: string): string[] {
 		const splitRegex = /(?=^export\s+(?:interface|type|class)\s+)/gm;
@@ -26,8 +27,10 @@ const CustomTypeSection: React.FC<CustomTypeSectionProps> = (_props) => {
 	}
 
 	function onChange(newValue: string) {
+		setCustomTypesAsString(newValue);
+
 		if (!schema) return;
-		setSchema({ ...schema, customTypes: splitTopLevelDefinitions(newValue) });
+		setSchema({ ...schema, customTypes: splitTopLevelDefinitions(customTypesAsString) });
 	}
 
 	if (!schema) return <></>;
@@ -41,9 +44,10 @@ const CustomTypeSection: React.FC<CustomTypeSectionProps> = (_props) => {
 				mode="typescript"
 				theme="terminal"
 				onChange={onChange}
+				onBlur={onBlur}
 				name="CustomType"
 				editorProps={{ $blockScrolling: true }}
-				value={schema.customTypes.join('\n\n')}
+				value={customTypesAsString}
 				enableBasicAutocompletion
 				enableLiveAutocompletion
 			/>

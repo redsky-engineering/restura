@@ -1,35 +1,35 @@
-import * as React from 'react';
-import './ResponseSection.scss';
 import { Box, Button, Label, popupController, rsToastify, Select } from '@redskytech/framework/ui';
-import { useRecoilValue } from 'recoil';
-import globalState from '../../../state/globalState';
+import * as React from 'react';
 import { useMemo } from 'react';
-import serviceFactory from '../../../services/serviceFactory';
-import SchemaService from '../../../services/schema/SchemaService';
-import ColumnPickerPopup, { ColumnPickerPopupProps } from '../../../popups/columnPickerPopup/ColumnPickerPopup';
-import { StringUtils, WebUtils } from '../../../utils/utils';
+import { useRecoilValue } from 'recoil';
 import useRouteData from '../../../customHooks/useRouteData';
+import ColumnPickerPopup, { ColumnPickerPopupProps } from '../../../popups/columnPickerPopup/ColumnPickerPopup';
+import SchemaService from '../../../services/schema/SchemaService';
+import serviceFactory from '../../../services/serviceFactory';
+import globalState from '../../../state/globalState';
+import { StringUtils, WebUtils } from '../../../utils/utils';
+import './ResponseSection.scss';
 
 import AceEditor from 'react-ace';
 
+import 'ace-builds/src-min-noconflict/ext-searchbox';
+import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/mode-typescript';
 import 'ace-builds/src-noconflict/theme-terminal';
-import 'ace-builds/src-noconflict/ext-language_tools';
-import 'ace-builds/src-min-noconflict/ext-searchbox';
+import EditSubqueryPopup, { EditSubqueryPopupProps } from '../../../popups/editSubqueryPopup/EditSubqueryPopup.js';
 import ResponseProperty from '../../responseProperty/ResponseProperty';
 import ResponseSubquery from '../../responseSubquery/ResponseSubquery.js';
-import EditSubqueryPopup, { EditSubqueryPopupProps } from '../../../popups/editSubqueryPopup/EditSubqueryPopup.js';
 
 interface ResponseSectionProps {}
 
-const ResponseSection: React.FC<ResponseSectionProps> = (props) => {
+const ResponseSection: React.FC<ResponseSectionProps> = (_props) => {
 	const schema = useRecoilValue<Restura.Schema | undefined>(globalState.schema);
 	const schemaService = serviceFactory.get<SchemaService>('SchemaService');
 
 	const routeData = useRouteData();
 
 	const customResponseOptions = useMemo<{ label: string; value: string }[]>(() => {
-		let options = [
+		const options = [
 			{ label: 'boolean', value: 'boolean' },
 			{ label: 'string', value: 'string' },
 			{ label: 'number', value: 'number' }
@@ -37,7 +37,11 @@ const ResponseSection: React.FC<ResponseSectionProps> = (props) => {
 
 		if (!schema) return options;
 
-		let matches = schema.customTypes.match(/(?<=\b(?:interface|type)\s)(\w+)/g);
+		const matches = schema.customTypes.map((customType) => {
+			const matches = customType.match(/(?<=interface\s)(\w+)|(?<=type\s)(\w+)/g);
+			if (matches && matches.length > 0) return matches[0];
+			return '';
+		});
 		if (!matches) return options;
 		return [...options, ...matches.map((item) => ({ label: item, value: item }))];
 	}, [schema]);
@@ -78,14 +82,17 @@ const ResponseSection: React.FC<ResponseSectionProps> = (props) => {
 					name = `${selectorBase}${StringUtils.capitalizeFirst(columnData.name)}`;
 					selectorBase = `${tableWithJoinColumn.joinColumn}_${tableWithJoinColumn.table}`;
 					// Since we are in a closure, we need to make sure we are using the latest value of routeData
-					let latestRouteData = schemaService.getSelectedRouteData() as Restura.StandardRouteData;
+					const latestRouteData = schemaService.getSelectedRouteData() as Restura.StandardRouteData;
 					if (!latestRouteData) return;
-					let existingJoin = latestRouteData.joins.find(
+					const existingJoin = latestRouteData.joins.find(
 						(join) => join.table === tableWithJoinColumn.table && join.alias === selectorBase
 					);
 					if (!existingJoin) {
 						// Find the foreign key for this table
-						let foreignKey = schemaService.getForeignKey(latestRouteData.table, tableWithJoinColumn.table);
+						const foreignKey = schemaService.getForeignKey(
+							latestRouteData.table,
+							tableWithJoinColumn.table
+						);
 						if (!foreignKey) {
 							rsToastify.error(
 								`Could not find foreign key for table ${latestRouteData.table} to table ${tableWithJoinColumn}`

@@ -41,7 +41,13 @@ const RequestParamInput: React.FC<RequestParamInputProps> = (props: RequestParam
 	const customRequestTypeOptions = useMemo<{ label: string; value: string }[]>(() => {
 		if (!schema) return [];
 
-		let matches = schema.customTypes.match(/(?<=\binterface\s)(\w+)/g);
+		const matches = schema.customTypes
+			.map((customType) => {
+				const matches = customType.match(/(?<=export\s+interface\s)(\w+)|(?<=export\s+type\s)(\w+)/g);
+				if (matches && matches.length > 0) return matches[0];
+				return '';
+			})
+			.filter(Boolean);
 		if (!matches) return [];
 		return matches.map((item) => ({ label: item, value: item }));
 	}, [schema]);
@@ -188,9 +194,9 @@ const RequestParamInput: React.FC<RequestParamInputProps> = (props: RequestParam
 												isDisabled={isPageParam}
 												onChange={(newValue) => {
 													if (!newValue) return;
-													let newValidatorType =
+													const newValidatorType =
 														newValue.value as Restura.ValidatorData['type'];
-													let sanitizedValue = parseValueFromType(
+													const sanitizedValue = parseValueFromType(
 														newValidatorType,
 														validator.value.toString()
 													);
@@ -218,7 +224,7 @@ const RequestParamInput: React.FC<RequestParamInputProps> = (props: RequestParam
 														);
 														return;
 													}
-													let sanitizedValue = parseValueFromType(
+													const sanitizedValue = parseValueFromType(
 														validator.type,
 														event.target.value
 													);

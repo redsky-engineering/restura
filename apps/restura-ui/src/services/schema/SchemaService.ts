@@ -459,25 +459,29 @@ export default class SchemaService extends Service {
 		}
 	}
 
-	static getInterfaceFromCustomTypes(interfaceName: string, customTypes: string): string {
+	static getInterfaceFromCustomTypes(interfaceOrTypeName: string, customTypes: string[]): string {
 		// Change the code below to find the index using a regex
-		const regex = new RegExp(`\\b(interface|type)\\s+${interfaceName}\\b`);
-		const match = regex.exec(customTypes);
-		if (!match) return 'not found';
-		const start = match.index;
+		const regex = new RegExp(`\\b(interface|type)\\s+${interfaceOrTypeName}\\b`);
+		for (let i = 0; i < customTypes.length; i++) {
+			const match = regex.exec(customTypes[i]);
+			if (!match) continue;
 
-		let index = customTypes.indexOf('{', start) + 1;
-		let depth = 1;
-		while (customTypes[index] !== undefined && depth > 0) {
-			if (customTypes[index] === '{') {
-				depth++;
-			} else if (customTypes[index] === '}') {
-				depth--;
+			const matchedCustomType = customTypes[i];
+
+			const start = match.index;
+			let index = matchedCustomType.indexOf('{', start) + 1;
+			let depth = 1;
+			while (matchedCustomType[index] !== undefined && depth > 0) {
+				if (matchedCustomType[index] === '{') {
+					depth++;
+				} else if (matchedCustomType[index] === '}') {
+					depth--;
+				}
+				index++;
 			}
-			index++;
-		}
-		if (start !== -1 && depth === 0) {
-			return customTypes.substring(start, index + 1);
+			if (start !== -1 && depth === 0) {
+				return matchedCustomType.substring(start, index + 1);
+			}
 		}
 		return 'not found';
 	}
@@ -486,7 +490,7 @@ export default class SchemaService extends Service {
 		const schema = getRecoilExternalValue<Restura.Schema | undefined>(globalState.schema);
 		if (!schema) return 'unknown';
 		let tableName = selector.split('.')[0];
-		let columnName = selector.split('.')[1];
+		const columnName = selector.split('.')[1];
 
 		let table = schema.database.find((item) => item.name === tableName);
 		if (!table && tableName.includes('_')) {
