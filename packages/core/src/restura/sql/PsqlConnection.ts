@@ -9,8 +9,8 @@ import { questionMarksToOrderedParams } from './PsqlUtils.js';
 
 export abstract class PsqlConnection {
 	readonly instanceId: UUID;
-	protected constructor() {
-		this.instanceId = crypto.randomUUID();
+	protected constructor(instanceId?: UUID) {
+		this.instanceId = instanceId || crypto.randomUUID();
 	}
 
 	protected abstract query<R extends QueryResultRow = QueryResultRow, T extends Array<unknown> = unknown[]>(

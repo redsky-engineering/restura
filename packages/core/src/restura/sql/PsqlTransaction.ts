@@ -1,3 +1,4 @@
+import { UUID } from 'crypto';
 import type { ClientConfig, Client as ClientType, QueryConfigValues, QueryResult, QueryResultRow } from 'pg';
 import pg from 'pg';
 import { PsqlConnection } from './PsqlConnection.js';
@@ -9,8 +10,11 @@ export class PsqlTransaction extends PsqlConnection {
 	private beginTransactionPromise: Promise<QueryResult<QueryResultRow>>;
 	private connectPromise: Promise<void>;
 
-	constructor(public clientConfig: ClientConfig) {
-		super();
+	constructor(
+		public clientConfig: ClientConfig,
+		instanceId?: UUID
+	) {
+		super(instanceId);
 		this.client = new Client(clientConfig);
 		this.connectPromise = this.client.connect();
 		this.beginTransactionPromise = this.beginTransaction();
