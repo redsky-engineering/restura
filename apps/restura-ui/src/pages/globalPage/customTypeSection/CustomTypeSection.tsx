@@ -17,14 +17,12 @@ const CustomTypeSection: React.FC<CustomTypeSectionProps> = (_props) => {
 	const [schema, setSchema] = useRecoilState<Restura.Schema | undefined>(globalState.schema);
 
 	function splitTopLevelDefinitions(typeString: string): string[] {
-		// Use a regular expression to split by `export` followed by either `interface`, `type`, etc.
 		const splitRegex = /(?=^export\s+(?:interface|type|class)\s+)/gm;
 
-		// Split the input string and trim each resulting part
 		return typeString
 			.split(splitRegex)
 			.map((item) => item.trim())
-			.filter((item) => item);
+			.filter(Boolean);
 	}
 
 	function onChange(newValue: string) {
