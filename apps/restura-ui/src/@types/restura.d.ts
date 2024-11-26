@@ -117,7 +117,20 @@ declare namespace Restura {
 	export interface WhereData {
 		tableName?: string;
 		columnName?: string;
-		operator?: '=' | '<' | '>' | '<=' | '>=' | '!=' | 'LIKE' | 'IN' | 'NOT IN' | 'STARTS WITH' | 'ENDS WITH';
+		operator?:
+			| '='
+			| '<'
+			| '>'
+			| '<='
+			| '>='
+			| '!='
+			| 'LIKE'
+			| 'IN'
+			| 'NOT IN'
+			| 'STARTS WITH'
+			| 'ENDS WITH'
+			| 'IS'
+			| 'IS NOT';
 		value?: string;
 		custom?: string;
 		conjunction?: 'AND' | 'OR';
