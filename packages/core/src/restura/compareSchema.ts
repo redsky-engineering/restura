@@ -19,8 +19,15 @@ class CompareSchema {
 		if (JSON.stringify(newSchema.database) !== JSON.stringify(latestSchema.database))
 			commands = await psqlEngine.diffDatabaseToSchema(newSchema);
 
-		const customTypes = newSchema.customTypes !== latestSchema.customTypes;
-		const schemaPreview: SchemaPreview = { endPoints, globalParams, roles, commands, customTypes };
+		const hasCustomTypesChanged =
+			JSON.stringify(newSchema.customTypes) !== JSON.stringify(latestSchema.customTypes);
+		const schemaPreview: SchemaPreview = {
+			endPoints,
+			globalParams,
+			roles,
+			commands,
+			customTypes: hasCustomTypesChanged
+		};
 		return schemaPreview;
 	}
 

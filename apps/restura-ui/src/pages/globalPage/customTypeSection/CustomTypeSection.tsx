@@ -1,24 +1,38 @@
-import * as React from 'react';
 import { Box } from '@redskytech/framework/ui';
+import * as React from 'react';
 
 import AceEditor from 'react-ace';
 
+import 'ace-builds/src-min-noconflict/ext-searchbox';
+import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/mode-typescript';
 import 'ace-builds/src-noconflict/theme-terminal';
-import 'ace-builds/src-noconflict/ext-language_tools';
-import 'ace-builds/src-min-noconflict/ext-searchbox';
 
 import { useRecoilState } from 'recoil';
 import globalState from '../../../state/globalState';
 
 interface CustomTypeSectionProps {}
 
-const CustomTypeSection: React.FC<CustomTypeSectionProps> = (props) => {
+const CustomTypeSection: React.FC<CustomTypeSectionProps> = (_props) => {
 	const [schema, setSchema] = useRecoilState<Restura.Schema | undefined>(globalState.schema);
+	const [customTypesAsString, setCustomTypesAsString] = React.useState(schema?.customTypes.join('\n\n') || '');
+
+	function splitTopLevelDefinitions(typeString: string): string[] {
+		const splitRegex = /(?=^(?:export\s+)?(?:interface|type|class)\s+)/gm;
+
+		if (!typeString.split(splitRegex).length) return [];
+
+		return typeString
+			.split(splitRegex)
+			.map((item) => item.trim())
+			.filter(Boolean);
+	}
 
 	function onChange(newValue: string) {
+		setCustomTypesAsString(newValue);
+
 		if (!schema) return;
-		setSchema({ ...schema, customTypes: newValue });
+		setSchema({ ...schema, customTypes: splitTopLevelDefinitions(newValue) });
 	}
 
 	if (!schema) return <></>;
@@ -34,7 +48,7 @@ const CustomTypeSection: React.FC<CustomTypeSectionProps> = (props) => {
 				onChange={onChange}
 				name="CustomType"
 				editorProps={{ $blockScrolling: true }}
-				value={schema.customTypes}
+				value={customTypesAsString}
 				enableBasicAutocompletion
 				enableLiveAutocompletion
 			/>

@@ -8,11 +8,17 @@ import type { ValidationDictionary } from '../validators/requestValidator.js';
 
 export default function customTypeValidationGenerator(currentSchema: ResturaSchema): ValidationDictionary {
 	const schemaObject: ValidationDictionary = {};
-	const customInterfaceNames = currentSchema.customTypes.match(/(?<=interface\s)(\w+)|(?<=type\s)(\w+)/g);
+	const customInterfaceNames = currentSchema.customTypes
+		.map((customType) => {
+			const matches = customType.match(/(?<=interface\s)(\w+)|(?<=type\s)(\w+)/g);
+			if (matches && matches.length > 0) return matches[0];
+			return '';
+		})
+		.filter(Boolean);
 	if (!customInterfaceNames) return {};
 
 	const temporaryFile = tmp.fileSync({ mode: 0o644, prefix: 'prefix-', postfix: '.ts' });
-	fs.writeFileSync(temporaryFile.name, currentSchema.customTypes);
+	fs.writeFileSync(temporaryFile.name, currentSchema.customTypes.join('\n'));
 
 	const compilerOptions: TJS.CompilerOptions = {
 		strictNullChecks: true,

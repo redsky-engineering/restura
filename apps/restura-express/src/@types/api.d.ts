@@ -228,14 +228,12 @@ declare namespace CustomTypes {
 		phone: string;
 		lastLoginOn: string;
 	}
-
 	export interface AuthResponse {
 		token: string;
 		tokenExp: string;
 		refreshToken: string;
 		refreshTokenExp: string;
 	}
-
 	export interface WeatherResponse {
 		currentTemperatureF: number;
 		sunrise: string;
@@ -247,7 +245,6 @@ declare namespace CustomTypes {
 		tomorrowHighF: number;
 		tomorrowLowF: number;
 	}
-
 	export interface Test extends Restura.PageQuery {
 		test: string;
 	}

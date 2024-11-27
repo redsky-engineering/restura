@@ -1,24 +1,23 @@
-import * as React from 'react';
-import './CodeGenSection.scss';
 import { Box, Button, rsToastify } from '@redskytech/framework/ui';
+import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { useRecoilValue } from 'recoil';
-import globalState from '../../../state/globalState';
-import serviceFactory from '../../../services/serviceFactory';
-import SchemaService, { SelectedRoute } from '../../../services/schema/SchemaService';
-import useRouteData from '../../../customHooks/useRouteData';
 import AceEditor from 'react-ace';
+import { useRecoilValue } from 'recoil';
+import useRouteData from '../../../customHooks/useRouteData';
+import SchemaService, { SelectedRoute } from '../../../services/schema/SchemaService';
+import globalState from '../../../state/globalState';
+import './CodeGenSection.scss';
 
-import 'ace-builds/src-noconflict/mode-typescript';
-import 'ace-builds/src-noconflict/theme-terminal';
+import 'ace-builds/src-min-noconflict/ext-searchbox';
 import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/mode-sh';
-import 'ace-builds/src-min-noconflict/ext-searchbox';
+import 'ace-builds/src-noconflict/mode-typescript';
+import 'ace-builds/src-noconflict/theme-terminal';
 import { StringUtils } from '../../../utils/utils';
 
 interface CodeGenSectionProps {}
 
-const CodeGenSection: React.FC<CodeGenSectionProps> = (props) => {
+const CodeGenSection: React.FC<CodeGenSectionProps> = (_props) => {
 	const selectedRoute = useRecoilValue<SelectedRoute | undefined>(globalState.selectedRoute);
 	const schema = useRecoilValue<Restura.Schema | undefined>(globalState.schema);
 
@@ -39,13 +38,13 @@ const CodeGenSection: React.FC<CodeGenSectionProps> = (props) => {
 				requestData.push(item.name);
 			});
 		} else if (SchemaService.isCustomRouteData(routeData)) {
-			let responsePreviewText = SchemaService.getInterfaceFromCustomTypes(
+			const responsePreviewText = SchemaService.getInterfaceFromCustomTypes(
 				routeData.requestType || '',
 				schema.customTypes
 			);
 			responsePreviewText.split('\n').forEach((item) => {
 				// perform a regex and check if this is a key : value line
-				let matches = item.match(/(\w+)(?=:)/);
+				const matches = item.match(/(\w+)(?=:)/);
 				if (matches && matches.length > 0) {
 					requestData.push(matches[0]);
 				}
@@ -57,7 +56,7 @@ const CodeGenSection: React.FC<CodeGenSectionProps> = (props) => {
 		// Create a curl command from the route data
 		const fullpath = `http://localhost:3001${schema.endpoints[0].baseUrl}${routeData.path}`;
 		if (['DELETE', 'GET'].includes(routeData.method)) {
-			let queryParams: string[] = [];
+			const queryParams: string[] = [];
 			requestData.forEach((item, index) => {
 				queryParams.push(`${item}=value_${index}`);
 			});
@@ -65,12 +64,12 @@ const CodeGenSection: React.FC<CodeGenSectionProps> = (props) => {
 				`curl -X ${routeData.method} ${fullpath}${queryParams.length > 0 ? '?' + queryParams.join('&') : ''}`
 			);
 		} else if (['POST', 'PATCH', 'PUT'].includes(routeData.method)) {
-			let bodyParams: string[] = [];
+			const bodyParams: string[] = [];
 			requestData.forEach((item) => {
 				bodyParams.push(`        "${item}" : ""`);
 			});
-			let bodyJsonStr = `{\n${bodyParams.join(',\n')}\n    }`;
-			let curlCommands: string[] = [];
+			const bodyJsonStr = `{\n${bodyParams.join(',\n')}\n    }`;
+			const curlCommands: string[] = [];
 			curlCommands.push(`curl --request ${routeData.method} \\`);
 			curlCommands.push(`    --url ${fullpath} \\`);
 			curlCommands.push(`    --header 'x-auth-token: {{token}}' \\`);

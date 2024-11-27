@@ -310,7 +310,7 @@ export const resturaSchema = z
 		endpoints: z.array(endpointDataSchema),
 		globalParams: z.array(z.string()),
 		roles: z.array(z.string()),
-		customTypes: z.string()
+		customTypes: z.array(z.string())
 	})
 	.strict();
 
