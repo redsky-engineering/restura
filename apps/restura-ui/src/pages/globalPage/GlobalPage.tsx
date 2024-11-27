@@ -1,19 +1,22 @@
-import * as React from 'react';
-import './GlobalPage.scss';
 import { Page } from '@redskytech/framework/996';
-import { useState } from 'react';
 import { Box, Label } from '@redskytech/framework/ui';
 import classNames from 'classnames';
+import * as React from 'react';
+import { useState } from 'react';
+import { useRecoilValue } from 'recoil';
+import globalState from '../../state/globalState.js';
+import CustomTypeSection from './customTypeSection/CustomTypeSection';
+import './GlobalPage.scss';
 import GlobalParamSection from './globalParamSection/GlobalParamSection';
 import RoleSection from './roleSection/RoleSection';
-import CustomTypeSection from './customTypeSection/CustomTypeSection';
 
 interface GlobalPageProps {}
 
-const GlobalPage: React.FC<GlobalPageProps> = (props) => {
+const GlobalPage: React.FC<GlobalPageProps> = (_props) => {
 	const [displayedSection, setDisplayedSection] = useState<'CUSTOM_TYPES' | 'GLOBAL_PARAMS' | 'ROLES'>(
 		'CUSTOM_TYPES'
 	);
+	const schema = useRecoilValue<Restura.Schema | undefined>(globalState.schema);
 
 	function renderTabHeader() {
 		return (
@@ -23,7 +26,7 @@ const GlobalPage: React.FC<GlobalPageProps> = (props) => {
 					onClick={() => setDisplayedSection('CUSTOM_TYPES')}
 				>
 					<Label variant={'subheader2'} weight={'semiBold'}>
-						Custom Types
+						Custom Types ({schema?.customTypes.length || 0})
 					</Label>
 				</Box>
 				<Box

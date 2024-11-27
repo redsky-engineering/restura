@@ -69,7 +69,7 @@ const RequestParamInput: React.FC<RequestParamInputProps> = (props: RequestParam
 		const sanitizedName = StringUtils.sanitizeParameter(newParameterName);
 		checkForDuplicateName(sanitizedName);
 		if (!sanitizedName) return;
-		let newParameter: Restura.RequestData = {
+		const newParameter: Restura.RequestData = {
 			name: sanitizedName,
 			required: false,
 			validator: [
@@ -338,7 +338,7 @@ const RequestParamInput: React.FC<RequestParamInputProps> = (props: RequestParam
 						checked={!!props.routeData.request}
 						onChange={(event) => {
 							if (!schema || !props.routeData) return;
-							let updatedRouteData = { ...props.routeData };
+							const updatedRouteData = { ...props.routeData };
 							if (event.currentTarget.checked) {
 								if ('requestType' in updatedRouteData) delete updatedRouteData.requestType;
 								updatedRouteData.request = [];

@@ -37,11 +37,13 @@ const ResponseSection: React.FC<ResponseSectionProps> = (_props) => {
 
 		if (!schema) return options;
 
-		const matches = schema.customTypes.map((customType) => {
-			const matches = customType.match(/(?<=interface\s)(\w+)|(?<=type\s)(\w+)/g);
-			if (matches && matches.length > 0) return matches[0];
-			return '';
-		});
+		const matches = schema.customTypes
+			.map((customType) => {
+				const matches = customType.match(/(?<=export\s+interface\s)(\w+)|(?<=export\s+type\s)(\w+)/g);
+				if (matches && matches.length > 0) return matches[0];
+				return '';
+			})
+			.filter(Boolean);
 		if (!matches) return options;
 		return [...options, ...matches.map((item) => ({ label: item, value: item }))];
 	}, [schema]);

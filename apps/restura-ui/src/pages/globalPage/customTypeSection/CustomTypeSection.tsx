@@ -18,7 +18,9 @@ const CustomTypeSection: React.FC<CustomTypeSectionProps> = (_props) => {
 	const [customTypesAsString, setCustomTypesAsString] = React.useState(schema?.customTypes.join('\n\n') || '');
 
 	function splitTopLevelDefinitions(typeString: string): string[] {
-		const splitRegex = /(?=^export\s+(?:interface|type|class)\s+)/gm;
+		const splitRegex = /(?=^(?:export\s+)?(?:interface|type|class)\s+)/gm;
+
+		if (!typeString.split(splitRegex).length) return [];
 
 		return typeString
 			.split(splitRegex)
@@ -30,7 +32,7 @@ const CustomTypeSection: React.FC<CustomTypeSectionProps> = (_props) => {
 		setCustomTypesAsString(newValue);
 
 		if (!schema) return;
-		setSchema({ ...schema, customTypes: splitTopLevelDefinitions(customTypesAsString) });
+		setSchema({ ...schema, customTypes: splitTopLevelDefinitions(newValue) });
 	}
 
 	if (!schema) return <></>;
@@ -44,7 +46,6 @@ const CustomTypeSection: React.FC<CustomTypeSectionProps> = (_props) => {
 				mode="typescript"
 				theme="terminal"
 				onChange={onChange}
-				onBlur={onBlur}
 				name="CustomType"
 				editorProps={{ $blockScrolling: true }}
 				value={customTypesAsString}
