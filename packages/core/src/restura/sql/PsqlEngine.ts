@@ -1,11 +1,10 @@
 import { ObjectUtils } from '@redskytech/core-utils';
 import getDiff from '@wmfs/pg-diff-sync';
 import pgInfo from '@wmfs/pg-info';
-import { boundMethod } from 'autobind-decorator';
 import type { Client as ClientType } from 'pg';
 import pg from 'pg';
 import { RsError } from '../RsError';
-import eventManager, { MutationType, QueryMetadata, TriggerResult } from '../eventManager.js';
+import eventManager, { MutationType, TriggerResult } from '../eventManager.js';
 import {
 	CustomRouteData,
 	JoinData,
@@ -93,16 +92,11 @@ export class PsqlEngine extends SqlEngine {
 	}
 
 	private async handleTrigger(payload: TriggerResult, mutationType: MutationType) {
-		const findRequesterDetailsRegex = /^--QUERY_METADATA\(\{.*\}\)/; //only looking at the beginning of the query
-		const match = payload.query.match(findRequesterDetailsRegex);
-		if (match) {
-			const jsonString = match[0].slice(match[0].indexOf('{'), match[0].lastIndexOf('}') + 1);
-			const queryMetadata = ObjectUtils.safeParse<QueryMetadata>(jsonString) as QueryMetadata;
-			const triggerFromThisInstance = queryMetadata.connectionInstanceId === this.psqlConnectionPool.instanceId;
-			if (!triggerFromThisInstance) {
-				return;
-			}
-			await eventManager.fireActionFromDbTrigger({ queryMetadata, mutationType }, payload);
+		if (
+			payload.queryMetadata &&
+			payload.queryMetadata.connectionInstanceId === this.psqlConnectionPool.instanceId
+		) {
+			await eventManager.fireActionFromDbTrigger({ queryMetadata: payload.queryMetadata, mutationType }, payload);
 		}
 	}
 
@@ -118,9 +112,12 @@ export class PsqlEngine extends SqlEngine {
 		const triggers = [];
 
 		for (const table of schema.database) {
-			triggers.push(this.createInsertTriggers(table.name));
-			triggers.push(this.createUpdateTrigger(table.name));
-			triggers.push(this.createDeleteTrigger(table.name));
+			if (table.notify) {
+				triggers.push(this.createInsertTriggers(table.name, table.notify));
+				triggers.push(this.createUpdateTrigger(table.name, table.notify));
+				triggers.push(this.createDeleteTrigger(table.name, table.notify));
+			}
+
 			let sql = `CREATE TABLE "${table.name}"
 					   ( `;
 			const tableColumns = [];
@@ -172,6 +169,7 @@ export class PsqlEngine extends SqlEngine {
 			sql += '\n);';
 			sqlStatements.push(sql);
 		}
+
 		// Now setup foreign keys
 		for (const table of schema.database) {
 			if (!table.foreignKeys.length) continue;
@@ -198,8 +196,10 @@ export class PsqlEngine extends SqlEngine {
 			}
 			sqlStatements.push(sql + constraints.join(',\n') + ';');
 		}
+
 		sqlStatements.push(indexes.join('\n'));
 		sqlStatements.push(triggers.join('\n'));
+
 		return sqlStatements.join('\n\n');
 	}
 
@@ -660,58 +660,224 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		return whereClause;
 	}
 
-	@boundMethod
-	private createUpdateTrigger(tableName: string) {
-		return ` 
+	private createUpdateTrigger(tableName: string, notify: ResturaSchema['database'][0]['notify']): string {
+		if (!notify) return '';
+		if (notify === 'ALL') {
+			return `
 CREATE OR REPLACE FUNCTION notify_${tableName}_update()
-    RETURNS TRIGGER AS $$
+	RETURNS TRIGGER AS $$
+DECLARE
+	query_metadata JSON;
 BEGIN
-    PERFORM pg_notify('update', JSON_BUILD_OBJECT('table', '${tableName}', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
+	SELECT INTO query_metadata
+				(regexp_match(
+						current_query(),
+						'^--QUERY_METADATA\\(({.*})', 'n'
+				))[1]::json;
+
+	PERFORM pg_notify(
+		'update',
+		json_build_object(
+						'table', '${tableName}',
+						'queryMetadata', query_metadata,
+						'changedId', NEW.id,
+						'record', NEW, 
+						'previousRecord', OLD
+		)::text
+		);
+	RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER ${tableName}_update
-    AFTER UPDATE ON "${tableName}"
-    FOR EACH ROW
+	AFTER UPDATE ON "${tableName}"
+	FOR EACH ROW
+EXECUTE FUNCTION notify_${tableName}_update();
+`;
+		}
+
+		const notifyColumnNewBuildString = notify.map((column) => `'${column}', NEW."${column}"`).join(',\n');
+		const notifyColumnOldBuildString = notify.map((column) => `'${column}', OLD."${column}"`).join(',\n');
+
+		return `
+CREATE OR REPLACE FUNCTION notify_${tableName}_update()
+	RETURNS TRIGGER AS $$
+DECLARE
+	query_metadata JSON;
+BEGIN
+	SELECT INTO query_metadata
+				(regexp_match(
+						current_query(),
+						'^--QUERY_METADATA\\(({.*})', 'n'
+				))[1]::json;
+
+	PERFORM pg_notify(
+		'update',
+		json_build_object(
+						'table', '${tableName}',
+						'queryMetadata', query_metadata,
+						'changedId', NEW.id,
+						'record', json_build_object(
+							${notifyColumnNewBuildString}
+						),
+						'previousRecord', json_build_object(
+							${notifyColumnOldBuildString}
+						)
+		)::text
+		);
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER ${tableName}_update
+	AFTER UPDATE ON "${tableName}"
+	FOR EACH ROW
 EXECUTE FUNCTION notify_${tableName}_update();
 		`;
 	}
 
-	@boundMethod
-	private createDeleteTrigger(tableName: string) {
-		return `
+	private createDeleteTrigger(tableName: string, notify: ResturaSchema['database'][0]['notify']): string {
+		if (!notify) return '';
+		if (notify === 'ALL') {
+			return `
 CREATE OR REPLACE FUNCTION notify_${tableName}_delete()
-    RETURNS TRIGGER AS $$
+	RETURNS TRIGGER AS $$
+DECLARE
+	query_metadata JSON;
 BEGIN
-    PERFORM pg_notify('delete', JSON_BUILD_OBJECT('table', '${tableName}', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
+	SELECT INTO query_metadata
+			(regexp_match(
+					current_query(),
+					'^--QUERY_METADATA\\(({.*})', 'n'
+			))[1]::json;
+
+	PERFORM pg_notify(
+		'delete',
+		json_build_object(
+						'table', '${tableName}',
+						'queryMetadata', query_metadata,
+						'deletedId', OLD.id,
+						'previousRecord', OLD
+		)::text
+		);
+	RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER "${tableName}_delete"
-    AFTER DELETE ON "${tableName}"
-    FOR EACH ROW
+	AFTER DELETE ON "${tableName}"
+	FOR EACH ROW
+EXECUTE FUNCTION notify_${tableName}_delete();
+`;
+		}
+
+		const notifyColumnOldBuildString = notify.map((column) => `'${column}', OLD."${column}"`).join(',\n');
+
+		return `
+CREATE OR REPLACE FUNCTION notify_${tableName}_delete()
+	RETURNS TRIGGER AS $$
+DECLARE
+	query_metadata JSON;
+BEGIN
+	SELECT INTO query_metadata
+			(regexp_match(
+					current_query(),
+					'^--QUERY_METADATA\\(({.*})', 'n'
+			))[1]::json;
+
+	PERFORM pg_notify(
+		'delete',
+		json_build_object(
+						'table', '${tableName}',
+						'queryMetadata', query_metadata,
+						'deletedId', OLD.id,
+						'previousRecord', json_build_object(
+							${notifyColumnOldBuildString}
+						)
+		)::text
+		);
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "${tableName}_delete"
+	AFTER DELETE ON "${tableName}"
+	FOR EACH ROW
 EXECUTE FUNCTION notify_${tableName}_delete();
 		`;
 	}
 
-	@boundMethod
-	private createInsertTriggers(tableName: string) {
-		return `
+	private createInsertTriggers(tableName: string, notify: ResturaSchema['database'][0]['notify']): string {
+		if (!notify) return '';
+		if (notify === 'ALL') {
+			return `
 CREATE OR REPLACE FUNCTION notify_${tableName}_insert()
-    RETURNS TRIGGER AS $$
+	RETURNS TRIGGER AS $$
+DECLARE
+	query_metadata JSON;
 BEGIN
-    PERFORM pg_notify('insert', JSON_BUILD_OBJECT('table', '${tableName}', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
+	SELECT INTO query_metadata
+			(regexp_match(
+					current_query(),
+					'^--QUERY_METADATA\\(({.*})', 'n'
+			))[1]::json;
+
+	PERFORM pg_notify(
+		'insert',
+		json_build_object(
+						'table', '${tableName}',
+						'queryMetadata', query_metadata,
+						'insertedId', NEW.id,
+						'record', NEW
+		)::text
+		);
+
+	RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER "${tableName}_insert"
-    AFTER INSERT ON "${tableName}"
-    FOR EACH ROW
+CREATE OR REPLACE TRIGGER "${tableName}_insert"
+	AFTER INSERT ON "${tableName}"
+	FOR EACH ROW
 EXECUTE FUNCTION notify_${tableName}_insert();
-		`;
+`;
+		}
+
+		const notifyColumnNewBuildString = notify.map((column) => `'${column}', NEW."${column}"`).join(',\n');
+
+		return `
+CREATE OR REPLACE FUNCTION notify_${tableName}_insert()
+	RETURNS TRIGGER AS $$
+DECLARE
+	query_metadata JSON;
+BEGIN
+	SELECT INTO query_metadata
+			(regexp_match(
+					current_query(),
+					'^--QUERY_METADATA\\(({.*})', 'n'
+			))[1]::json;
+
+	PERFORM pg_notify(
+		'insert',
+		json_build_object(
+						'table', '${tableName}',
+						'queryMetadata', query_metadata,
+						'insertedId', NEW.id,
+						'record', json_build_object(
+							${notifyColumnNewBuildString}
+						)
+		)::text
+		);
+		
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "${tableName}_insert"
+	AFTER INSERT ON "${tableName}"
+	FOR EACH ROW
+EXECUTE FUNCTION notify_${tableName}_insert();
+`;
 	}
 
 	private schemaToPsqlType(column: ColumnData) {

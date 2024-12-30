@@ -78,7 +78,8 @@ const sampleSchema: ResturaSchema = {
 			checkConstraints: [],
 			foreignKeys: [],
 			indexes: [{ name: 'PRIMARY', columns: ['id'], isUnique: true, isPrimaryKey: true, order: 'ASC' }],
-			roles: []
+			roles: [],
+			notify: 'ALL'
 		},
 		{
 			name: 'item',
@@ -254,7 +255,8 @@ const sampleSchema: ResturaSchema = {
 					isPrimaryKey: false
 				}
 			],
-			roles: []
+			roles: [],
+			notify: ['firstName', 'lastName', 'email', 'role', 'phone', 'accountStatus', 'onboardingStatus']
 		}
 	],
 	endpoints: [
@@ -667,6 +669,31 @@ const patchUserRouteData: RouteData = {
 	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
 };
 
+const deleteUserRouteData: StandardRouteData = {
+	type: 'ONE',
+	method: 'DELETE',
+	name: 'Delete user',
+	description: 'Delete user',
+	path: '/user/me',
+	table: 'user',
+	roles: ['user', 'admin'],
+	request: [
+		{
+			name: 'id',
+			required: true,
+			validator: [{ type: 'TYPE_CHECK', value: 'number' }]
+		}
+	],
+	joins: [],
+	response: [
+		{ name: 'id', selector: 'user.id' },
+		{ name: 'firstName', selector: 'user.firstName' },
+		{ name: 'lastName', selector: 'user.lastName' }
+	],
+	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '$id' }],
+	assignments: []
+};
+
 const createOrderRouteData: RouteData = {
 	type: 'ONE',
 	method: 'POST',
@@ -810,6 +837,8 @@ const getEventPsqlEngine = () => {
 
 describe('PsqlEngine', function () {
 	after(async function () {
+		// Let all pending events finish by pausing for a bit
+		await MiscUtils.sleep(500);
 		if (psqlPool) psqlPool.pool.end();
 		await getEventPsqlEngine().close();
 		if (enginePool) enginePool.pool.end();
@@ -830,218 +859,272 @@ describe('PsqlEngine', function () {
 	describe('db diff', () => {
 		it('should create the database DDL from ResturaSchema', async () => {
 			const psqlEngine = new PsqlEngine(psqlPool);
-			// await psqlEngine.diffDatabaseToSchema(sampleSchema);
 			const ddl = psqlEngine.generateDatabaseSchemaFromSchema(sampleSchema);
 			const ddlNoSpace = trimRedundantWhitespace(ddl);
 			expect(ddlNoSpace).to.equal(
 				trimRedundantWhitespace(`CREATE TABLE "company"
-	   ( 	"id" BIGSERIAL PRIMARY KEY  NOT NULL, 
-	"createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
-	"modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
-	"name" VARCHAR(255) NULL
+                                           (    "id" BIGSERIAL PRIMARY KEY  NOT NULL, 
+        "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+        "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+        "name" VARCHAR(255) NULL
 );
 
 CREATE TABLE "order"
-	   ( 	"id" BIGSERIAL PRIMARY KEY  NOT NULL, 
-	"amountCents" BIGINT NOT NULL, 
-	"userId" BIGINT NOT NULL
+                                           (    "id" BIGSERIAL PRIMARY KEY  NOT NULL, 
+        "amountCents" BIGINT NOT NULL, 
+        "userId" BIGINT NOT NULL
 );
 
 CREATE TABLE "item"
-( "id" BIGSERIAL PRIMARY KEY NOT NULL,
-  "orderId" BIGINT NOT NULL 
+                                           (    "id" BIGSERIAL PRIMARY KEY  NOT NULL, 
+        "orderId" BIGINT NOT NULL
 );
 
 CREATE TABLE "user"
-(  "id" BIGSERIAL NOT NULL, 
-	"createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
-	"modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
-	"firstName" VARCHAR(30) NOT NULL, 
-	"lastName" VARCHAR(30) NOT NULL, 
-	"companyId" BIGINT NOT NULL, 
-	"password" VARCHAR(70) NOT NULL, 
-	"email" VARCHAR(100) NOT NULL, 
-	"role" TEXT NOT NULL DEFAULT 'user' CHECK ("role" IN ('admin','user')), 
-	"permissionLogin" BOOLEAN NOT NULL DEFAULT true, 
-	"lastLoginOn" TIMESTAMPTZ NULL, 
-	"phone" VARCHAR(30) NULL, 
-	"loginDisabledOn" TIMESTAMPTZ NULL, 
-	"passwordResetGuid" VARCHAR(100) NULL, 
-	"verifyEmailPin" INT NULL, 
-	"verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, 
-	"accountStatus" TEXT NOT NULL DEFAULT 'view_only' CHECK ("accountStatus" IN ('banned','view_only','active')), 
-	"passwordResetExpiresOn" TIMESTAMPTZ NULL, 
-	"onboardingStatus" TEXT NOT NULL DEFAULT 'verify_email' CHECK ("onboardingStatus" IN ('verify_email','complete')), 
-	"pendingEmail" VARCHAR(100) NULL
+                                           (    "id" BIGSERIAL NOT NULL, 
+        "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+        "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+        "firstName" VARCHAR(30) NOT NULL, 
+        "lastName" VARCHAR(30) NOT NULL, 
+        "companyId" BIGINT NOT NULL, 
+        "password" VARCHAR(70) NOT NULL, 
+        "email" VARCHAR(100) NOT NULL, 
+        "role" TEXT NOT NULL DEFAULT 'user' CHECK ("role" IN ('admin','user')), 
+        "permissionLogin" BOOLEAN NOT NULL DEFAULT true, 
+        "lastLoginOn" TIMESTAMPTZ NULL, 
+        "phone" VARCHAR(30) NULL, 
+        "loginDisabledOn" TIMESTAMPTZ NULL, 
+        "passwordResetGuid" VARCHAR(100) NULL, 
+        "verifyEmailPin" INT NULL, 
+        "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, 
+        "accountStatus" TEXT NOT NULL DEFAULT 'view_only' CHECK ("accountStatus" IN ('banned','view_only','active')), 
+        "passwordResetExpiresOn" TIMESTAMPTZ NULL, 
+        "onboardingStatus" TEXT NOT NULL DEFAULT 'verify_email' CHECK ("onboardingStatus" IN ('verify_email','complete')), 
+        "pendingEmail" VARCHAR(100) NULL
 );
 
-ALTER TABLE "user" 	 ADD CONSTRAINT "user_companyId_company_id_fk"
+ALTER TABLE "user"       ADD CONSTRAINT "user_companyId_company_id_fk"
         FOREIGN KEY ("companyId") REFERENCES "company" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
-	CREATE  INDEX "user_companyId_index" ON "user" ("companyId" ASC);
-	CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC);
-	CREATE  INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC);
+        CREATE  INDEX "user_companyId_index" ON "user" ("companyId" ASC);
+        CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC);
+        CREATE  INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC);
 
-
-CREATE OR REPLACE FUNCTION notify_company_insert()
-    RETURNS TRIGGER AS $$
-BEGIN
-    PERFORM pg_notify('insert', JSON_BUILD_OBJECT('table', 'company', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER "company_insert"
-    AFTER INSERT ON "company"
-    FOR EACH ROW
-EXECUTE FUNCTION notify_company_insert();
- 
-CREATE OR REPLACE FUNCTION notify_company_update()
-    RETURNS TRIGGER AS $$
-BEGIN
-    PERFORM pg_notify('update', JSON_BUILD_OBJECT('table', 'company', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE TRIGGER company_update
-    AFTER UPDATE ON "company"
-    FOR EACH ROW
-EXECUTE FUNCTION notify_company_update();
-
-CREATE OR REPLACE FUNCTION notify_company_delete()
-    RETURNS TRIGGER AS $$
-BEGIN
-    PERFORM pg_notify('delete', JSON_BUILD_OBJECT('table', 'company', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE TRIGGER "company_delete"
-    AFTER DELETE ON "company"
-    FOR EACH ROW
-EXECUTE FUNCTION notify_company_delete();
 
 CREATE OR REPLACE FUNCTION notify_order_insert()
-    RETURNS TRIGGER AS $$
+        RETURNS TRIGGER AS $$
+DECLARE
+        query_metadata JSON;
 BEGIN
-    PERFORM pg_notify('insert', JSON_BUILD_OBJECT('table', 'order', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
+        SELECT INTO query_metadata
+                        (regexp_match(
+                                        current_query(),
+                                        '^--QUERY_METADATA\\(({.*})', 'n'
+                        ))[1]::json;
+
+        PERFORM pg_notify(
+                'insert',
+                json_build_object(
+                                                'table', 'order',
+                                                'queryMetadata', query_metadata,
+                                                'insertedId', NEW.id,
+                                                'record', NEW
+                )::text
+                );
+
+        RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER "order_insert"
-    AFTER INSERT ON "order"
-    FOR EACH ROW
+CREATE OR REPLACE TRIGGER "order_insert"
+        AFTER INSERT ON "order"
+        FOR EACH ROW
 EXECUTE FUNCTION notify_order_insert();
- 
+
+
 CREATE OR REPLACE FUNCTION notify_order_update()
-    RETURNS TRIGGER AS $$
+        RETURNS TRIGGER AS $$
+DECLARE
+        query_metadata JSON;
 BEGIN
-    PERFORM pg_notify('update', JSON_BUILD_OBJECT('table', 'order', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
+        SELECT INTO query_metadata
+                                (regexp_match(
+                                                current_query(),
+                                                '^--QUERY_METADATA\\(({.*})', 'n'
+                                ))[1]::json;
+
+        PERFORM pg_notify(
+                'update',
+                json_build_object(
+                                                'table', 'order',
+                                                'queryMetadata', query_metadata,
+                                                'changedId', NEW.id,
+                                                'record', NEW, 
+                                                'previousRecord', OLD
+                )::text
+                );
+        RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER order_update
-    AFTER UPDATE ON "order"
-    FOR EACH ROW
+        AFTER UPDATE ON "order"
+        FOR EACH ROW
 EXECUTE FUNCTION notify_order_update();
 
+
 CREATE OR REPLACE FUNCTION notify_order_delete()
-    RETURNS TRIGGER AS $$
+        RETURNS TRIGGER AS $$
+DECLARE
+        query_metadata JSON;
 BEGIN
-    PERFORM pg_notify('delete', JSON_BUILD_OBJECT('table', 'order', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
+        SELECT INTO query_metadata
+                        (regexp_match(
+                                        current_query(),
+                                        '^--QUERY_METADATA\\(({.*})', 'n'
+                        ))[1]::json;
+
+        PERFORM pg_notify(
+                'delete',
+                json_build_object(
+                                                'table', 'order',
+                                                'queryMetadata', query_metadata,
+                                                'deletedId', OLD.id,
+                                                'previousRecord', OLD
+                )::text
+                );
+        RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER "order_delete"
-    AFTER DELETE ON "order"
-    FOR EACH ROW
+        AFTER DELETE ON "order"
+        FOR EACH ROW
 EXECUTE FUNCTION notify_order_delete();
 
 
-CREATE OR REPLACE FUNCTION notify_item_insert()
-    RETURNS TRIGGER AS $$
-BEGIN
-    PERFORM pg_notify('insert', JSON_BUILD_OBJECT('table', 'item', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER "item_insert"
-    AFTER INSERT ON "item"
-    FOR EACH ROW
-EXECUTE FUNCTION notify_item_insert();
-
- 
-CREATE OR REPLACE FUNCTION notify_item_update()
-    RETURNS TRIGGER AS $$
-BEGIN
-    PERFORM pg_notify('update', JSON_BUILD_OBJECT('table', 'item', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE TRIGGER item_update
-    AFTER UPDATE ON "item"
-    FOR EACH ROW
-EXECUTE FUNCTION notify_item_update();
-
-
-CREATE OR REPLACE FUNCTION notify_item_delete()
-    RETURNS TRIGGER AS $$
-BEGIN
-    PERFORM pg_notify('delete', JSON_BUILD_OBJECT('table', 'item', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE TRIGGER "item_delete"
-    AFTER DELETE ON "item"
-    FOR EACH ROW
-EXECUTE FUNCTION notify_item_delete();
-
-
 CREATE OR REPLACE FUNCTION notify_user_insert()
-    RETURNS TRIGGER AS $$
+        RETURNS TRIGGER AS $$
+DECLARE
+        query_metadata JSON;
 BEGIN
-    PERFORM pg_notify('insert', JSON_BUILD_OBJECT('table', 'user', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
+        SELECT INTO query_metadata
+                        (regexp_match(
+                                        current_query(),
+                                        '^--QUERY_METADATA\\(({.*})', 'n'
+                        ))[1]::json;
+
+        PERFORM pg_notify(
+                'insert',
+                json_build_object(
+                                                'table', 'user',
+                                                'queryMetadata', query_metadata,
+                                                'insertedId', NEW.id,
+                                                'record', json_build_object(
+                                                        'firstName', NEW."firstName",
+'lastName', NEW."lastName",
+'email', NEW."email",
+'role', NEW."role",
+'phone', NEW."phone",
+'accountStatus', NEW."accountStatus",
+'onboardingStatus', NEW."onboardingStatus"
+                                                )
+                )::text
+                );
+
+        RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER "user_insert"
-    AFTER INSERT ON "user"
-    FOR EACH ROW
+CREATE OR REPLACE TRIGGER "user_insert"
+        AFTER INSERT ON "user"
+        FOR EACH ROW
 EXECUTE FUNCTION notify_user_insert();
- 
+
+
 CREATE OR REPLACE FUNCTION notify_user_update()
-    RETURNS TRIGGER AS $$
+        RETURNS TRIGGER AS $$
+DECLARE
+        query_metadata JSON;
 BEGIN
-    PERFORM pg_notify('update', JSON_BUILD_OBJECT('table', 'user', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
+        SELECT INTO query_metadata
+                                (regexp_match(
+                                                current_query(),
+                                                '^--QUERY_METADATA\\(({.*})', 'n'
+                                ))[1]::json;
+
+        PERFORM pg_notify(
+                'update',
+                json_build_object(
+                                                'table', 'user',
+                                                'queryMetadata', query_metadata,
+                                                'changedId', NEW.id,
+                                                'record', json_build_object(
+                                                        'firstName', NEW."firstName",
+'lastName', NEW."lastName",
+'email', NEW."email",
+'role', NEW."role",
+'phone', NEW."phone",
+'accountStatus', NEW."accountStatus",
+'onboardingStatus', NEW."onboardingStatus"
+                                                ),
+                                                'previousRecord', json_build_object(
+                                                        'firstName', OLD."firstName",
+'lastName', OLD."lastName",
+'email', OLD."email",
+'role', OLD."role",
+'phone', OLD."phone",
+'accountStatus', OLD."accountStatus",
+'onboardingStatus', OLD."onboardingStatus"
+                                                )
+                )::text
+                );
+        RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER user_update
-    AFTER UPDATE ON "user"
-    FOR EACH ROW
+        AFTER UPDATE ON "user"
+        FOR EACH ROW
 EXECUTE FUNCTION notify_user_update();
 
+
 CREATE OR REPLACE FUNCTION notify_user_delete()
-    RETURNS TRIGGER AS $$
+        RETURNS TRIGGER AS $$
+DECLARE
+        query_metadata JSON;
 BEGIN
-    PERFORM pg_notify('delete', JSON_BUILD_OBJECT('table', 'user', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-    RETURN NEW;
+        SELECT INTO query_metadata
+                        (regexp_match(
+                                        current_query(),
+                                        '^--QUERY_METADATA\\(({.*})', 'n'
+                        ))[1]::json;
+
+        PERFORM pg_notify(
+                'delete',
+                json_build_object(
+                                                'table', 'user',
+                                                'queryMetadata', query_metadata,
+                                                'deletedId', OLD.id,
+                                                'previousRecord', json_build_object(
+                                                        'firstName', OLD."firstName",
+'lastName', OLD."lastName",
+'email', OLD."email",
+'role', OLD."role",
+'phone', OLD."phone",
+'accountStatus', OLD."accountStatus",
+'onboardingStatus', OLD."onboardingStatus"
+                                                )
+                )::text
+                );
+        RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER "user_delete"
-    AFTER DELETE ON "user"
-    FOR EACH ROW
-EXECUTE FUNCTION notify_user_delete();			
+        AFTER DELETE ON "user"
+        FOR EACH ROW
+EXECUTE FUNCTION notify_user_delete();
 `)
 			);
 		});
@@ -1095,7 +1178,7 @@ EXECUTE FUNCTION notify_user_delete();
 		it('should receive notification of user row being inserted', function (done) {
 			const email = `${Date.now()}@plvr.com`;
 			let doneCalled = false;
-			eventManager.addRowInsertHandler<{ email: string }>(
+			eventManager.addRowInsertHandler<{ email: string; metadata: undefined }>(
 				async function (data) {
 					if (doneCalled) return;
 					try {
@@ -1103,7 +1186,9 @@ EXECUTE FUNCTION notify_user_delete();
 						expect(data.queryMetadata.host).to.equal('google.com');
 						expect(data.queryMetadata.ipAddress).to.equal('1.1.1.1');
 						expect(data.queryMetadata.userId).to.equal(1);
+						expect(data.insertedId).to.be.greaterThan(0);
 						expect(data.insertObject.email).to.equal(email);
+						expect(data.insertObject.metadata).to.equal(undefined);
 						expect(data.tableName).to.equal('user');
 					} catch (e) {
 						console.log(e);
@@ -1148,6 +1233,7 @@ EXECUTE FUNCTION notify_user_delete();
 							expect(data.queryMetadata.role).to.equal('admin');
 							expect(data.queryMetadata.host).to.equal('google.com');
 							expect(data.queryMetadata.ipAddress).to.equal('1.1.1.1');
+							expect(data.changedId).to.equal(1);
 							expect(data.queryMetadata.userId).to.equal(1);
 							expect(data.tableName).to.equal('user');
 							expect(data.newData.firstName).to.equal('Billy');
@@ -1188,7 +1274,71 @@ EXECUTE FUNCTION notify_user_delete();
 				await getEventPsqlEngine()['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
 			})();
 		});
+		it('should receive notification of user row being deleted', function (done) {
+			(async () => {
+				const email = `${Date.now()}@plvr.com`;
+				let doneCalled = false;
+				eventManager.addRowDeleteHandler<{ email: string; metadata: undefined }>(
+					async function (data) {
+						console.log(data);
+						if (doneCalled) return;
+						try {
+							expect(data.queryMetadata.role).to.equal('admin');
+							expect(data.queryMetadata.host).to.equal('google.com');
+							expect(data.queryMetadata.ipAddress).to.equal('1.1.1.1');
+							expect(data.queryMetadata.userId).to.equal(1);
+							expect(data.deletedId).to.equal(createResponse.id);
+							expect(data.deletedRow.email).to.equal(email);
+							expect(data.deletedRow.metadata).to.equal(undefined);
+							expect(data.tableName).to.equal('user');
+						} catch (e) {
+							console.log(e);
+							doneCalled = true;
+							return done(e);
+						}
+						doneCalled = true;
+						done();
+					},
+					{ tableName: 'user' }
+				);
+
+				const getData = () => {
+					return {
+						firstName: 'Billy',
+						lastName: 'Bob',
+						companyId: 1,
+						password: 'asdfa',
+						email,
+						role: 'user'
+					};
+				};
+				const requesterDetails: RequesterDetails = {
+					role: 'admin',
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				};
+				const createRequest: RsRequest = {
+					requesterDetails,
+					data: getData()
+				} as unknown as RsRequest;
+				const createResponse = await getEventPsqlEngine()['executeCreateRequest'](
+					cloneDeep(createRequest),
+					patchUserRouteData,
+					sampleSchema
+				);
+				expect(createResponse?.id).to.be.greaterThan(0);
+
+				const deleteRequest: RsRequest = {
+					requesterDetails,
+					data: { id: createResponse.id }
+				} as unknown as RsRequest;
+				await getEventPsqlEngine().setupTriggerListeners;
+				await getEventPsqlEngine()['executeDeleteRequest'](deleteRequest, deleteUserRouteData, sampleSchema);
+			})();
+		});
 	});
+
 	describe('PsqlEngine executeUpdateRequest', () => {
 		const psqlEngine = new PsqlEngine(psqlPool);
 		it('should executeUpdateRequest', async () => {
