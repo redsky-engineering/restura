@@ -286,7 +286,8 @@ const tableDataSchema = z
 		indexes: z.array(indexDataSchema),
 		foreignKeys: z.array(foreignKeyDataSchema),
 		checkConstraints: z.array(checkConstraintDataSchema),
-		roles: z.array(z.string())
+		roles: z.array(z.string()),
+		notify: z.union([z.literal('ALL'), z.array(z.string())]).optional()
 	})
 	.strict();
 

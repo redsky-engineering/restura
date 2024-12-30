@@ -15,17 +15,18 @@ export interface DatabaseActionData {
 }
 
 export interface ActionRowInsertData<T = DynamicObject> extends DatabaseActionData {
-	insertId: number;
+	insertedId: number;
 	insertObject: T;
 }
 
 export interface ActionRowDeleteData<T = DynamicObject> extends DatabaseActionData {
+	deletedId: number;
 	deletedRow: T;
 }
 
 export interface ActionColumnChangeData<T = DynamicObject> extends DatabaseActionData {
 	tableName: string;
-	rowId: number;
+	changedId: number;
 	newData: T;
 	oldData: T;
 }
@@ -45,8 +46,10 @@ export interface ActionColumnChangeFilter {
 
 export type TriggerResult = {
 	table: string;
-	insertId?: number;
-	query: string;
+	insertedId?: number;
+	changedId?: number;
+	deletedId?: number;
+	queryMetadata: QueryMetadata;
 	record: DynamicObject;
 	previousRecord: DynamicObject;
 	requesterId: number;
@@ -123,7 +126,7 @@ class EventManager {
 				if (!this.hasHandlersForEventType('DATABASE_ROW_INSERT', filter, triggerResult)) return;
 				const insertData: ActionRowInsertData = {
 					tableName: triggerResult.table,
-					insertId: triggerResult.record.id as number,
+					insertedId: triggerResult.insertedId || 0,
 					insertObject: triggerResult.record,
 					queryMetadata: data.queryMetadata
 				};
@@ -139,6 +142,7 @@ class EventManager {
 				if (!this.hasHandlersForEventType('DATABASE_ROW_DELETE', filter, triggerResult)) return;
 				const deleteData: ActionRowDeleteData = {
 					tableName: triggerResult.table,
+					deletedId: triggerResult.deletedId || 0,
 					deletedRow: triggerResult.previousRecord,
 					queryMetadata: data.queryMetadata
 				};
@@ -154,7 +158,7 @@ class EventManager {
 				if (!this.hasHandlersForEventType('DATABASE_COLUMN_UPDATE', filter, triggerResult)) return;
 				const columnChangeData: ActionColumnChangeData = {
 					tableName: triggerResult.table,
-					rowId: triggerResult.record.id as number,
+					changedId: triggerResult.changedId || 0,
 					newData: triggerResult.record,
 					oldData: triggerResult.previousRecord,
 					queryMetadata: data.queryMetadata
