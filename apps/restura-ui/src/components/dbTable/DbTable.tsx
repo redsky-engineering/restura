@@ -1,16 +1,17 @@
-import * as React from 'react';
-import './DbTable.scss';
 import { Box, Icon, InputText, Label, popupController } from '@redskytech/framework/ui';
-import Paper from '../paper/Paper';
-import { useRecoilState } from 'recoil';
-import globalState from '../../state/globalState';
-import { useState } from 'react';
 import cloneDeep from 'lodash.clonedeep';
+import * as React from 'react';
+import { useState } from 'react';
+import { useRecoilState } from 'recoil';
+import ConfirmationPopup, { ConfirmationPopupProps } from '../../popups/confirmationPopup/ConfirmationPopup';
+import globalState from '../../state/globalState';
+import Paper from '../paper/Paper';
+import CheckConstraintSection from './checkConstraintSection/CheckConstraintSection.js';
+import ColumnSection from './columnSection/ColumnSection';
+import './DbTable.scss';
 import ForeignKeySection from './foreignKeySection/ForeignKeySection';
 import IndexSection from './indexSection/IndexSection';
-import ConfirmationPopup, { ConfirmationPopupProps } from '../../popups/confirmationPopup/ConfirmationPopup';
-import ColumnSection from './columnSection/ColumnSection';
-import CheckConstraintSection from './checkConstraintSection/CheckConstraintSection.js';
+import NotifySection from './notifySection/NotifySection.js';
 
 interface DbTableProps {
 	tableName: string;
@@ -18,6 +19,7 @@ interface DbTableProps {
 	hideIndexes: boolean;
 	hideForeignKeys: boolean;
 	hideChecks: boolean;
+	hideNotifications: boolean;
 }
 
 const DbTable: React.FC<DbTableProps> = (props) => {
@@ -32,7 +34,7 @@ const DbTable: React.FC<DbTableProps> = (props) => {
 			rejectLabel: 'Cancel',
 			onAccept: () => {
 				if (!schema) return;
-				let updatedSchema = cloneDeep(schema);
+				const updatedSchema = cloneDeep(schema);
 				updatedSchema.database = updatedSchema.database.filter((table) => table.name !== props.tableName);
 				setSchema(updatedSchema);
 			}
@@ -41,8 +43,8 @@ const DbTable: React.FC<DbTableProps> = (props) => {
 
 	function changeTableName(newName: string) {
 		if (!schema) return;
-		let updatedSchema = cloneDeep(schema);
-		let tableData = updatedSchema.database.find((table) => table.name === props.tableName)!;
+		const updatedSchema = cloneDeep(schema);
+		const tableData = updatedSchema.database.find((table) => table.name === props.tableName)!;
 		tableData.name = newName;
 		setSchema(updatedSchema);
 	}
@@ -96,6 +98,7 @@ const DbTable: React.FC<DbTableProps> = (props) => {
 				{!props.hideIndexes && <IndexSection tableName={props.tableName} />}
 				{!props.hideForeignKeys && <ForeignKeySection tableName={props.tableName} />}
 				{!props.hideChecks && <CheckConstraintSection tableName={props.tableName} />}
+				{!props.hideNotifications && <NotifySection tableName={props.tableName} />}
 			</Paper>
 		</Box>
 	);

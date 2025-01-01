@@ -1,6 +1,19 @@
 /** Auto generated file. DO NOT MODIFY **/
 
 declare namespace Model {
+	export interface Item {
+		id: number;
+		createdOn: string;
+		modifiedOn: string;
+		orderId: number;
+	}
+	export interface Order {
+		id: number;
+		createdOn: string;
+		modifiedOn: string;
+		userId: number;
+		amountCents: number;
+	}
 	export interface Company {
 		id: number;
 		createdOn: string;
@@ -28,5 +41,7 @@ declare namespace Model {
 		passwordResetExpiresOn?: string;
 		onboardingStatus: 'verify_email' | 'complete';
 		pendingEmail?: string;
+		testAge: number;
+		metadata: object;
 	}
 }

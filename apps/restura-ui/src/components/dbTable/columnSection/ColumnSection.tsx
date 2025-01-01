@@ -14,6 +14,10 @@ export const columnTypeList: (
 	| Restura.MariaDbColumnDateTypes
 	| Restura.MariaDbColumnStringTypes
 	| Restura.MariaDbColumnNumericTypes
+	| Restura.PostgresColumnNumericTypes
+	| Restura.PostgresColumnStringTypes
+	| Restura.PostgresColumnDateTypes
+	| Restura.PostgresColumnJsonTypes
 )[] = [
 	'BOOLEAN',
 	'TINYINT',
@@ -39,7 +43,9 @@ export const columnTypeList: (
 	'DATETIME',
 	'TIME',
 	'TIMESTAMP',
-	'ENUM'
+	'ENUM',
+	'BIGSERIAL',
+	'JSONB'
 ];
 
 interface ColumnSectionProps {
@@ -52,7 +58,7 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 	function getAllowLengthEdit(
 		type: Restura.MariaDbColumnNumericTypes | Restura.MariaDbColumnStringTypes | Restura.MariaDbColumnDateTypes
 	): boolean {
-		let lengthTypes: (
+		const lengthTypes: (
 			| Restura.MariaDbColumnNumericTypes
 			| Restura.MariaDbColumnStringTypes
 			| Restura.MariaDbColumnDateTypes
@@ -63,7 +69,7 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 	function getAllowValueEdit(
 		type: Restura.MariaDbColumnNumericTypes | Restura.MariaDbColumnStringTypes | Restura.MariaDbColumnDateTypes
 	): boolean {
-		let valueTypes: (
+		const valueTypes: (
 			| Restura.MariaDbColumnNumericTypes
 			| Restura.MariaDbColumnStringTypes
 			| Restura.MariaDbColumnDateTypes
@@ -74,7 +80,7 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 	function getAllowAutoIncrement(
 		type: Restura.MariaDbColumnNumericTypes | Restura.MariaDbColumnStringTypes | Restura.MariaDbColumnDateTypes
 	): boolean {
-		let autoTypes: (
+		const autoTypes: (
 			| Restura.MariaDbColumnNumericTypes
 			| Restura.MariaDbColumnStringTypes
 			| Restura.MariaDbColumnDateTypes
@@ -138,13 +144,13 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 	}
 
 	function getColumnForeignKeyRefTable(columnName: string, tableData: Restura.TableData): string {
-		let foreignKey = tableData.foreignKeys.find((item) => item.column === columnName);
+		const foreignKey = tableData.foreignKeys.find((item) => item.column === columnName);
 		if (!foreignKey) return '';
 		return foreignKey.refTable;
 	}
 
 	function getColumnForeignKeyRefColumn(columnName: string, tableData: Restura.TableData): string {
-		let foreignKey = tableData.foreignKeys.find((item) => item.column === columnName);
+		const foreignKey = tableData.foreignKeys.find((item) => item.column === columnName);
 		if (!foreignKey) return '';
 		return foreignKey.refColumn;
 	}
@@ -155,19 +161,19 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 		originalColumnName: string,
 		newColumnName: string
 	) {
-		let tableData = SchemaService.getTableData(updatedSchema, tableName);
-		let columnData = SchemaService.getColumnData(updatedSchema, props.tableName, originalColumnName);
+		const tableData = SchemaService.getTableData(updatedSchema, tableName);
+		const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, originalColumnName);
 
 		// No matter what update column name with what they choose.
 		columnData.name = newColumnName;
 
 		if (newColumnName.endsWith('Id')) {
-			let refTableName = newColumnName.replace('Id', '');
-			let refColumnName = 'id';
-			let refTable = SchemaService.getTableData(updatedSchema, refTableName);
+			const refTableName = newColumnName.replace('Id', '');
+			const refColumnName = 'id';
+			const refTable = SchemaService.getTableData(updatedSchema, refTableName);
 			let referenceIsValid = false;
 			if (refTable) {
-				let refColumnData = SchemaService.getColumnData(updatedSchema, refTableName, refColumnName);
+				const refColumnData = SchemaService.getColumnData(updatedSchema, refTableName, refColumnName);
 				if (refColumnData) referenceIsValid = true;
 			}
 
@@ -238,21 +244,21 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 	}
 
 	function getAllRoles(): string[] {
-		let roles: string[] = [];
+		const roles: string[] = [];
 		if (!schema) return roles;
-		for (let table of schema.database) {
+		for (const table of schema.database) {
 			roles.push(...table.roles);
-			for (let column of table.columns) {
+			for (const column of table.columns) {
 				roles.push(...column.roles);
 			}
 		}
-		let roleSet = new Set(roles);
+		const roleSet = new Set(roles);
 		return Array.from(roleSet);
 	}
 
 	function renderColumns() {
 		if (!schema) return <></>;
-		let tableData = schema.database.find((item) => item.name === props.tableName);
+		const tableData = schema.database.find((item) => item.name === props.tableName);
 		if (!tableData) return <></>;
 
 		return tableData.columns.map((column) => {
@@ -270,12 +276,12 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 								return;
 							}
 
-							let updatedSchema = cloneDeep(schema);
+							const updatedSchema = cloneDeep(schema);
 
 							if (column.name.includes('new_column')) {
 								predictAndEditColumnData(updatedSchema, props.tableName, column.name, value);
 							} else {
-								let columnData = SchemaService.getColumnData(
+								const columnData = SchemaService.getColumnData(
 									updatedSchema,
 									props.tableName,
 									column.name
@@ -291,8 +297,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 						selectOptions={columnTypeList}
 						value={column.type}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
+							const updatedSchema = cloneDeep(schema);
+							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
 							if (!getAllowLengthEdit(value as MariaDbColumnNumericTypes)) delete columnData.length;
 							else columnData.length = columnData.length || 10;
 							columnData.type = value as Restura.MariaDbColumnDateTypes;
@@ -305,8 +311,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 						selectOptions={column.value ? (column.value.replaceAll("'", '').split(',') as string[]) : []}
 						value={column.value ? column.value.replaceAll("'", '').split(',') : []}
 						onMultiSelectChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
+							const updatedSchema = cloneDeep(schema);
+							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
 							columnData.value = '';
 							value.forEach((item, index) => {
 								if (index === 0) columnData.value += "'" + item.replaceAll("'", '') + "'";
@@ -321,8 +327,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 						cellType={'text'}
 						value={column.length ? column.length.toString() : ''}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
+							const updatedSchema = cloneDeep(schema);
+							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
 							columnData.length = parseInt(value);
 							setSchema(updatedSchema);
 						}}
@@ -332,8 +338,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 						cellType={'selectBoolean'}
 						value={column.hasAutoIncrement || false}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
+							const updatedSchema = cloneDeep(schema);
+							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
 							columnData.hasAutoIncrement = value === 'true';
 							setSchema(updatedSchema);
 						}}
@@ -342,8 +348,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 						cellType={'selectBoolean'}
 						value={columnHasUniqueIndex(column.name, tableData!)}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+							const updatedSchema = cloneDeep(schema);
+							const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
 							if (value === 'true') {
 								updatedTableData.indexes.push({
 									name: SchemaService.generateIndexName(props.tableName, [column.name], true),
@@ -366,8 +372,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 						cellType={'selectBoolean'}
 						value={column.isNullable}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
+							const updatedSchema = cloneDeep(schema);
+							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
 							columnData.isNullable = value === 'true';
 							setSchema(updatedSchema);
 						}}
@@ -377,8 +383,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 							cellType={'text'}
 							value={column.default || ''}
 							onChange={(value) => {
-								let updatedSchema = cloneDeep(schema);
-								let columnData = SchemaService.getColumnData(
+								const updatedSchema = cloneDeep(schema);
+								const columnData = SchemaService.getColumnData(
 									updatedSchema,
 									props.tableName,
 									column.name
@@ -394,8 +400,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 							selectOptions={(!!column.value && column.value.replaceAll("'", '').split(',')) || []}
 							value={(column.default && column.default.replaceAll("'", '')) || ''}
 							onChange={(value) => {
-								let updatedSchema = cloneDeep(schema);
-								let columnData = SchemaService.getColumnData(
+								const updatedSchema = cloneDeep(schema);
+								const columnData = SchemaService.getColumnData(
 									updatedSchema,
 									props.tableName,
 									column.name
@@ -411,8 +417,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 						cellType={'text'}
 						value={column.comment || ''}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
+							const updatedSchema = cloneDeep(schema);
+							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
 							if (value) columnData.comment = value;
 							else delete columnData.comment;
 							setSchema(updatedSchema);
@@ -423,7 +429,7 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 						disableEdit
 						cellType={'text'}
 						value={getColumnForeignKeyRefTable(column.name, tableData!)}
-						onChange={(value) => {}}
+						onChange={() => {}}
 					/>
 					<DbTableCell
 						disableEdit
@@ -435,8 +441,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 						selectOptions={schema.roles}
 						value={column.roles}
 						onMultiSelectChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
+							const updatedSchema = cloneDeep(schema);
+							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
 							columnData.roles = value;
 							setSchema(updatedSchema);
 						}}
@@ -448,8 +454,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 							fontSize={16}
 							cursorPointer
 							onClick={() => {
-								let updatedSchema = cloneDeep(schema);
-								let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+								const updatedSchema = cloneDeep(schema);
+								const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
 								updatedTableData.columns = updatedTableData.columns.filter(
 									(col) => col.name !== column.name
 								);
@@ -464,9 +470,9 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 
 	function addNewTableColumn() {
 		if (!schema) return;
-		let updatedSchema = cloneDeep(schema);
-		let tableData = SchemaService.getTableData(updatedSchema, props.tableName);
-		let newColumnName = `new_column_${Math.random().toString(36).substr(2, 5)}`;
+		const updatedSchema = cloneDeep(schema);
+		const tableData = SchemaService.getTableData(updatedSchema, props.tableName);
+		const newColumnName = `new_column_${Math.random().toString(36).substr(2, 5)}`;
 		tableData.columns.push({
 			roles: [],
 			name: newColumnName,
@@ -477,11 +483,11 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 		setSchema(updatedSchema);
 		setTimeout(() => {
 			// Simulate a click on the new column to open the edit dialog
-			let newColumn = document.getElementById(`Cell-${newColumnName}`);
+			const newColumn = document.getElementById(`Cell-${newColumnName}`);
 			if (newColumn) {
 				newColumn.click();
 			}
-			let input = document.querySelector<HTMLInputElement>(`#Cell-${newColumnName} input`);
+			const input = document.querySelector<HTMLInputElement>(`#Cell-${newColumnName} input`);
 			if (input) {
 				input.focus();
 				input.setSelectionRange(0, input.value.length);

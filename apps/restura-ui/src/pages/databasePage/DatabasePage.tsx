@@ -19,10 +19,12 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 	const [isIndexesFiltered, setIsIndexesFiltered] = useState<boolean>(false);
 	const [isForeignKeysFiltered, setIsForeignKeysFiltered] = useState<boolean>(false);
 	const [isChecksFiltered, setIsChecksFiltered] = useState<boolean>(false);
+	const [isNotificationsFiltered, setIsNotificationsFiltered] = useState<boolean>(false);
 	const [tableSearch, setTableSearch] = useState<string>('');
 	const [validationError, setValidationError] = useState<string>('');
 
-	const isAnyFiltersApplied = isColumnsFiltered || isIndexesFiltered || isForeignKeysFiltered;
+	const isAnyFiltersApplied =
+		isColumnsFiltered || isIndexesFiltered || isForeignKeysFiltered || isChecksFiltered || isNotificationsFiltered;
 
 	function addNewTable() {
 		if (!schema) return;
@@ -30,7 +32,14 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 		updatedSchema.database.unshift({
 			name: `new_table_${Math.random().toString(36).substr(2, 5)}`,
 			columns: [
-				{ name: 'id', hasAutoIncrement: true, isNullable: false, roles: [], type: 'BIGINT', isPrimary: true },
+				{
+					name: 'id',
+					hasAutoIncrement: true,
+					isNullable: false,
+					roles: [],
+					type: 'BIGSERIAL',
+					isPrimary: true
+				},
 				{ name: 'createdOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME' },
 				{ name: 'modifiedOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME' }
 			],
@@ -84,6 +93,13 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 					>
 						Checks
 					</Button>
+					<Button
+						look={isNotificationsFiltered ? 'containedPrimary' : 'outlinedPrimary'}
+						ml={8}
+						onClick={() => setIsNotificationsFiltered(!isNotificationsFiltered)}
+					>
+						Notifications
+					</Button>
 				</Box>
 				{validationError && (
 					<Label variant={'subheader2'} weight={'bold'} color={themes.primaryRed500}>
@@ -125,6 +141,7 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 								hideIndexes={isAnyFiltersApplied && !isIndexesFiltered}
 								hideForeignKeys={isAnyFiltersApplied && !isForeignKeysFiltered}
 								hideChecks={isAnyFiltersApplied && !isChecksFiltered}
+								hideNotifications={isAnyFiltersApplied && !isNotificationsFiltered}
 								key={item.name}
 								tableName={item.name}
 							/>

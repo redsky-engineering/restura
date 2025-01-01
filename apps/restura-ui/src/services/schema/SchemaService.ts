@@ -429,6 +429,12 @@ export default class SchemaService extends Service {
 			case 'int':
 			case 'bigint':
 			case 'decimal':
+			case 'serial':
+			case 'bigserial':
+			case 'real':
+			case 'double precision':
+			case 'numeric':
+
 			case 'integer':
 			case 'float':
 			case 'double':

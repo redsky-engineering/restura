@@ -34,6 +34,23 @@ declare namespace Restura {
 		| 'TIME' //	8-bytes	Holds hour, minute, second and optionally microseconds for time. Supported range is '-838:59:59.999999' to '838:59:59.999999'. Supported from version 1.2.0 onwards.
 		| 'TIMESTAMP'; //	4-bytes	Values are stored as the number of seconds since 1970-01-01 00:00:00 UTC, and optionally microseconds. The max value is currently 2038-01-19 03:14:07 UTC. Supported starting with MariaDB ColumnStore 1.4.2.
 
+	export type PostgresColumnNumericTypes =
+		| 'SMALLINT'
+		| 'INTEGER'
+		| 'BIGINT'
+		| 'DECIMAL'
+		| 'NUMERIC'
+		| 'REAL'
+		| 'DOUBLE PRECISION'
+		| 'SERIAL'
+		| 'BIGSERIAL';
+
+	export type PostgresColumnStringTypes = 'CHAR' | 'VARCHAR' | 'TEXT' | 'BYTEA';
+
+	export type PostgresColumnDateTypes = 'DATE' | 'TIMESTAMP' | 'TIMESTAMPTZ' | 'TIME' | 'INTERVAL';
+
+	export type PostgresColumnJsonTypes = 'JSON' | 'JSONB';
+
 	export type ForeignKeyActions = 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION' | 'SET DEFAULT';
 
 	export interface IndexData {
@@ -55,7 +72,14 @@ declare namespace Restura {
 
 	export interface ColumnData {
 		name: string;
-		type: MariaDbColumnNumericTypes | MariaDbColumnStringTypes | MariaDbColumnDateTypes;
+		type:
+			| MariaDbColumnNumericTypes
+			| MariaDbColumnStringTypes
+			| MariaDbColumnDateTypes
+			| PostgresColumnNumericTypes
+			| PostgresColumnStringTypes
+			| PostgresColumnDateTypes
+			| PostgresColumnJsonTypes;
 		isNullable: boolean;
 		roles: string[];
 		comment?: string;
@@ -79,6 +103,7 @@ declare namespace Restura {
 		foreignKeys: ForeignKeyData[];
 		checkConstraints: CheckConstraintData[];
 		roles: string[];
+		notify?: 'ALL' | string[];
 	}
 
 	export interface ValidatorData {

@@ -10,7 +10,12 @@ class SqlUtils {
 			type.indexOf('int') > -1 ||
 			type.startsWith('decimal') ||
 			type.startsWith('double') ||
-			type.startsWith('float')
+			type.startsWith('float') ||
+			type.indexOf('serial') > -1 ||
+			type.startsWith('decimal') ||
+			type.startsWith('real') ||
+			type.startsWith('double precision') ||
+			type.startsWith('numeric')
 		)
 			return 'number';
 		if (type === 'json') {
