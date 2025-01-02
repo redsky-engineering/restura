@@ -131,8 +131,15 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 				{renderFiltersAndSearch()}
 				{schema.database
 					.filter((item) => {
-						if (tableSearch === '') return true;
-						return item.name.toLowerCase().includes(tableSearch.toLowerCase());
+						const lowerCaseSearch = tableSearch.toLowerCase().trim();
+						if (lowerCaseSearch === '') return true;
+						const lowerCaseItem = item.name.toLowerCase().trim();
+
+						// If the search is wrapped in quotes, then we are searching for an exact match
+						if (lowerCaseSearch.startsWith('"') && lowerCaseSearch.endsWith('"'))
+							return lowerCaseItem === lowerCaseSearch.substring(1, lowerCaseSearch.length - 1);
+
+						return lowerCaseItem.includes(lowerCaseSearch);
 					})
 					.map((item) => {
 						return (

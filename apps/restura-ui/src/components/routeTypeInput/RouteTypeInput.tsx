@@ -1,8 +1,8 @@
-import * as React from 'react';
 import { Box, Label, Select } from '@redskytech/framework/ui';
+import * as React from 'react';
 import { useMemo } from 'react';
-import serviceFactory from '../../services/serviceFactory';
 import SchemaService from '../../services/schema/SchemaService';
+import serviceFactory from '../../services/serviceFactory';
 import { ObjectUtils } from '../../utils/utils.js';
 
 interface RouteTypeInputProps {
@@ -14,12 +14,12 @@ const RouteTypeInput: React.FC<RouteTypeInputProps> = (props) => {
 
 	const routeTypeOptions = useMemo(() => {
 		return [
-			{ label: 'One Item', value: 'ONE' },
-			{ label: 'Array of Items', value: 'ARRAY' },
+			{ label: 'Item', value: 'ONE' },
+			{ label: 'Array', value: 'ARRAY' },
 			{ label: 'Paginated List', value: 'PAGED' },
-			{ label: 'Custom One Item', value: 'CUSTOM_ONE' },
+			{ label: 'Custom Item', value: 'CUSTOM_ONE' },
 			{ label: 'Custom Array', value: 'CUSTOM_ARRAY' },
-			{ label: 'Custom Paged', value: 'CUSTOM_PAGED' }
+			{ label: 'Custom Paginated List', value: 'CUSTOM_PAGED' }
 		];
 	}, []);
 
