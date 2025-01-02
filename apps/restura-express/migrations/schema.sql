@@ -3,161 +3,364 @@
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
 
--- Create the ENUM types
-CREATE TYPE role_enum AS ENUM ( 'admin',
-	'user'
+CREATE TABLE "item"
+(    "id" BIGSERIAL PRIMARY KEY  NOT NULL,
+     "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+     "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+     "orderId" BIGINT NOT NULL
 );
 
-CREATE TYPE account_status_enum AS ENUM ( 'banned',
-	'view_only',
-	'active'
+CREATE TABLE "order"
+(    "id" BIGSERIAL PRIMARY KEY  NOT NULL,
+     "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+     "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+     "userId" BIGINT NOT NULL,
+     "amountCents" BIGINT NOT NULL
 );
 
-CREATE TYPE onboarding_status_enum AS ENUM ( 'verify_email',
-	'complete'
+CREATE TABLE "company"
+(    "id" BIGSERIAL PRIMARY KEY  NOT NULL,
+     "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+     "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+     "name" VARCHAR(255) NULL
 );
 
--- Create the company table
-CREATE TABLE "company" (
-	"id" BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	"createdOn" TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-	"modifiedOn" TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-	"name" VARCHAR(255) NULL
+CREATE TABLE "user"
+(    "id" BIGSERIAL PRIMARY KEY  NOT NULL,
+     "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+     "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+     "firstName" VARCHAR(30) NOT NULL,
+     "lastName" VARCHAR(30) NOT NULL,
+     "companyId" BIGINT NOT NULL,
+     "password" VARCHAR(70) NOT NULL,
+     "email" VARCHAR(100) NOT NULL,
+     "role" TEXT NOT NULL CHECK ("role" IN ('admin','user')),
+     "permissionLogin" BOOLEAN NOT NULL DEFAULT true,
+     "lastLoginOn" TIMESTAMPTZ NULL,
+     "phone" VARCHAR(30) NULL,
+     "loginDisabledOn" TIMESTAMPTZ NULL,
+     "passwordResetGuid" VARCHAR(100) NULL,
+     "verifyEmailPin" INT NULL,
+     "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL,
+     "accountStatus" TEXT NOT NULL DEFAULT 'view_only' CHECK ("accountStatus" IN ('banned','view_only','active')),
+     "passwordResetExpiresOn" TIMESTAMPTZ NULL,
+     "onboardingStatus" TEXT NOT NULL DEFAULT 'verify_email' CHECK ("onboardingStatus" IN ('verify_email','complete')),
+     "pendingEmail" VARCHAR(100) NULL,
+     "testAge" INTEGER NOT NULL DEFAULT 0,
+     "metadata" JSON NOT NULL DEFAULT '{}'
 );
 
--- Create the user table with ENUMs for role, accountStatus, and onboardingStatus
-CREATE TABLE "user" (
-	"id" BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	"createdOn" TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-	"modifiedOn" TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-	"firstName" VARCHAR(30) NOT NULL,
-	"lastName" VARCHAR(30) NOT NULL,
-	"companyId" BIGINT NOT NULL,
-	"password" VARCHAR(70) NOT NULL,
-	"email" VARCHAR(100) NOT NULL,
-	"role" role_enum NOT NULL,
-	"permissionLogin" BOOLEAN DEFAULT TRUE NOT NULL,
-	"lastLoginOn" TIMESTAMPTZ NULL,
-	"phone" VARCHAR(30) NULL,
-	"loginDisabledOn" TIMESTAMPTZ NULL,
-	"passwordResetGuid" VARCHAR(100) NULL,
-	"verifyEmailPin" INTEGER NULL,
-	"verifyEmailPinExpiresOn" TIMESTAMPTZ NULL,
-	"accountStatus" account_status_enum DEFAULT 'view_only' NOT NULL,
-	"passwordResetExpiresOn" TIMESTAMPTZ NULL,
-	"onboardingStatus" onboarding_status_enum DEFAULT 'verify_email' NOT NULL,
-	"pendingEmail" VARCHAR(100) NULL,
-	"testAge" INT DEFAULT 0 NULL,
-	"metadata" JSONB DEFAULT '{}' NOT NULL,
-	CONSTRAINT "user_email_unique_index" UNIQUE ("email"),
-	CONSTRAINT "user_companyId_company_id_fk" FOREIGN KEY ("companyId") REFERENCES "company" ("id")
-);
+ALTER TABLE "item"       ADD CONSTRAINT "item_orderId_order_id_fk"
+    FOREIGN KEY ("orderId") REFERENCES "order" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
--- Create the item table
-CREATE TABLE item (
-	"id" BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	"orderId" BIGINT NOT NULL
-);
+ALTER TABLE "order"      ADD CONSTRAINT "order_userId_user_id_fk"
+    FOREIGN KEY ("userId") REFERENCES "user" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
--- Create the order table
-CREATE TABLE "order" (
-	id bigserial CONSTRAINT order_pk PRIMARY KEY,
-	"userId" bigint NOT NULL CONSTRAINT order_user_null_fk REFERENCES "user",
-	"amountCents" bigint
-);
+ALTER TABLE "user"       ADD CONSTRAINT "user_companyId_company_id_fk"
+    FOREIGN KEY ("companyId") REFERENCES "company" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
--- Indexes
-CREATE INDEX "user_companyId_index" ON "user" ("companyId");
+CREATE  INDEX "item_orderId_index" ON "item" ("orderId" ASC);
+CREATE  INDEX "order_userId_index" ON "order" ("userId" ASC);
+CREATE  INDEX "user_companyId_index" ON "user" ("companyId" ASC);
+CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC);
+CREATE  INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC);
 
-CREATE INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid");
 
--- Add triggers to notify the channel when a record is inserted, updated, or deleted
-CREATE FUNCTION notify_user_insert ()
-	RETURNS TRIGGER
-	LANGUAGE plpgsql
-	AS $$
+CREATE OR REPLACE FUNCTION notify_order_insert()
+    RETURNS TRIGGER AS $$
+DECLARE
+    query_metadata JSON;
 BEGIN
-	PERFORM
-		pg_notify('insert', json_build_object('table', 'user', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-	RETURN NEW;
+    SELECT INTO query_metadata
+        (regexp_match(
+                current_query(),
+                '^--QUERY_METADATA\(({.*})', 'n'
+         ))[1]::json;
+
+    PERFORM pg_notify(
+            'insert',
+            json_build_object(
+                    'table', 'order',
+                    'queryMetadata', query_metadata,
+                    'insertedId', NEW.id,
+                    'record', NEW
+            )::text
+            );
+
+    RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-ALTER FUNCTION notify_user_insert () OWNER TO postgres;
+CREATE OR REPLACE TRIGGER "order_insert"
+    AFTER INSERT ON "order"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_order_insert();
 
-CREATE TRIGGER user_insert
-	AFTER INSERT ON "user" FOR EACH ROW
-	EXECUTE PROCEDURE notify_user_insert ();
 
-CREATE FUNCTION notify_username_insert ()
-	RETURNS TRIGGER
-	LANGUAGE plpgsql
-	AS $$
+CREATE OR REPLACE FUNCTION notify_order_update()
+    RETURNS TRIGGER AS $$
+DECLARE
+    query_metadata JSON;
 BEGIN
-	PERFORM
-		pg_notify('user_insert', current_query());
-RETURN NEW;
+    SELECT INTO query_metadata
+        (regexp_match(
+                current_query(),
+                '^--QUERY_METADATA\(({.*})', 'n'
+         ))[1]::json;
+
+    PERFORM pg_notify(
+            'update',
+            json_build_object(
+                    'table', 'order',
+                    'queryMetadata', query_metadata,
+                    'changedId', NEW.id,
+                    'record', NEW,
+                    'previousRecord', OLD
+            )::text
+            );
+    RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-ALTER FUNCTION notify_username_insert () OWNER TO postgres;
+CREATE OR REPLACE TRIGGER order_update
+    AFTER UPDATE ON "order"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_order_update();
 
-CREATE FUNCTION notify_user_update ()
-	RETURNS TRIGGER
-	LANGUAGE plpgsql
-	AS $$
+
+CREATE OR REPLACE FUNCTION notify_order_delete()
+    RETURNS TRIGGER AS $$
+DECLARE
+    query_metadata JSON;
 BEGIN
-	PERFORM
-		pg_notify('update', json_build_object('table', 'user', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-RETURN NEW;
+    SELECT INTO query_metadata
+        (regexp_match(
+                current_query(),
+                '^--QUERY_METADATA\(({.*})', 'n'
+         ))[1]::json;
+
+    PERFORM pg_notify(
+            'delete',
+            json_build_object(
+                    'table', 'order',
+                    'queryMetadata', query_metadata,
+                    'deletedId', OLD.id,
+                    'previousRecord', OLD
+            )::text
+            );
+    RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-ALTER FUNCTION notify_user_update () OWNER TO postgres;
+CREATE OR REPLACE TRIGGER "order_delete"
+    AFTER DELETE ON "order"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_order_delete();
 
-CREATE TRIGGER user_update
-	AFTER UPDATE ON "user" FOR EACH ROW
-	EXECUTE PROCEDURE notify_user_update ();
 
-CREATE FUNCTION "notify_userOLD_insert" ()
-	RETURNS TRIGGER
-	LANGUAGE plpgsql
-	AS $$
+CREATE OR REPLACE FUNCTION notify_company_insert()
+    RETURNS TRIGGER AS $$
+DECLARE
+    query_metadata JSON;
 BEGIN
-	PERFORM
-		pg_notify('insert', json_build_object('table', 'user', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-RETURN NEW;
+    SELECT INTO query_metadata
+        (regexp_match(
+                current_query(),
+                '^--QUERY_METADATA\(({.*})', 'n'
+         ))[1]::json;
+
+    PERFORM pg_notify(
+            'insert',
+            json_build_object(
+                    'table', 'company',
+                    'queryMetadata', query_metadata,
+                    'insertedId', NEW.id,
+                    'record', NEW
+            )::text
+            );
+
+    RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-ALTER FUNCTION "notify_userOLD_insert" () OWNER TO postgres;
+CREATE OR REPLACE TRIGGER "company_insert"
+    AFTER INSERT ON "company"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_company_insert();
 
-CREATE FUNCTION notify_userold_insert ()
-	RETURNS TRIGGER
-	LANGUAGE plpgsql
-	AS $$
+
+CREATE OR REPLACE FUNCTION notify_company_update()
+    RETURNS TRIGGER AS $$
+DECLARE
+    query_metadata JSON;
 BEGIN
-	PERFORM
-		pg_notify('insert', json_build_object('table', 'user', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-RETURN NEW;
+    SELECT INTO query_metadata
+        (regexp_match(
+                current_query(),
+                '^--QUERY_METADATA\(({.*})', 'n'
+         ))[1]::json;
+
+    PERFORM pg_notify(
+            'update',
+            json_build_object(
+                    'table', 'company',
+                    'queryMetadata', query_metadata,
+                    'changedId', NEW.id,
+                    'record', NEW,
+                    'previousRecord', OLD
+            )::text
+            );
+    RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-ALTER FUNCTION notify_userold_insert () OWNER TO postgres;
+CREATE OR REPLACE TRIGGER company_update
+    AFTER UPDATE ON "company"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_company_update();
 
-CREATE FUNCTION notify_order_delete ()
-	RETURNS TRIGGER
-	LANGUAGE plpgsql
-	AS $$
+
+CREATE OR REPLACE FUNCTION notify_company_delete()
+    RETURNS TRIGGER AS $$
+DECLARE
+    query_metadata JSON;
 BEGIN
-	PERFORM
-		pg_notify('delete', json_build_object('table', 'order', 'query', current_query(), 'record', NEW, 'previousRecord', OLD)::text);
-RETURN NEW;
+    SELECT INTO query_metadata
+        (regexp_match(
+                current_query(),
+                '^--QUERY_METADATA\(({.*})', 'n'
+         ))[1]::json;
+
+    PERFORM pg_notify(
+            'delete',
+            json_build_object(
+                    'table', 'company',
+                    'queryMetadata', query_metadata,
+                    'deletedId', OLD.id,
+                    'previousRecord', OLD
+            )::text
+            );
+    RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-ALTER FUNCTION notify_order_delete () OWNER TO postgres;
+CREATE OR REPLACE TRIGGER "company_delete"
+    AFTER DELETE ON "company"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_company_delete();
 
-CREATE TRIGGER order_delete
-	AFTER DELETE ON "order" FOR EACH ROW
-	EXECUTE PROCEDURE notify_order_delete ();
+
+CREATE OR REPLACE FUNCTION notify_user_insert()
+    RETURNS TRIGGER AS $$
+DECLARE
+    query_metadata JSON;
+BEGIN
+    SELECT INTO query_metadata
+        (regexp_match(
+                current_query(),
+                '^--QUERY_METADATA\(({.*})', 'n'
+         ))[1]::json;
+
+    PERFORM pg_notify(
+            'insert',
+            json_build_object(
+                    'table', 'user',
+                    'queryMetadata', query_metadata,
+                    'insertedId', NEW.id,
+                    'record', json_build_object(
+                            'id', NEW."id",
+                            'firstName', NEW."firstName",
+                            'lastName', NEW."lastName",
+                            'email', NEW."email",
+                            'phone', NEW."phone"
+                              )
+            )::text
+            );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "user_insert"
+    AFTER INSERT ON "user"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_user_insert();
+
+
+CREATE OR REPLACE FUNCTION notify_user_update()
+    RETURNS TRIGGER AS $$
+DECLARE
+    query_metadata JSON;
+BEGIN
+    SELECT INTO query_metadata
+        (regexp_match(
+                current_query(),
+                '^--QUERY_METADATA\(({.*})', 'n'
+         ))[1]::json;
+
+    PERFORM pg_notify(
+            'update',
+            json_build_object(
+                    'table', 'user',
+                    'queryMetadata', query_metadata,
+                    'changedId', NEW.id,
+                    'record', json_build_object(
+                            'id', NEW."id",
+                            'firstName', NEW."firstName",
+                            'lastName', NEW."lastName",
+                            'email', NEW."email",
+                            'phone', NEW."phone"
+                              ),
+                    'previousRecord', json_build_object(
+                            'id', OLD."id",
+                            'firstName', OLD."firstName",
+                            'lastName', OLD."lastName",
+                            'email', OLD."email",
+                            'phone', OLD."phone"
+                                      )
+            )::text
+            );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER user_update
+    AFTER UPDATE ON "user"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_user_update();
+
+
+CREATE OR REPLACE FUNCTION notify_user_delete()
+    RETURNS TRIGGER AS $$
+DECLARE
+    query_metadata JSON;
+BEGIN
+    SELECT INTO query_metadata
+        (regexp_match(
+                current_query(),
+                '^--QUERY_METADATA\(({.*})', 'n'
+         ))[1]::json;
+
+    PERFORM pg_notify(
+            'delete',
+            json_build_object(
+                    'table', 'user',
+                    'queryMetadata', query_metadata,
+                    'deletedId', OLD.id,
+                    'previousRecord', json_build_object(
+                            'id', OLD."id",
+                            'firstName', OLD."firstName",
+                            'lastName', OLD."lastName",
+                            'email', OLD."email",
+                            'phone', OLD."phone"
+                                      )
+            )::text
+            );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "user_delete"
+    AFTER DELETE ON "user"
+    FOR EACH ROW
+EXECUTE FUNCTION notify_user_delete();

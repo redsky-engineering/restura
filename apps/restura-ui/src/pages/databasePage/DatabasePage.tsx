@@ -4,6 +4,7 @@ import cloneDeep from 'lodash.clonedeep';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useRecoilState } from 'recoil';
+import { isColumnType } from '../../components/dbTable/columnSection/ColumnSection.js';
 import DbTable from '../../components/dbTable/DbTable';
 import PageHeader from '../../components/pageHeader/PageHeader';
 import SchemaService from '../../services/schema/SchemaService.js';
@@ -19,10 +20,12 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 	const [isIndexesFiltered, setIsIndexesFiltered] = useState<boolean>(false);
 	const [isForeignKeysFiltered, setIsForeignKeysFiltered] = useState<boolean>(false);
 	const [isChecksFiltered, setIsChecksFiltered] = useState<boolean>(false);
-	const [tableSearch, setTableSearch] = useState<string>('');
+	const [isNotificationsFiltered, setIsNotificationsFiltered] = useState<boolean>(false);
+	const [searchTerm, setSearchTerm] = useState<string>('');
 	const [validationError, setValidationError] = useState<string>('');
 
-	const isAnyFiltersApplied = isColumnsFiltered || isIndexesFiltered || isForeignKeysFiltered;
+	const isAnyFiltersApplied =
+		isColumnsFiltered || isIndexesFiltered || isForeignKeysFiltered || isChecksFiltered || isNotificationsFiltered;
 
 	function addNewTable() {
 		if (!schema) return;
@@ -30,7 +33,14 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 		updatedSchema.database.unshift({
 			name: `new_table_${Math.random().toString(36).substr(2, 5)}`,
 			columns: [
-				{ name: 'id', hasAutoIncrement: true, isNullable: false, roles: [], type: 'BIGINT', isPrimary: true },
+				{
+					name: 'id',
+					hasAutoIncrement: true,
+					isNullable: false,
+					roles: [],
+					type: 'BIGSERIAL',
+					isPrimary: true
+				},
 				{ name: 'createdOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME' },
 				{ name: 'modifiedOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME' }
 			],
@@ -84,6 +94,13 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 					>
 						Checks
 					</Button>
+					<Button
+						look={isNotificationsFiltered ? 'containedPrimary' : 'outlinedPrimary'}
+						ml={8}
+						onClick={() => setIsNotificationsFiltered(!isNotificationsFiltered)}
+					>
+						Notifications
+					</Button>
 				</Box>
 				{validationError && (
 					<Label variant={'subheader2'} weight={'bold'} color={themes.primaryRed500}>
@@ -94,7 +111,12 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 					<Label variant={'subheader2'} weight={'medium'} mr={8}>
 						Search
 					</Label>
-					<InputText inputMode={'search'} value={tableSearch} onChange={(value) => setTableSearch(value)} />
+					<InputText
+						placeholder="Quotes = exact, type"
+						inputMode={'search'}
+						value={searchTerm}
+						onChange={(value) => setSearchTerm(value)}
+					/>
 				</Box>
 			</Box>
 		);
@@ -115,8 +137,23 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 				{renderFiltersAndSearch()}
 				{schema.database
 					.filter((item) => {
-						if (tableSearch === '') return true;
-						return item.name.toLowerCase().includes(tableSearch.toLowerCase());
+						const lowerCaseSearch = searchTerm.toLowerCase().trim();
+						if (lowerCaseSearch === '') return true;
+
+						// If we are searching for column types, then see if this table has a column with that type
+						if (isColumnType(lowerCaseSearch)) {
+							return item.columns.some((column) => {
+								return column.type.toLowerCase().includes(lowerCaseSearch);
+							});
+						}
+
+						const lowerCaseItem = item.name.toLowerCase().trim();
+
+						// If the search is wrapped in quotes, then we are searching for an exact match
+						if (lowerCaseSearch.startsWith('"') && lowerCaseSearch.endsWith('"'))
+							return lowerCaseItem === lowerCaseSearch.substring(1, lowerCaseSearch.length - 1);
+
+						return lowerCaseItem.includes(lowerCaseSearch);
 					})
 					.map((item) => {
 						return (
@@ -125,8 +162,10 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 								hideIndexes={isAnyFiltersApplied && !isIndexesFiltered}
 								hideForeignKeys={isAnyFiltersApplied && !isForeignKeysFiltered}
 								hideChecks={isAnyFiltersApplied && !isChecksFiltered}
+								hideNotifications={isAnyFiltersApplied && !isNotificationsFiltered}
 								key={item.name}
 								tableName={item.name}
+								searchTerm={searchTerm}
 							/>
 						);
 					})}

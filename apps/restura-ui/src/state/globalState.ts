@@ -1,12 +1,12 @@
+import * as React from 'react';
 import {
 	atom,
+	Loadable,
 	RecoilState,
-	useRecoilTransactionObserver_UNSTABLE,
-	useRecoilCallback,
 	RecoilValue,
-	Loadable
+	useRecoilCallback,
+	useRecoilTransactionObserver_UNSTABLE
 } from 'recoil';
-import * as React from 'react';
 import { SelectedRoute } from '../services/schema/SchemaService';
 
 enum GlobalStateKeys {
@@ -58,10 +58,9 @@ class GlobalState {
 		if (!item) return defaultValue;
 		try {
 			item = JSON.parse(item);
-		} catch (e) {}
+		} catch (_e) {}
 		if (typeof item === 'string' && item === 'undefined') return defaultValue;
-		// @ts-ignore
-		return item;
+		return item as T;
 	}
 }
 
@@ -102,6 +101,7 @@ export default globalState;
  * @example const lastCreatedUser = getRecoilExternalValue(lastCreatedUserState);
  *
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let getRecoilExternalLoadable: <T>(recoilValue: RecoilValue<T>) => Loadable<T> = () => null as any;
 
 /**
@@ -128,6 +128,7 @@ export function getRecoilExternalValue<T>(recoilValue: RecoilValue<T>): T {
 export let setRecoilExternalValue: <T>(
 	recoilState: RecoilState<T>,
 	valOrUpdater: ((currVal: T) => T) | T
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) => void = () => null as any;
 
 export const GlobalStateInfluencer: React.FC = () => {

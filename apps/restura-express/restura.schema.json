@@ -15,17 +15,38 @@
 					"isPrimary": true,
 					"name": "id",
 					"roles": [],
-					"type": "BIGINT"
+					"type": "BIGSERIAL"
 				},
 				{ "default": "now()", "isNullable": false, "name": "createdOn", "roles": [], "type": "DATETIME" },
 				{ "default": "now()", "isNullable": false, "name": "modifiedOn", "roles": [], "type": "DATETIME" },
-				{ "isNullable": true, "length": 255, "name": "name", "roles": [], "type": "VARCHAR" }
+				{
+					"comment": "Foreign key to order(id)",
+					"isNullable": false,
+					"name": "orderId",
+					"roles": [],
+					"type": "BIGINT"
+				}
 			],
-			"foreignKeys": [],
+			"foreignKeys": [
+				{
+					"column": "orderId",
+					"name": "item_orderId_order_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "order"
+				}
+			],
 			"indexes": [
-				{ "columns": ["id"], "isPrimaryKey": true, "isUnique": true, "name": "PRIMARY", "order": "ASC" }
+				{
+					"columns": ["orderId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "item_orderId_index",
+					"order": "ASC"
+				}
 			],
-			"name": "company",
+			"name": "item",
 			"roles": []
 		},
 		{
@@ -37,7 +58,75 @@
 					"isPrimary": true,
 					"name": "id",
 					"roles": [],
+					"type": "BIGSERIAL"
+				},
+				{ "default": "now()", "isNullable": false, "name": "createdOn", "roles": [], "type": "DATETIME" },
+				{ "default": "now()", "isNullable": false, "name": "modifiedOn", "roles": [], "type": "DATETIME" },
+				{
+					"comment": "Foreign key to user(id)",
+					"isNullable": false,
+					"name": "userId",
+					"roles": [],
 					"type": "BIGINT"
+				},
+				{ "isNullable": false, "name": "amountCents", "roles": [], "type": "BIGINT" }
+			],
+			"foreignKeys": [
+				{
+					"column": "userId",
+					"name": "order_userId_user_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "user"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["userId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "order_userId_index",
+					"order": "ASC"
+				}
+			],
+			"name": "order",
+			"notify": "ALL",
+			"roles": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"type": "BIGSERIAL"
+				},
+				{ "default": "now()", "isNullable": false, "name": "createdOn", "roles": [], "type": "DATETIME" },
+				{ "default": "now()", "isNullable": false, "name": "modifiedOn", "roles": [], "type": "DATETIME" },
+				{ "isNullable": true, "length": 255, "name": "name", "roles": [], "type": "VARCHAR" }
+			],
+			"foreignKeys": [],
+			"indexes": [
+				{ "columns": ["id"], "isPrimaryKey": true, "isUnique": true, "name": "PRIMARY", "order": "ASC" }
+			],
+			"name": "company",
+			"notify": "ALL",
+			"roles": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"type": "BIGSERIAL"
 				},
 				{ "default": "now()", "isNullable": false, "name": "createdOn", "roles": [], "type": "DATETIME" },
 				{ "default": "now()", "isNullable": false, "name": "modifiedOn", "roles": [], "type": "DATETIME" },
@@ -89,7 +178,9 @@
 					"type": "ENUM",
 					"value": "'verify_email','complete'"
 				},
-				{ "isNullable": true, "length": 100, "name": "pendingEmail", "roles": [], "type": "VARCHAR" }
+				{ "isNullable": true, "length": 100, "name": "pendingEmail", "roles": [], "type": "VARCHAR" },
+				{ "default": "0", "isNullable": false, "name": "testAge", "roles": [], "type": "INTEGER" },
+				{ "default": "'{}'", "isNullable": false, "name": "metadata", "roles": [], "type": "JSON" }
 			],
 			"foreignKeys": [
 				{
@@ -126,6 +217,7 @@
 				}
 			],
 			"name": "user",
+			"notify": ["id", "firstName", "lastName", "email", "phone"],
 			"roles": []
 		}
 	],

@@ -1,11 +1,11 @@
-import * as React from 'react';
-import './CheckConstraintSection.scss';
 import { Box, Button, Icon, Label, rsToastify } from '@redskytech/framework/ui';
-import { useRecoilState } from 'recoil';
-import globalState from '../../../state/globalState';
 import cloneDeep from 'lodash.clonedeep';
+import * as React from 'react';
+import { useRecoilState } from 'recoil';
 import SchemaService from '../../../services/schema/SchemaService.js';
+import globalState from '../../../state/globalState';
 import DbTableCell from '../../dbTableCell/DbTableCell';
+import './CheckConstraintSection.scss';
 
 interface CheckConstraintSectionProps {
 	tableName: string;
@@ -34,7 +34,7 @@ const CheckConstraintSection: React.FC<CheckConstraintSectionProps> = (props) =>
 
 	function renderCheckConstraints() {
 		if (!schema) return <></>;
-		let tableData = schema.database.find((item) => item.name === props.tableName);
+		const tableData = schema.database.find((item) => item.name === props.tableName);
 		if (!tableData) return <></>;
 		return tableData.checkConstraints.map((keyData) => {
 			return (
@@ -49,8 +49,8 @@ const CheckConstraintSection: React.FC<CheckConstraintSectionProps> = (props) =>
 								return;
 							}
 
-							let updatedSchema = cloneDeep(schema);
-							let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+							const updatedSchema = cloneDeep(schema);
+							const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
 
 							const constraintIndex = updatedTableData.checkConstraints.findIndex(
 								(item) => item.name === keyData.name
@@ -67,8 +67,8 @@ const CheckConstraintSection: React.FC<CheckConstraintSectionProps> = (props) =>
 						cellType={'text'}
 						value={keyData.check}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+							const updatedSchema = cloneDeep(schema);
+							const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
 
 							const constraintIndex = updatedTableData.checkConstraints.findIndex(
 								(item) => item.name === keyData.name
@@ -89,8 +89,8 @@ const CheckConstraintSection: React.FC<CheckConstraintSectionProps> = (props) =>
 							fontSize={16}
 							cursorPointer
 							onClick={() => {
-								let updatedSchema = cloneDeep(schema);
-								let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+								const updatedSchema = cloneDeep(schema);
+								const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
 								updatedTableData.checkConstraints = updatedTableData.checkConstraints.filter(
 									(item) => item.name !== keyData.name
 								);
@@ -105,8 +105,8 @@ const CheckConstraintSection: React.FC<CheckConstraintSectionProps> = (props) =>
 
 	function addNewConstraint() {
 		if (!schema) return;
-		let updatedSchema = cloneDeep(schema);
-		let tableData = SchemaService.getTableData(updatedSchema, props.tableName);
+		const updatedSchema = cloneDeep(schema);
+		const tableData = SchemaService.getTableData(updatedSchema, props.tableName);
 		tableData.checkConstraints.push({
 			name: `${props.tableName}_check_${tableData.checkConstraints.length + 1}`,
 			check: 'MISSING!'

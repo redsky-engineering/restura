@@ -1,6 +1,13 @@
 import { ObjectUtils, StringUtils } from '@redskytech/core-utils';
 import prettier from 'prettier';
-import type { EndpointData, ResponseData, ResturaSchema, RouteData, TableData } from '../schemas/resturaSchema.js';
+import type {
+	EndpointData,
+	JoinData,
+	ResponseData,
+	ResturaSchema,
+	RouteData,
+	TableData
+} from '../schemas/resturaSchema.js';
 import { SqlUtils } from '../sql/SqlUtils.js';
 import ResponseValidator from '../validators/ResponseValidator.js';
 
@@ -147,27 +154,39 @@ class ApiTree {
 				return `export type Res = CustomTypes.${route.responseType}[]`;
 			else return `export type Res = CustomTypes.${route.responseType}`;
 		}
-		return `export interface Res ${this.getFields(route.response)}`;
+		return `export interface Res ${this.getFields(route.response, route.table, route.joins)}`;
 	}
 
-	getFields(fields: ReadonlyArray<ResponseData>): string {
-		const nameFields = fields.map((f) => this.getNameAndType(f));
+	getFields(fields: ReadonlyArray<ResponseData>, routeBaseTable: string, joins: JoinData[]): string {
+		const nameFields = fields.map((f) => this.getNameAndType(f, routeBaseTable, joins));
 		const nested: string = `{
 			${nameFields.join(';\n\t')}${ObjectUtils.isArrayWithData(nameFields) ? ';' : ''}
 		}`;
 		return nested;
 	}
 
-	getNameAndType(p: ResponseData): string {
+	getNameAndType(p: ResponseData, routeBaseTable: string, joins: JoinData[]): string {
 		let responseType = 'any',
 			isNullable = false,
 			array = false;
+
 		if (p.selector) {
 			({ responseType, isNullable } = this.getTypeFromTable(p.selector, p.name));
+
+			// If selector is not from the baseTable, then we need to determine if the join is inner join or not.
+			// If it is not an inner join, then it is nullable.
+			const selectorKey = p.selector.split('.')[0];
+			if (selectorKey !== routeBaseTable) {
+				const join = joins.find((j) => j.alias === selectorKey);
+				if (join && join.type !== 'INNER') {
+					isNullable = true;
+				}
+			}
 		} else if (p.subquery) {
-			responseType = this.getFields(p.subquery.properties);
+			responseType = this.getFields(p.subquery.properties, p.subquery.table, p.subquery.joins);
 			array = true;
 		}
+
 		return `${p.name}:${responseType}${array ? '[]' : ''}${isNullable ? ' | null' : ''}`;
 	}
 
