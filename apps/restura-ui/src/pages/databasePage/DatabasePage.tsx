@@ -4,6 +4,7 @@ import cloneDeep from 'lodash.clonedeep';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useRecoilState } from 'recoil';
+import { isColumnType } from '../../components/dbTable/columnSection/ColumnSection.js';
 import DbTable from '../../components/dbTable/DbTable';
 import PageHeader from '../../components/pageHeader/PageHeader';
 import SchemaService from '../../services/schema/SchemaService.js';
@@ -20,7 +21,7 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 	const [isForeignKeysFiltered, setIsForeignKeysFiltered] = useState<boolean>(false);
 	const [isChecksFiltered, setIsChecksFiltered] = useState<boolean>(false);
 	const [isNotificationsFiltered, setIsNotificationsFiltered] = useState<boolean>(false);
-	const [tableSearch, setTableSearch] = useState<string>('');
+	const [searchTerm, setSearchTerm] = useState<string>('');
 	const [validationError, setValidationError] = useState<string>('');
 
 	const isAnyFiltersApplied =
@@ -110,7 +111,12 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 					<Label variant={'subheader2'} weight={'medium'} mr={8}>
 						Search
 					</Label>
-					<InputText inputMode={'search'} value={tableSearch} onChange={(value) => setTableSearch(value)} />
+					<InputText
+						placeholder="Quotes = exact, type"
+						inputMode={'search'}
+						value={searchTerm}
+						onChange={(value) => setSearchTerm(value)}
+					/>
 				</Box>
 			</Box>
 		);
@@ -131,8 +137,16 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 				{renderFiltersAndSearch()}
 				{schema.database
 					.filter((item) => {
-						const lowerCaseSearch = tableSearch.toLowerCase().trim();
+						const lowerCaseSearch = searchTerm.toLowerCase().trim();
 						if (lowerCaseSearch === '') return true;
+
+						// If we are searching for column types, then see if this table has a column with that type
+						if (isColumnType(lowerCaseSearch)) {
+							return item.columns.some((column) => {
+								return column.type.toLowerCase().includes(lowerCaseSearch);
+							});
+						}
+
 						const lowerCaseItem = item.name.toLowerCase().trim();
 
 						// If the search is wrapped in quotes, then we are searching for an exact match
@@ -151,6 +165,7 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 								hideNotifications={isAnyFiltersApplied && !isNotificationsFiltered}
 								key={item.name}
 								tableName={item.name}
+								searchTerm={searchTerm}
 							/>
 						);
 					})}

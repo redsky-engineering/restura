@@ -20,6 +20,7 @@ interface DbTableProps {
 	hideForeignKeys: boolean;
 	hideChecks: boolean;
 	hideNotifications: boolean;
+	searchTerm: string;
 }
 
 const DbTable: React.FC<DbTableProps> = (props) => {
@@ -94,7 +95,7 @@ const DbTable: React.FC<DbTableProps> = (props) => {
 					</Box>
 					<Icon ml={8} iconImg={'icon-delete'} fontSize={16} cursorPointer onClick={onDeleteTable} />
 				</Box>
-				{!props.hideColumns && <ColumnSection tableName={props.tableName} />}
+				{!props.hideColumns && <ColumnSection tableName={props.tableName} searchTerm={props.searchTerm} />}
 				{!props.hideIndexes && <IndexSection tableName={props.tableName} />}
 				{!props.hideForeignKeys && <ForeignKeySection tableName={props.tableName} />}
 				{!props.hideChecks && <CheckConstraintSection tableName={props.tableName} />}

@@ -48,8 +48,22 @@ export const columnTypeList: (
 	'JSONB'
 ];
 
+export function isColumnType(
+	value: string
+): value is
+	| Restura.MariaDbColumnDateTypes
+	| Restura.MariaDbColumnStringTypes
+	| Restura.MariaDbColumnNumericTypes
+	| Restura.PostgresColumnNumericTypes
+	| Restura.PostgresColumnStringTypes
+	| Restura.PostgresColumnDateTypes
+	| Restura.PostgresColumnJsonTypes {
+	return columnTypeList.includes(value.toUpperCase() as (typeof columnTypeList)[number]);
+}
+
 interface ColumnSectionProps {
 	tableName: string;
+	searchTerm: string;
 }
 
 const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
@@ -261,144 +275,50 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 		const tableData = schema.database.find((item) => item.name === props.tableName);
 		if (!tableData) return <></>;
 
-		return tableData.columns.map((column) => {
-			return (
-				<React.Fragment key={column.name}>
-					<DbTableCell
-						isPrimaryKey={isPrimaryColumn(column.name, tableData!)}
-						addId
-						cellType={'text'}
-						value={column.name}
-						onChange={(value) => {
-							if (value === column.name) return;
-							if (hasDuplicateColumnName(value, tableData!)) {
-								rsToastify.error('Column name already exists.', 'Duplicate Column Name');
-								return;
-							}
-
-							const updatedSchema = cloneDeep(schema);
-
-							if (column.name.includes('new_column')) {
-								predictAndEditColumnData(updatedSchema, props.tableName, column.name, value);
-							} else {
-								const columnData = SchemaService.getColumnData(
-									updatedSchema,
-									props.tableName,
-									column.name
-								);
-								columnData.name = value;
-							}
-
-							setSchema(updatedSchema);
-						}}
-					/>
-					<DbTableCell
-						cellType={'select'}
-						selectOptions={columnTypeList}
-						value={column.type}
-						onChange={(value) => {
-							const updatedSchema = cloneDeep(schema);
-							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
-							if (!getAllowLengthEdit(value as MariaDbColumnNumericTypes)) delete columnData.length;
-							else columnData.length = columnData.length || 10;
-							columnData.type = value as Restura.MariaDbColumnDateTypes;
-							setSchema(updatedSchema);
-						}}
-					/>
-					<DbTableCell
-						disableEdit={!getAllowValueEdit(column.type)}
-						cellType={'multiSelect'}
-						selectOptions={column.value ? (column.value.replaceAll("'", '').split(',') as string[]) : []}
-						value={column.value ? column.value.replaceAll("'", '').split(',') : []}
-						onMultiSelectChange={(value) => {
-							const updatedSchema = cloneDeep(schema);
-							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
-							columnData.value = '';
-							value.forEach((item, index) => {
-								if (index === 0) columnData.value += "'" + item.replaceAll("'", '') + "'";
-								else columnData.value += ",'" + item.replaceAll("'", '') + "'";
-							});
-							setSchema(updatedSchema);
-						}}
-						isMultiSelectCreatable
-					/>
-					<DbTableCell
-						disableEdit={!getAllowLengthEdit(column.type)}
-						cellType={'text'}
-						value={column.length ? column.length.toString() : ''}
-						onChange={(value) => {
-							const updatedSchema = cloneDeep(schema);
-							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
-							columnData.length = parseInt(value);
-							setSchema(updatedSchema);
-						}}
-					/>
-					<DbTableCell
-						disableEdit={!getAllowAutoIncrement(column.type)}
-						cellType={'selectBoolean'}
-						value={column.hasAutoIncrement || false}
-						onChange={(value) => {
-							const updatedSchema = cloneDeep(schema);
-							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
-							columnData.hasAutoIncrement = value === 'true';
-							setSchema(updatedSchema);
-						}}
-					/>
-					<DbTableCell
-						cellType={'selectBoolean'}
-						value={columnHasUniqueIndex(column.name, tableData!)}
-						onChange={(value) => {
-							const updatedSchema = cloneDeep(schema);
-							const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
-							if (value === 'true') {
-								updatedTableData.indexes.push({
-									name: SchemaService.generateIndexName(props.tableName, [column.name], true),
-									columns: [column.name],
-									order: 'ASC',
-									isPrimaryKey: false,
-									isUnique: true
-								});
-							} else {
-								updatedTableData.indexes = updatedTableData.indexes.filter(
-									(index) =>
-										index.name !==
-										SchemaService.generateIndexName(props.tableName, [column.name], true)
-								);
-							}
-							setSchema(updatedSchema);
-						}}
-					/>
-					<DbTableCell
-						cellType={'selectBoolean'}
-						value={column.isNullable}
-						onChange={(value) => {
-							const updatedSchema = cloneDeep(schema);
-							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
-							columnData.isNullable = value === 'true';
-							setSchema(updatedSchema);
-						}}
-					/>
-					{column.type !== 'ENUM' ? (
+		return tableData.columns
+			.filter((column) => {
+				if (!props.searchTerm) return true;
+				if (isColumnType(props.searchTerm)) {
+					// Check that the column type matches the search term
+					return column.type.toUpperCase() === props.searchTerm.toUpperCase();
+				}
+				return true;
+			})
+			.map((column) => {
+				return (
+					<React.Fragment key={column.name}>
 						<DbTableCell
+							isPrimaryKey={isPrimaryColumn(column.name, tableData!)}
+							addId
 							cellType={'text'}
-							value={column.default || ''}
+							value={column.name}
 							onChange={(value) => {
+								if (value === column.name) return;
+								if (hasDuplicateColumnName(value, tableData!)) {
+									rsToastify.error('Column name already exists.', 'Duplicate Column Name');
+									return;
+								}
+
 								const updatedSchema = cloneDeep(schema);
-								const columnData = SchemaService.getColumnData(
-									updatedSchema,
-									props.tableName,
-									column.name
-								);
-								if (value) columnData.default = value;
-								else delete columnData.default;
+
+								if (column.name.includes('new_column')) {
+									predictAndEditColumnData(updatedSchema, props.tableName, column.name, value);
+								} else {
+									const columnData = SchemaService.getColumnData(
+										updatedSchema,
+										props.tableName,
+										column.name
+									);
+									columnData.name = value;
+								}
+
 								setSchema(updatedSchema);
 							}}
 						/>
-					) : (
 						<DbTableCell
 							cellType={'select'}
-							selectOptions={(!!column.value && column.value.replaceAll("'", '').split(',')) || []}
-							value={(column.default && column.default.replaceAll("'", '')) || ''}
+							selectOptions={columnTypeList}
+							value={column.type}
 							onChange={(value) => {
 								const updatedSchema = cloneDeep(schema);
 								const columnData = SchemaService.getColumnData(
@@ -408,64 +328,198 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 								);
 								if (!getAllowLengthEdit(value as MariaDbColumnNumericTypes)) delete columnData.length;
 								else columnData.length = columnData.length || 10;
-								columnData.default = ("'" + value + "'") as Restura.MariaDbColumnDateTypes;
+								columnData.type = value as Restura.MariaDbColumnDateTypes;
 								setSchema(updatedSchema);
 							}}
 						/>
-					)}
-					<DbTableCell
-						cellType={'text'}
-						value={column.comment || ''}
-						onChange={(value) => {
-							const updatedSchema = cloneDeep(schema);
-							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
-							if (value) columnData.comment = value;
-							else delete columnData.comment;
-							setSchema(updatedSchema);
-						}}
-					/>
-					<DbTableCell disableEdit cellType={'text'} value={columnHasAnyIndex(column.name, tableData!)} />
-					<DbTableCell
-						disableEdit
-						cellType={'text'}
-						value={getColumnForeignKeyRefTable(column.name, tableData!)}
-						onChange={() => {}}
-					/>
-					<DbTableCell
-						disableEdit
-						cellType={'text'}
-						value={getColumnForeignKeyRefColumn(column.name, tableData!)}
-					/>
-					<DbTableCell
-						cellType={'multiSelect'}
-						selectOptions={schema.roles}
-						value={column.roles}
-						onMultiSelectChange={(value) => {
-							const updatedSchema = cloneDeep(schema);
-							const columnData = SchemaService.getColumnData(updatedSchema, props.tableName, column.name);
-							columnData.roles = value;
-							setSchema(updatedSchema);
-						}}
-					/>
-					<Box display={'flex'} alignItems={'center'}>
-						<Icon
-							iconImg={'icon-delete'}
-							padding={4}
-							fontSize={16}
-							cursorPointer
-							onClick={() => {
+						<DbTableCell
+							disableEdit={!getAllowValueEdit(column.type)}
+							cellType={'multiSelect'}
+							selectOptions={
+								column.value ? (column.value.replaceAll("'", '').split(',') as string[]) : []
+							}
+							value={column.value ? column.value.replaceAll("'", '').split(',') : []}
+							onMultiSelectChange={(value) => {
+								const updatedSchema = cloneDeep(schema);
+								const columnData = SchemaService.getColumnData(
+									updatedSchema,
+									props.tableName,
+									column.name
+								);
+								columnData.value = '';
+								value.forEach((item, index) => {
+									if (index === 0) columnData.value += "'" + item.replaceAll("'", '') + "'";
+									else columnData.value += ",'" + item.replaceAll("'", '') + "'";
+								});
+								setSchema(updatedSchema);
+							}}
+							isMultiSelectCreatable
+						/>
+						<DbTableCell
+							disableEdit={!getAllowLengthEdit(column.type)}
+							cellType={'text'}
+							value={column.length ? column.length.toString() : ''}
+							onChange={(value) => {
+								const updatedSchema = cloneDeep(schema);
+								const columnData = SchemaService.getColumnData(
+									updatedSchema,
+									props.tableName,
+									column.name
+								);
+								columnData.length = parseInt(value);
+								setSchema(updatedSchema);
+							}}
+						/>
+						<DbTableCell
+							disableEdit={!getAllowAutoIncrement(column.type)}
+							cellType={'selectBoolean'}
+							value={column.hasAutoIncrement || false}
+							onChange={(value) => {
+								const updatedSchema = cloneDeep(schema);
+								const columnData = SchemaService.getColumnData(
+									updatedSchema,
+									props.tableName,
+									column.name
+								);
+								columnData.hasAutoIncrement = value === 'true';
+								setSchema(updatedSchema);
+							}}
+						/>
+						<DbTableCell
+							cellType={'selectBoolean'}
+							value={columnHasUniqueIndex(column.name, tableData!)}
+							onChange={(value) => {
 								const updatedSchema = cloneDeep(schema);
 								const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
-								updatedTableData.columns = updatedTableData.columns.filter(
-									(col) => col.name !== column.name
-								);
+								if (value === 'true') {
+									updatedTableData.indexes.push({
+										name: SchemaService.generateIndexName(props.tableName, [column.name], true),
+										columns: [column.name],
+										order: 'ASC',
+										isPrimaryKey: false,
+										isUnique: true
+									});
+								} else {
+									updatedTableData.indexes = updatedTableData.indexes.filter(
+										(index) =>
+											index.name !==
+											SchemaService.generateIndexName(props.tableName, [column.name], true)
+									);
+								}
 								setSchema(updatedSchema);
 							}}
 						/>
-					</Box>
-				</React.Fragment>
-			);
-		});
+						<DbTableCell
+							cellType={'selectBoolean'}
+							value={column.isNullable}
+							onChange={(value) => {
+								const updatedSchema = cloneDeep(schema);
+								const columnData = SchemaService.getColumnData(
+									updatedSchema,
+									props.tableName,
+									column.name
+								);
+								columnData.isNullable = value === 'true';
+								setSchema(updatedSchema);
+							}}
+						/>
+						{column.type !== 'ENUM' ? (
+							<DbTableCell
+								cellType={'text'}
+								value={column.default || ''}
+								onChange={(value) => {
+									const updatedSchema = cloneDeep(schema);
+									const columnData = SchemaService.getColumnData(
+										updatedSchema,
+										props.tableName,
+										column.name
+									);
+									if (value) columnData.default = value;
+									else delete columnData.default;
+									setSchema(updatedSchema);
+								}}
+							/>
+						) : (
+							<DbTableCell
+								cellType={'select'}
+								selectOptions={(!!column.value && column.value.replaceAll("'", '').split(',')) || []}
+								value={(column.default && column.default.replaceAll("'", '')) || ''}
+								onChange={(value) => {
+									const updatedSchema = cloneDeep(schema);
+									const columnData = SchemaService.getColumnData(
+										updatedSchema,
+										props.tableName,
+										column.name
+									);
+									if (!getAllowLengthEdit(value as MariaDbColumnNumericTypes))
+										delete columnData.length;
+									else columnData.length = columnData.length || 10;
+									columnData.default = ("'" + value + "'") as Restura.MariaDbColumnDateTypes;
+									setSchema(updatedSchema);
+								}}
+							/>
+						)}
+						<DbTableCell
+							cellType={'text'}
+							value={column.comment || ''}
+							onChange={(value) => {
+								const updatedSchema = cloneDeep(schema);
+								const columnData = SchemaService.getColumnData(
+									updatedSchema,
+									props.tableName,
+									column.name
+								);
+								if (value) columnData.comment = value;
+								else delete columnData.comment;
+								setSchema(updatedSchema);
+							}}
+						/>
+						<DbTableCell disableEdit cellType={'text'} value={columnHasAnyIndex(column.name, tableData!)} />
+						<DbTableCell
+							disableEdit
+							cellType={'text'}
+							value={getColumnForeignKeyRefTable(column.name, tableData!)}
+							onChange={() => {}}
+						/>
+						<DbTableCell
+							disableEdit
+							cellType={'text'}
+							value={getColumnForeignKeyRefColumn(column.name, tableData!)}
+						/>
+						<DbTableCell
+							cellType={'multiSelect'}
+							selectOptions={schema.roles}
+							value={column.roles}
+							onMultiSelectChange={(value) => {
+								const updatedSchema = cloneDeep(schema);
+								const columnData = SchemaService.getColumnData(
+									updatedSchema,
+									props.tableName,
+									column.name
+								);
+								columnData.roles = value;
+								setSchema(updatedSchema);
+							}}
+						/>
+						<Box display={'flex'} alignItems={'center'}>
+							<Icon
+								iconImg={'icon-delete'}
+								padding={4}
+								fontSize={16}
+								cursorPointer
+								onClick={() => {
+									const updatedSchema = cloneDeep(schema);
+									const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+									updatedTableData.columns = updatedTableData.columns.filter(
+										(col) => col.name !== column.name
+									);
+									setSchema(updatedSchema);
+								}}
+							/>
+						</Box>
+					</React.Fragment>
+				);
+			});
 	}
 
 	function addNewTableColumn() {
