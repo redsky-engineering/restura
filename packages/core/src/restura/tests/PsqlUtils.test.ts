@@ -15,6 +15,13 @@ describe('PsqlUtils', () => {
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
+	it('should convert an object with an assignment to an insert statement', () => {
+		const query = insertObjectQuery('USER', { id: 1, partnerId: '?' });
+		const expectedQuery = `INSERT INTO "USER" ("id", "partnerId")
+                           VALUES (1, ?)
+                           RETURNING *`;
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
+	});
 	it('should convert an object to an update statement', () => {
 		const query = updateObjectQuery('USER', { firstName: 'bob', isActive: true }, 'WHERE "id" = 1');
 		const expectedQuery = `UPDATE "USER"
