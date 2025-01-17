@@ -55,10 +55,12 @@ export function insertObjectQuery(table: string, obj: DynamicObject): string {
 	const columns = keys.map((column) => escapeColumnName(column)).join(', ');
 	const values = params.map((value) => SQL`${value}`).join(', ');
 
-	const query = `
+	let query = `
 INSERT INTO "${table}" (${columns})
                  VALUES (${values})
                  RETURNING *`;
+
+	query = query.replace(/'(\?)'/, '?');
 	return query;
 }
 
