@@ -1,4 +1,4 @@
-import { expect, assert } from 'chai';
+import { assert, expect } from 'chai';
 import { Done } from 'mocha';
 import filterPsqlParser from '../sql/filterPsqlParser.js';
 
@@ -64,6 +64,8 @@ B%')`,
 		);
 
 		test('(((column:id,value:4504055,type:contains)))', `((("id" ILIKE '%4504055%')))`);
+
+		test("(column:name,value:i'm,type:startsWith)", `("name" ILIKE 'i''m%')`);
 
 		test('(column:id,value:15234,type:exact)', `("id" = '15234')`);
 		test('(column:userId,value:15234,type:exact)', `("userId" = '15234')`);

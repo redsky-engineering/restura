@@ -91,9 +91,7 @@ typeString = text:"startsWith" { return function(column, value) { return \`\${co
     text:"lessThan" { return function(column, value) { return \`\${column} < '\${format.literal(value).slice(1,-1)}'\`; } } / 
     text:"isNull"   { return function(column, value) { return \`isNull(\${column})\`; } } 
 
-value = "value" _ ":" value:text { 
-    return value.replace(/'/g, "''");  // Escapes single quotes for SQL
-}
+value = "value" _ ":" value:text { return value; }
 
 
 `;
