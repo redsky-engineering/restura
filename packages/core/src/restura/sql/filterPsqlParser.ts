@@ -77,7 +77,8 @@ column = left:text "." right:text { return  \`\${quoteSqlIdentity(left)}.\${quot
     text:text { return quoteSqlIdentity(text); } 
     
 
-text = text:[a-z0-9 \\t\\r\\n\\-_:@]i+ { return text.join(""); }
+text = text:[a-z0-9 \\t\\r\\n\\-_:@']i+ { return text.join(""); }
+
 
 type = "type" _ ":" _ type:typeString { return type; }
 typeString = text:"startsWith" { return function(column, value) { return \`\${column} ILIKE '\${format.literal(value).slice(1,-1)}%'\`; } } /
@@ -90,7 +91,9 @@ typeString = text:"startsWith" { return function(column, value) { return \`\${co
     text:"lessThan" { return function(column, value) { return \`\${column} < '\${format.literal(value).slice(1,-1)}'\`; } } / 
     text:"isNull"   { return function(column, value) { return \`isNull(\${column})\`; } } 
 
-value = "value" _ ":" value:text { return value; }
+value = "value" _ ":" value:text { 
+    return value.replace(/'/g, "''");  // Escapes single quotes for SQL
+}
 
 
 `;

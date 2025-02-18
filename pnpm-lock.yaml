@@ -6419,6 +6419,7 @@ packages:
             {
                 integrity: sha512-GhrVeweiTD6uTmmn5hV/lzgCQhccwReIVRLHp7LT4SopOjqEZ5BbX8b5WWEtAKasjmy8hR7ZPwsYlxRCku5odg==
             }
+        deprecated: This package is deprecated. Use structuredClone instead.
 
     lodash.clonedeep@4.5.0:
         resolution:
