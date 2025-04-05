@@ -868,7 +868,7 @@ BEGIN
 						)
 		)::text
 		);
-		
+
 	RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
