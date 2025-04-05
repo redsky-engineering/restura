@@ -681,7 +681,7 @@ BEGIN
 						'table', '${tableName}',
 						'queryMetadata', query_metadata,
 						'changedId', NEW.id,
-						'record', NEW, 
+						'record', NEW,
 						'previousRecord', OLD
 		)::text
 		);
@@ -868,7 +868,7 @@ BEGIN
 						)
 		)::text
 		);
-		
+
 	RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
