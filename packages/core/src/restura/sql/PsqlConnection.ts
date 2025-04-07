@@ -35,7 +35,6 @@ export abstract class PsqlConnection {
 			return response.rows[0] as T;
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (error: any) {
-			console.error(error, query, options);
 			if (RsError.isRsError(error)) throw error;
 
 			if (error?.routine === '_bt_check_unique') {
@@ -57,7 +56,6 @@ export abstract class PsqlConnection {
 			return response.rows as T[];
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (error: any) {
-			console.error(error, query, options);
 			if (error?.routine === '_bt_check_unique') {
 				throw new RsError('DUPLICATE', error.message);
 			}

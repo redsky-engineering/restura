@@ -43,7 +43,7 @@ class CustomApiFactory {
 					this.bindMethodsToInstance(customApiClass);
 					this.customApis[ApiImport.default.name] = customApiClass;
 				} catch (e) {
-					console.error(e);
+					logger.error(e);
 				}
 			}
 		});
