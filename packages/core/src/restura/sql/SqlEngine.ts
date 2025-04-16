@@ -19,7 +19,7 @@ export default abstract class SqlEngine {
 		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 	): Promise<DynamicObject | any[] | boolean> {
 		if (!this.doesRoleHavePermissionToTable(req.requesterDetails.role, schema, routeData.table))
-			throw new RsError('UNAUTHORIZED', 'You do not have permission to access this table');
+			throw new RsError('FORBIDDEN', 'You do not have permission to access this table');
 
 		switch (routeData.method) {
 			case 'POST':

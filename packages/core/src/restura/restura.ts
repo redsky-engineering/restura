@@ -427,8 +427,7 @@ class ResturaEngine {
 	private validateAuthorization(req: RsRequest<unknown>, routeData: RouteData) {
 		const role = req.requesterDetails.role;
 		if (routeData.roles.length === 0 || !role) return;
-		if (!routeData.roles.includes(role))
-			throw new RsError('UNAUTHORIZED', 'Not authorized to access this endpoint');
+		if (!routeData.roles.includes(role)) throw new RsError('FORBIDDEN', 'Not authorized to access this endpoint');
 	}
 
 	private getRouteData(method: string, baseUrl: string, path: string): RouteData {

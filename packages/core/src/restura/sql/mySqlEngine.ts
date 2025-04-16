@@ -249,7 +249,7 @@ class MySqlEngine extends SqlEngine {
 			if (item.subquery || this.doesRoleHavePermissionToColumn(userRole, schema, item, routeData.joins))
 				selectColumns.push(item);
 		});
-		if (!selectColumns.length) throw new RsError('UNAUTHORIZED', `You do not have permission to access this data.`);
+		if (!selectColumns.length) throw new RsError('FORBIDDEN', `You do not have permission to access this data.`);
 		let selectStatement = 'SELECT \n';
 		selectStatement += `\t${selectColumns
 			.map((item) => {
@@ -405,7 +405,7 @@ class MySqlEngine extends SqlEngine {
 		let joinStatements = '';
 		joins.forEach((item) => {
 			if (!this.doesRoleHavePermissionToTable(userRole, schema, item.table))
-				throw new RsError('UNAUTHORIZED', 'You do not have permission to access this table');
+				throw new RsError('FORBIDDEN', 'You do not have permission to access this table');
 			if (item.custom) {
 				const customReplaced = this.replaceParamKeywords(item.custom, routeData, req, sqlParams);
 				joinStatements += `\t${item.type} JOIN \`${item.table}\` ON ${customReplaced}\n`;
