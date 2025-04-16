@@ -31,11 +31,7 @@ export abstract class PsqlConnection {
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<any>);
 
-			if (logger.level === 'silly') {
-				const [seconds, nanoseconds] = process.hrtime(startTime);
-				const duration = seconds * 1000 + nanoseconds / 1000000;
-				logger.silly(`Query duration: ${duration.toFixed(2)}ms`);
-			}
+			this.logQueryDuration(startTime);
 
 			// There should be one and only one row returned
 			if (response.rows.length === 0) throw new RsError('NOT_FOUND', 'No results found');
@@ -64,11 +60,7 @@ export abstract class PsqlConnection {
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<any>);
 
-			if (logger.level === 'silly') {
-				const [seconds, nanoseconds] = process.hrtime(startTime);
-				const duration = seconds * 1000 + nanoseconds / 1000000;
-				logger.silly(`Query duration: ${duration.toFixed(2)}ms`);
-			}
+			this.logQueryDuration(startTime);
 
 			return response.rows as T[];
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
@@ -77,6 +69,14 @@ export abstract class PsqlConnection {
 				throw new RsError('DUPLICATE', error.message);
 			}
 			throw new RsError('DATABASE_ERROR', `${error.message}`);
+		}
+	}
+
+	private logQueryDuration(startTime: [number, number]): void {
+		if (logger.level === 'silly') {
+			const [seconds, nanoseconds] = process.hrtime(startTime);
+			const duration = seconds * 1000 + nanoseconds / 1000000;
+			logger.silly(`Query duration: ${duration.toFixed(2)}ms`);
 		}
 	}
 
