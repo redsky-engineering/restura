@@ -26,7 +26,7 @@ export default function modelGenerator(schema: ResturaSchema): Promise<string> {
 function convertTable(table: TableData): string {
 	let modelString = `\texport interface ${StringUtils.capitalizeFirst(table.name)} {\n`;
 	for (const column of table.columns) {
-		modelString += `\t\t${column.name}${column.isNullable ? '?' : ''}: ${SqlUtils.convertDatabaseTypeToTypescript(column.type, column.value)};\n`;
+		modelString += `\t\t${column.name}: ${SqlUtils.convertDatabaseTypeToTypescript(column.type, column.value)}${column.isNullable ? ' | null' : ''};\n`;
 	}
 	modelString += `\t}\n`;
 	return modelString;

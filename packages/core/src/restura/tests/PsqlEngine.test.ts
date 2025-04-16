@@ -612,6 +612,31 @@ const sampleSchema: ResturaSchema = {
 	]
 };
 
+const patchUserClearGuidRouteData: RouteData = {
+	type: 'ONE',
+	method: 'PATCH',
+	name: 'Clears a users password reset guid',
+	description: 'Clears a users password reset guid',
+	path: '/user/clear-password-reset-guid',
+	table: 'user',
+	roles: ['user', 'admin'],
+	orderBy: {
+		columnName: 'lastName',
+		order: 'DESC',
+		tableName: 'user'
+	},
+	request: [],
+	joins: [],
+	response: [
+		{ name: 'id', selector: 'user.id' },
+		{ name: 'firstName', selector: 'user.firstName' },
+		{ name: 'lastName', selector: 'user.lastName' },
+		{ name: 'passwordResetGuid', selector: 'user.passwordResetGuid' }
+	],
+	assignments: [{ name: 'passwordResetGuid', value: '' }],
+	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
+};
+
 const patchUserRouteData: RouteData = {
 	type: 'ONE',
 	method: 'PATCH',
@@ -1362,6 +1387,24 @@ EXECUTE FUNCTION notify_user_delete();
 				body: { id: 1, firstName: 'Tanner', permissionLogin: true }
 			} as unknown as RsRequest;
 			await psqlEngine['executeUpdateRequest'](resetUserRequest, patchUserRouteData, sampleSchema);
+		});
+		it('should executeUpdateRequest with an assignment', async () => {
+			const updateRequest: RsRequest = {
+				requesterDetails: {
+					role: 'admin',
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				},
+				body: {}
+			} as unknown as RsRequest;
+			const response = await psqlEngine['executeUpdateRequest'](
+				updateRequest,
+				patchUserClearGuidRouteData,
+				sampleSchema
+			);
+			expect(response?.id).to.equal(1);
+			expect(response?.passwordResetGuid).to.equal('');
 		});
 	});
 	describe('PsqlEngine executeCreateRequest', () => {

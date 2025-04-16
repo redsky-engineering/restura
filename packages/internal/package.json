@@ -1,6 +1,6 @@
 {
 	"name": "@restura/internal",
-	"version": "0.1.0-alpha.7",
+	"version": "0.1.1",
 	"description": "Internal utilities for Restura",
 	"types": "./dist/index.d.ts",
 	"repository": "https://github.com/redsky-engineering/restura",
@@ -26,13 +26,13 @@
 		"lint": "eslint src"
 	},
 	"devDependencies": {
-		"tsup": "^8.3.0"
+		"tsup": "^8.4.0"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
 		"json5": "^2.2.3",
-		"zod": "^3.23.8"
+		"zod": "^3.24.2"
 	}
 }
