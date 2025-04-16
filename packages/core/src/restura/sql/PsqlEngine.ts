@@ -476,24 +476,18 @@ export class PsqlEngine extends SqlEngine {
 			bodyNoId.modifiedOn = new Date().toISOString();
 		}
 
-		// In order remove ambiguity, we need to add the table name to the column names when the table is joined
-		// for (let i in bodyNoId) {
-		// 	if (i.includes('.')) continue;
-		// 	bodyNoId[escapeColumnName(`${routeData.table}.${i}`)] = bodyNoId[i];
-		// 	delete bodyNoId[i];
-		// }
-
 		for (const assignment of routeData.assignments) {
 			const column = table.columns.find((column) => column.name === assignment.name);
 			if (!column) continue;
 
-			const assignmentWithPrefix = escapeColumnName(`${routeData.table}.${assignment.name}`);
+			const assignmentEscaped = escapeColumnName(assignment.name);
 
 			if (SqlUtils.convertDatabaseTypeToTypescript(column.type!) === 'number')
-				bodyNoId[assignmentWithPrefix] = Number(assignment.value);
-			else bodyNoId[assignmentWithPrefix] = assignment.value;
+				bodyNoId[assignmentEscaped] = Number(assignment.value);
+			else bodyNoId[assignmentEscaped] = assignment.value;
 		}
 
+		// Todo: Add joins back in on the update. They are useful for the where clause.
 		// let joinStatement = this.generateJoinStatements(
 		// 	req,
 		// 	routeData.joins!,
@@ -551,7 +545,9 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 				throw new RsError('UNAUTHORIZED', 'You do not have permission to access this table');
 			if (item.custom) {
 				const customReplaced = this.replaceParamKeywords(item.custom, routeData, req, sqlParams);
-				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)} ON ${customReplaced}\n`;
+				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)}${
+					item.alias ? `AS "${item.alias}"` : ''
+				} ON ${customReplaced}\n`;
 			} else {
 				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)}${
 					item.alias ? `AS "${item.alias}"` : ''
