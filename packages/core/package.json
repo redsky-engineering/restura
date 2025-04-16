@@ -1,6 +1,6 @@
 {
 	"name": "@restura/core",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "Restura core utilities for No Code APIs",
 	"types": "./dist/index.d.ts",
 	"repository": "https://github.com/redsky-engineering/restura",
