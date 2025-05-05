@@ -80,7 +80,15 @@ export default class ResponseValidator {
 	}
 
 	private getFieldResponseType(field: ResponseData, tableName: string): ResponseType {
-		if (field.selector) {
+		if (field.type) {
+			if (ResponseValidator.validatorIsValidString(field.type)) {
+				return { validator: field.type };
+			}
+			if (field.type.includes('|')) {
+				return { validator: this.parseValidationEnum(field.type) };
+			}
+			return { validator: 'object' };
+		} else if (field.selector) {
 			return this.getTypeFromTable(field.selector, tableName);
 		} else if (field.subquery) {
 			const table = this.database.find((t) => t.name == tableName);

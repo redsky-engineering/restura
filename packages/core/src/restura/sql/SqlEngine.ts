@@ -45,6 +45,7 @@ export default abstract class SqlEngine {
 		item: ResponseData,
 		joins: JoinData[]
 	): boolean {
+		if (item.type) return true;
 		if (item.selector) {
 			let tableName = item.selector.split('.')[0];
 			const columnName = item.selector.split('.')[1];

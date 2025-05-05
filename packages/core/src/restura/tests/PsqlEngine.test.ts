@@ -1198,6 +1198,52 @@ EXECUTE FUNCTION notify_user_delete();
 			expect(response?.lastName).to.equal('Burton');
 			expect(response?.email).to.equal('tanner@plvr.com');
 		});
+
+		it('should handle custom selector with case statement', async () => {
+			const responseData: ResponseData = {
+				name: 'statusLabel',
+				selector:
+					"CASE WHEN \"user\".\"accountStatus\" = 'active' THEN 'Active' WHEN \"user\".\"accountStatus\" = 'banned' THEN 'Banned' ELSE 'View Only' END",
+				type: 'string'
+			};
+			const routeData = { ...patchUserRouteData, response: [responseData] };
+			const response = (await psqlEngine['executeGetRequest'](
+				basicRequest,
+				routeData,
+				sampleSchema
+			)) as DynamicObject;
+			expect(response?.statusLabel).to.equal('View Only');
+		});
+
+		it('should handle custom selector with string concatenation', async () => {
+			const responseData: ResponseData = {
+				name: 'fullName',
+				selector: '"user"."firstName" || \' \' || "user"."lastName"',
+				type: 'string'
+			};
+			const routeData = { ...patchUserRouteData, response: [responseData] };
+			const response = (await psqlEngine['executeGetRequest'](
+				basicRequest,
+				routeData,
+				sampleSchema
+			)) as DynamicObject;
+			expect(response?.fullName).to.equal('Tanner Burton');
+		});
+
+		it('should handle custom selector with date formatting', async () => {
+			const responseData: ResponseData = {
+				name: 'formattedDate',
+				selector: 'to_char("user"."createdOn", \'YYYY-MM-DD\')',
+				type: 'string'
+			};
+			const routeData = { ...patchUserRouteData, response: [responseData] };
+			const response = (await psqlEngine['executeGetRequest'](
+				basicRequest,
+				routeData,
+				sampleSchema
+			)) as DynamicObject;
+			expect(response?.formattedDate).to.match(/^\d{4}-\d{2}-\d{2}$/);
+		});
 	});
 	describe('PsqlEngine events', () => {
 		it('should receive notification of user row being inserted', function (done) {

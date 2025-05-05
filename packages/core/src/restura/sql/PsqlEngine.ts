@@ -396,7 +396,7 @@ export class PsqlEngine extends SqlEngine {
 						item.name
 					)}`;
 				}
-				return `${escapeColumnName(item.selector)} AS ${escapeColumnName(item.name)}`;
+				return `${item.type ? item.selector : escapeColumnName(item.selector)} AS ${escapeColumnName(item.name)}`;
 			})
 			.join(',\n\t')}\n`;
 		sqlStatement += `FROM "${routeData.table}"\n`;
