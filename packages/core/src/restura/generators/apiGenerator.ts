@@ -170,7 +170,9 @@ class ApiTree {
 			isNullable = false,
 			array = false;
 
-		if (p.selector) {
+		if (p.type) {
+			responseType = p.type;
+		} else if (p.selector) {
 			({ responseType, isNullable } = this.getTypeFromTable(p.selector, p.name));
 
 			// If selector is not from the baseTable, then we need to determine if the join is inner join or not.

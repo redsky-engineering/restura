@@ -83,7 +83,8 @@ const responseDataSchema = z
 				groupBy: groupBySchema.optional(),
 				orderBy: orderBySchema.optional()
 			})
-			.optional()
+			.optional(),
+		type: z.string().optional()
 	})
 	.strict();
 
