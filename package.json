@@ -8,7 +8,9 @@
     "test": "nx run-many -t=test",
     "lint": "nx run-many -t=lint",
     "build": "nx run-many -t=build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "express:dev": "nx run restura-express:dev",
+    "ui:start": "nx run restura-ui:start"
   },
   "keywords": [],
   "author": "",
