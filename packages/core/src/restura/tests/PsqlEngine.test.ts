@@ -860,6 +860,13 @@ const getEventPsqlEngine = () => {
 	return eventPsqlEngine;
 };
 
+let psqlTransaction: PsqlTransaction;
+const getPsqlTransaction = () => {
+	if (psqlTransaction) return psqlTransaction;
+	psqlTransaction = new PsqlTransaction(clientConfig);
+	return psqlTransaction;
+};
+
 describe('PsqlEngine', function () {
 	after(async function () {
 		// Let all pending events finish by pausing for a bit
@@ -867,18 +874,39 @@ describe('PsqlEngine', function () {
 		if (psqlPool) psqlPool.pool.end();
 		await getEventPsqlEngine().close();
 		if (enginePool) enginePool.pool.end();
+		if (psqlTransaction) await psqlTransaction.close();
 	});
 
 	describe('db transaction', () => {
 		it('db transaction', async () => {
-			const psqlTransaction = new PsqlTransaction(clientConfig);
+			const psqlTransaction = getPsqlTransaction();
 			const user = await psqlTransaction.queryOne<{ id: number }>(
 				`SELECT * FROM "user" WHERE id = 1;`,
 				[],
 				{} as RequesterDetails
 			);
 			expect(user.id).to.equal(1);
-			await psqlTransaction.close();
+		});
+	});
+	describe('Run Query', () => {
+		it('should run a query', async () => {
+			const psqlTransaction = getPsqlTransaction();
+			const result = await psqlTransaction.runQuery(`SELECT * FROM "user" WHERE id = 1;`, [], {
+				role: 'admin',
+				host: 'google.com',
+				ipAddress: '1.1.1.1',
+				userId: 1
+			} as RequesterDetails);
+			expect(result.length).to.equal(1);
+		});
+		it('should run a query with an array parameter using ANY operator', async () => {
+			const psqlTransaction = getPsqlTransaction();
+			const result = await psqlTransaction.runQuery(`SELECT * FROM "user" WHERE id = ANY(?);`, [[1, 2, 3]], {
+				role: 'admin',
+				host: 'google.com',
+				ipAddress: '1.1.1.1'
+			});
+			expect(result.length).to.be.greaterThan(0);
 		});
 	});
 	describe('db diff', () => {
