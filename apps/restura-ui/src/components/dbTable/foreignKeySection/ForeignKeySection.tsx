@@ -1,11 +1,11 @@
-import * as React from 'react';
-import './ForeignKeySection.scss';
 import { Box, Button, Icon, Label } from '@redskytech/framework/ui';
-import { useRecoilState } from 'recoil';
-import globalState from '../../../state/globalState';
 import cloneDeep from 'lodash.clonedeep';
+import * as React from 'react';
+import { useRecoilState } from 'recoil';
 import SchemaService from '../../../services/schema/SchemaService.js';
+import globalState from '../../../state/globalState';
 import DbTableCell from '../../dbTableCell/DbTableCell';
+import './ForeignKeySection.scss';
 import ForeignKeyActions = Restura.ForeignKeyActions;
 
 interface ForeignKeySectionProps {
@@ -17,7 +17,7 @@ const ForeignKeySection: React.FC<ForeignKeySectionProps> = (props) => {
 
 	function getOtherTableNames() {
 		if (!schema) return [];
-		let otherTableNames: string[] = [];
+		const otherTableNames: string[] = [];
 		schema.database.forEach((table) => {
 			// We allow foreign keys to our table for parent-child relationships
 			otherTableNames.push(table.name);
@@ -25,13 +25,13 @@ const ForeignKeySection: React.FC<ForeignKeySectionProps> = (props) => {
 		return otherTableNames;
 	}
 
-	function getColumnsForTableThatAreBigInt(tableName: string) {
+	function getColumnsForTableThatAreBigIntOrBigSerial(tableName: string) {
 		if (!schema) return [];
-		let tableData = schema.database.find((table) => table.name === tableName);
+		const tableData = schema.database.find((table) => table.name === tableName);
 		if (!tableData) return [];
-		let columns: string[] = [];
+		const columns: string[] = [];
 		tableData.columns.forEach((column) => {
-			if (column.type === 'BIGINT') columns.push(column.name);
+			if (column.type === 'BIGINT' || column.type === 'BIGSERIAL') columns.push(column.name);
 		});
 		return columns;
 	}
@@ -64,7 +64,7 @@ const ForeignKeySection: React.FC<ForeignKeySectionProps> = (props) => {
 
 	function renderForeignKeys() {
 		if (!schema) return <></>;
-		let tableData = schema.database.find((item) => item.name === props.tableName);
+		const tableData = schema.database.find((item) => item.name === props.tableName);
 		if (!tableData) return <></>;
 		return tableData.foreignKeys.map((keyData) => {
 			return (
@@ -73,11 +73,11 @@ const ForeignKeySection: React.FC<ForeignKeySectionProps> = (props) => {
 					<DbTableCell
 						cellType={'select'}
 						value={keyData.column}
-						selectOptions={getColumnsForTableThatAreBigInt(props.tableName)}
+						selectOptions={getColumnsForTableThatAreBigIntOrBigSerial(props.tableName)}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
-							let updatedIndexData = updatedTableData.foreignKeys.find(
+							const updatedSchema = cloneDeep(schema);
+							const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+							const updatedIndexData = updatedTableData.foreignKeys.find(
 								(item) => item.name === keyData.name
 							);
 							if (updatedIndexData) {
@@ -97,9 +97,9 @@ const ForeignKeySection: React.FC<ForeignKeySectionProps> = (props) => {
 						value={keyData.refTable}
 						selectOptions={getOtherTableNames()}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
-							let updatedIndexData = updatedTableData.foreignKeys.find(
+							const updatedSchema = cloneDeep(schema);
+							const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+							const updatedIndexData = updatedTableData.foreignKeys.find(
 								(item) => item.name === keyData.name
 							);
 							if (updatedIndexData) {
@@ -117,11 +117,11 @@ const ForeignKeySection: React.FC<ForeignKeySectionProps> = (props) => {
 					<DbTableCell
 						cellType={'select'}
 						value={keyData.refColumn}
-						selectOptions={getColumnsForTableThatAreBigInt(keyData.refTable)}
+						selectOptions={getColumnsForTableThatAreBigIntOrBigSerial(keyData.refTable)}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
-							let updatedIndexData = updatedTableData.foreignKeys.find(
+							const updatedSchema = cloneDeep(schema);
+							const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+							const updatedIndexData = updatedTableData.foreignKeys.find(
 								(item) => item.name === keyData.name
 							);
 							if (updatedIndexData) {
@@ -141,9 +141,9 @@ const ForeignKeySection: React.FC<ForeignKeySectionProps> = (props) => {
 						value={keyData.onDelete}
 						selectOptions={['CASCADE', 'SET NULL', 'RESTRICT', 'NO ACTION', 'SET DEFAULT']}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
-							let updatedIndexData = updatedTableData.foreignKeys.find(
+							const updatedSchema = cloneDeep(schema);
+							const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+							const updatedIndexData = updatedTableData.foreignKeys.find(
 								(item) => item.name === keyData.name
 							);
 							if (updatedIndexData) updatedIndexData.onDelete = value as ForeignKeyActions;
@@ -156,9 +156,9 @@ const ForeignKeySection: React.FC<ForeignKeySectionProps> = (props) => {
 						value={keyData.onUpdate}
 						selectOptions={['CASCADE', 'SET NULL', 'RESTRICT', 'NO ACTION', 'SET DEFAULT']}
 						onChange={(value) => {
-							let updatedSchema = cloneDeep(schema);
-							let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
-							let updatedIndexData = updatedTableData.foreignKeys.find(
+							const updatedSchema = cloneDeep(schema);
+							const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+							const updatedIndexData = updatedTableData.foreignKeys.find(
 								(item) => item.name === keyData.name
 							);
 							if (updatedIndexData) updatedIndexData.onUpdate = value as ForeignKeyActions;
@@ -173,8 +173,8 @@ const ForeignKeySection: React.FC<ForeignKeySectionProps> = (props) => {
 							fontSize={16}
 							cursorPointer
 							onClick={() => {
-								let updatedSchema = cloneDeep(schema);
-								let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+								const updatedSchema = cloneDeep(schema);
+								const updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
 								updatedTableData.foreignKeys = updatedTableData.foreignKeys.filter(
 									(item) => item.name !== keyData.name
 								);
@@ -189,8 +189,8 @@ const ForeignKeySection: React.FC<ForeignKeySectionProps> = (props) => {
 
 	function addNewForeignKey() {
 		if (!schema) return;
-		let updatedSchema = cloneDeep(schema);
-		let tableData = SchemaService.getTableData(updatedSchema, props.tableName);
+		const updatedSchema = cloneDeep(schema);
+		const tableData = SchemaService.getTableData(updatedSchema, props.tableName);
 		tableData.foreignKeys.push({
 			name: SchemaService.generateForeignKeyName(props.tableName, 'MISSING!', 'MISSING!', 'MISSING!'),
 			column: 'MISSING!',
