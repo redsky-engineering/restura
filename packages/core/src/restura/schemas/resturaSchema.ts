@@ -84,7 +84,7 @@ const responseDataSchema = z
 				orderBy: orderBySchema.optional()
 			})
 			.optional(),
-		type: z.string().optional()
+		type: z.string().optional() // Type allows you to override the type of the response, used in custom selectors
 	})
 	.strict();
 
@@ -96,7 +96,8 @@ const routeDataBaseSchema = z
 		name: z.string(),
 		description: z.string(),
 		path: z.string(),
-		roles: z.array(z.string())
+		roles: z.array(z.string()),
+		scopes: z.array(z.string())
 	})
 	.strict();
 
@@ -224,6 +225,7 @@ const columnDataSchema = z
 		]),
 		isNullable: z.boolean(),
 		roles: z.array(z.string()),
+		scopes: z.array(z.string()),
 		comment: z.string().optional(),
 		default: z.string().optional(),
 		value: z.string().optional(),
@@ -288,6 +290,7 @@ const tableDataSchema = z
 		foreignKeys: z.array(foreignKeyDataSchema),
 		checkConstraints: z.array(checkConstraintDataSchema),
 		roles: z.array(z.string()),
+		scopes: z.array(z.string()),
 		notify: z.union([z.literal('ALL'), z.array(z.string())]).optional()
 	})
 	.strict();
@@ -312,6 +315,7 @@ export const resturaSchema = z
 		endpoints: z.array(endpointDataSchema),
 		globalParams: z.array(z.string()),
 		roles: z.array(z.string()),
+		scopes: z.array(z.string()),
 		customTypes: z.array(z.string())
 	})
 	.strict();
