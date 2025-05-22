@@ -18,7 +18,14 @@ export default abstract class SqlEngine {
 		schema: ResturaSchema
 		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 	): Promise<DynamicObject | any[] | boolean> {
-		if (!this.doesRoleHavePermissionToTable(req.requesterDetails.role, schema, routeData.table))
+		if (
+			!this.canRequesterAccessTable(
+				req.requesterDetails.role,
+				req.requesterDetails.scopes,
+				schema,
+				routeData.table
+			)
+		)
 			throw new RsError('FORBIDDEN', 'You do not have permission to access this table');
 
 		switch (routeData.method) {
@@ -39,8 +46,9 @@ export default abstract class SqlEngine {
 		return tableSchema;
 	}
 
-	protected doesRoleHavePermissionToColumn(
-		role: string | undefined | null,
+	protected canRequesterAccessColumn(
+		requesterRole: string | undefined | null,
+		requesterScopes: string[] | undefined | null,
 		schema: ResturaSchema,
 		item: ResponseData,
 		joins: JoinData[]
@@ -62,35 +70,42 @@ export default abstract class SqlEngine {
 			if (!columnSchema)
 				throw new RsError('SCHEMA_ERROR', `Column ${columnName} not found in table ${tableName}`);
 
-			const doesColumnHaveRoles = ObjectUtils.isArrayWithData(columnSchema.roles);
-			if (!doesColumnHaveRoles) return true; // Public column, any role can access
-
-			if (!role) return false; // Column has roles, but no role provided (no access)
-
-			return columnSchema.roles.includes(role!);
+			if (ObjectUtils.isArrayWithData(columnSchema.roles)) {
+				if (!requesterRole) return false;
+				return columnSchema.roles.includes(requesterRole);
+			}
+			if (ObjectUtils.isArrayWithData(columnSchema.scopes)) {
+				if (!requesterScopes) return false;
+				return columnSchema.scopes.some((scope) => requesterScopes.includes(scope));
+			}
+			return true; // Public column, any role can access
 		}
 		if (item.subquery) {
 			return ObjectUtils.isArrayWithData(
 				item.subquery.properties.filter((nestedItem) => {
-					return this.doesRoleHavePermissionToColumn(role, schema, nestedItem, joins);
+					return this.canRequesterAccessColumn(requesterRole, requesterScopes, schema, nestedItem, joins);
 				})
 			);
 		}
 		return false;
 	}
 
-	protected doesRoleHavePermissionToTable(
-		userRole: string | undefined,
+	protected canRequesterAccessTable(
+		requesterRole: string | undefined,
+		requesterScopes: string[] | undefined,
 		schema: ResturaSchema,
 		tableName: string
 	): boolean {
 		const tableSchema = this.getTableSchema(schema, tableName);
-		const doesTableHaveRoles = ObjectUtils.isArrayWithData(tableSchema.roles);
-		if (!doesTableHaveRoles) return true; // Public table, any role can access
-
-		if (!userRole) return false; // Table has roles, but no role provided (no access)
-
-		return tableSchema.roles.includes(userRole);
+		if (ObjectUtils.isArrayWithData(tableSchema.roles)) {
+			if (!requesterRole) return false; // Table has roles, but no role provided (no access)
+			return tableSchema.roles.includes(requesterRole);
+		}
+		if (ObjectUtils.isArrayWithData(tableSchema.scopes)) {
+			if (!requesterScopes) return false;
+			return tableSchema.scopes.some((scope) => requesterScopes.includes(scope));
+		}
+		return true; // Public table, any role can access
 	}
 
 	protected abstract generateJoinStatements(
@@ -99,7 +114,6 @@ export default abstract class SqlEngine {
 		baseTable: string,
 		routeData: StandardRouteData,
 		schema: ResturaSchema,
-		userRole: string | undefined,
 		sqlParams: string[]
 	): string;
 
@@ -182,7 +196,6 @@ export default abstract class SqlEngine {
 		schema: ResturaSchema,
 		item: ResponseData,
 		routeData: StandardRouteData,
-		userRole: string | undefined,
 		sqlParams: string[]
 	): string;
 

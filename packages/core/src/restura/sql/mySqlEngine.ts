@@ -150,7 +150,7 @@ class MySqlEngine extends SqlEngine {
 		if (
 			!ObjectUtils.isArrayWithData(
 				item.subquery.properties.filter((nestedItem) => {
-					return this.doesRoleHavePermissionToColumn(req.requesterDetails.role, schema, nestedItem, [
+					return this.canRequesterAccessColumn(req.requesterDetails.role, schema, nestedItem, [
 						...routeData.joins,
 						...item.subquery!.joins
 					]);
@@ -166,7 +166,7 @@ class MySqlEngine extends SqlEngine {
 								${item.subquery.properties
 									.map((nestedItem) => {
 										if (
-											!this.doesRoleHavePermissionToColumn(
+											!this.canRequesterAccessColumn(
 												req.requesterDetails.role,
 												schema,
 												nestedItem,
@@ -246,7 +246,7 @@ class MySqlEngine extends SqlEngine {
 		const selectColumns: ResponseData[] = [];
 		routeData.response.forEach((item) => {
 			// For a subquery, we will check the permission when generating the subquery statement, so pass it through
-			if (item.subquery || this.doesRoleHavePermissionToColumn(userRole, schema, item, routeData.joins))
+			if (item.subquery || this.canRequesterAccessColumn(userRole, schema, item, routeData.joins))
 				selectColumns.push(item);
 		});
 		if (!selectColumns.length) throw new RsError('FORBIDDEN', `You do not have permission to access this data.`);

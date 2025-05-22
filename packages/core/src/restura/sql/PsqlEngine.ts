@@ -289,17 +289,19 @@ export class PsqlEngine extends SqlEngine {
 		schema: ResturaSchema,
 		item: ResponseData,
 		routeData: StandardRouteData,
-		userRole: string | undefined,
 		sqlParams: string[]
 	): string {
 		if (!item.subquery) return '';
 		if (
 			!ObjectUtils.isArrayWithData(
 				item.subquery.properties.filter((nestedItem) => {
-					return this.doesRoleHavePermissionToColumn(req.requesterDetails.role, schema, nestedItem, [
-						...routeData.joins,
-						...item.subquery!.joins
-					]);
+					return this.canRequesterAccessColumn(
+						req.requesterDetails.role,
+						req.requesterDetails.scopes,
+						schema,
+						nestedItem,
+						[...routeData.joins, ...item.subquery!.joins]
+					);
 				})
 			)
 		) {
@@ -310,10 +312,13 @@ export class PsqlEngine extends SqlEngine {
 			${item.subquery.properties
 				.map((nestedItem) => {
 					if (
-						!this.doesRoleHavePermissionToColumn(req.requesterDetails.role, schema, nestedItem, [
-							...routeData.joins,
-							...item.subquery!.joins
-						])
+						!this.canRequesterAccessColumn(
+							req.requesterDetails.role,
+							req.requesterDetails.scopes,
+							schema,
+							nestedItem,
+							[...routeData.joins, ...item.subquery!.joins]
+						)
 					) {
 						return;
 					}
@@ -324,7 +329,6 @@ export class PsqlEngine extends SqlEngine {
 							schema,
 							nestedItem,
 							routeData,
-							userRole,
 							sqlParams
 						)}`;
 					}
@@ -335,7 +339,7 @@ export class PsqlEngine extends SqlEngine {
 						)) 
 						FROM
 							"${item.subquery.table}"
-							${this.generateJoinStatements(req, item.subquery.joins, item.subquery.table, routeData, schema, userRole, sqlParams)}
+							${this.generateJoinStatements(req, item.subquery.joins, item.subquery.table, routeData, schema, sqlParams)}
 							${this.generateWhereClause(req, item.subquery.where, routeData, sqlParams)}
 					), '[]')`;
 	}
@@ -379,13 +383,21 @@ export class PsqlEngine extends SqlEngine {
 		const DEFAULT_PAGED_PER_PAGE_NUMBER = 25;
 		const sqlParams: string[] = [];
 
-		const userRole = req.requesterDetails.role;
 		let sqlStatement = '';
 
 		const selectColumns: ResponseData[] = [];
 		routeData.response.forEach((item) => {
 			// For a subquery, we will check the permission when generating the subquery statement, so pass it through
-			if (item.subquery || this.doesRoleHavePermissionToColumn(userRole, schema, item, routeData.joins))
+			if (
+				item.subquery ||
+				this.canRequesterAccessColumn(
+					req.requesterDetails.role,
+					req.requesterDetails.scopes,
+					schema,
+					item,
+					routeData.joins
+				)
+			)
 				selectColumns.push(item);
 		});
 		if (!selectColumns.length) throw new RsError('FORBIDDEN', `You do not have permission to access this data.`);
@@ -393,7 +405,7 @@ export class PsqlEngine extends SqlEngine {
 		selectStatement += `\t${selectColumns
 			.map((item) => {
 				if (item.subquery) {
-					return `${this.createNestedSelect(req, schema, item, routeData, userRole, sqlParams)} AS ${escapeColumnName(
+					return `${this.createNestedSelect(req, schema, item, routeData, sqlParams)} AS ${escapeColumnName(
 						item.name
 					)}`;
 				}
@@ -407,7 +419,6 @@ export class PsqlEngine extends SqlEngine {
 			routeData.table,
 			routeData,
 			schema,
-			userRole,
 			sqlParams
 		);
 
@@ -517,7 +528,6 @@ export class PsqlEngine extends SqlEngine {
 			routeData.table,
 			routeData,
 			schema,
-			req.requesterDetails.role,
 			sqlParams
 		);
 		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
@@ -537,12 +547,18 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		baseTable: string,
 		routeData: StandardRouteData | CustomRouteData,
 		schema: ResturaSchema,
-		userRole: string | undefined,
 		sqlParams: string[]
 	): string {
 		let joinStatements = '';
 		joins.forEach((item) => {
-			if (!this.doesRoleHavePermissionToTable(userRole, schema, item.table))
+			if (
+				!this.canRequesterAccessTable(
+					req.requesterDetails.role,
+					req.requesterDetails.scopes,
+					schema,
+					item.table
+				)
+			)
 				throw new RsError('FORBIDDEN', 'You do not have permission to access this table');
 			if (item.custom) {
 				const customReplaced = this.replaceParamKeywords(item.custom, routeData, req, sqlParams);
