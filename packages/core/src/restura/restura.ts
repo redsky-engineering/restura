@@ -19,7 +19,7 @@ import customTypeValidationGenerator from './generators/customTypeValidationGene
 import modelGenerator from './generators/modelGenerator.js';
 import resturaGlobalTypesGenerator from './generators/resturaGlobalTypesGenerator.js';
 import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
-import { authenticateUser } from './middleware/authenticateUser.js';
+import { authenticateRequester } from './middleware/authenticateRequester.js';
 import { getMulterUpload } from './middleware/getMulterUpload.js';
 import { schemaValidation } from './middleware/schemaValidation.js';
 import { resturaConfigSchema, type ResturaConfigSchema } from './schemas/resturaConfigSchema.js';
@@ -92,7 +92,7 @@ class ResturaEngine {
 		app.disable('x-powered-by');
 
 		app.use('/', addApiResponseFunctions as unknown as express.RequestHandler);
-		app.use('/api/', authenticateUser(this.authenticationHandler) as unknown as express.RequestHandler);
+		app.use('/api/', authenticateRequester(this.authenticationHandler) as unknown as express.RequestHandler);
 		app.use('/restura', this.resturaAuthentication);
 
 		// Routes specific to Restura
@@ -119,7 +119,7 @@ class ResturaEngine {
 
 	/**
 	 * Determines if a given endpoint is public based on the HTTP method and full URL. This
-	 * is determined on whether the endpoint in the schema has no roles assigned to it.
+	 * is determined on whether the endpoint in the schema has no roles or scopes assigned to it.
 	 *
 	 * @param method - The HTTP method (e.g., 'GET', 'POST', 'PUT', 'PATCH', 'DELETE').
 	 * @param fullUrl - The full URL of the endpoint.
@@ -218,7 +218,8 @@ class ResturaEngine {
 				route.path = route.path.endsWith('/') ? route.path.slice(0, -1) : route.path;
 				const fullUrl = `${baseUrl}${route.path}`;
 
-				if (route.roles.length === 0) this.publicEndpoints[route.method].push(fullUrl);
+				if (route.roles.length === 0 && route.scopes.length === 0)
+					this.publicEndpoints[route.method].push(fullUrl);
 
 				this.resturaRouter[route.method.toLowerCase() as Lowercase<typeof route.method>](
 					route.path, // <-- Notice we only use path here since the baseUrl is already added to the router.
@@ -328,7 +329,7 @@ class ResturaEngine {
 			// Locate the route in the schema
 			const routeData = this.getRouteData(req.method, req.baseUrl, req.path);
 
-			// Validate the user has access to the endpoint
+			// Validate the requester has access to the endpoint
 			this.validateAuthorization(req, routeData);
 
 			// Check for file uploads
@@ -425,9 +426,17 @@ class ResturaEngine {
 	}
 
 	private validateAuthorization(req: RsRequest<unknown>, routeData: RouteData) {
-		const role = req.requesterDetails.role;
-		if (routeData.roles.length === 0 || !role) return;
-		if (!routeData.roles.includes(role)) throw new RsError('FORBIDDEN', 'Not authorized to access this endpoint');
+		const requesterRole = req.requesterDetails.role;
+		const requesterScopes = req.requesterDetails.scopes;
+		if (routeData.roles.length === 0 && routeData.scopes.length === 0) return;
+		if (requesterRole && routeData.roles.length > 0 && !routeData.roles.includes(requesterRole))
+			throw new RsError('FORBIDDEN', 'Not authorized to access this endpoint');
+		if (
+			requesterScopes.length > 0 &&
+			routeData.scopes.length > 0 &&
+			!routeData.scopes.some((scope) => requesterScopes.includes(scope))
+		)
+			throw new RsError('FORBIDDEN', 'Not authorized to access this endpoint');
 	}
 
 	private getRouteData(method: string, baseUrl: string, path: string): RouteData {

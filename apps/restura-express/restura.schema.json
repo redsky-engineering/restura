@@ -15,15 +15,31 @@
 					"isPrimary": true,
 					"name": "id",
 					"roles": [],
+					"scopes": [],
 					"type": "BIGSERIAL"
 				},
-				{ "default": "now()", "isNullable": false, "name": "createdOn", "roles": [], "type": "DATETIME" },
-				{ "default": "now()", "isNullable": false, "name": "modifiedOn", "roles": [], "type": "DATETIME" },
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
 				{
 					"comment": "Foreign key to order(id)",
 					"isNullable": false,
 					"name": "orderId",
 					"roles": [],
+					"scopes": [],
 					"type": "BIGINT"
 				}
 			],
@@ -47,7 +63,8 @@
 				}
 			],
 			"name": "item",
-			"roles": []
+			"roles": [],
+			"scopes": []
 		},
 		{
 			"checkConstraints": [],
@@ -58,18 +75,34 @@
 					"isPrimary": true,
 					"name": "id",
 					"roles": [],
+					"scopes": [],
 					"type": "BIGSERIAL"
 				},
-				{ "default": "now()", "isNullable": false, "name": "createdOn", "roles": [], "type": "DATETIME" },
-				{ "default": "now()", "isNullable": false, "name": "modifiedOn", "roles": [], "type": "DATETIME" },
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
 				{
 					"comment": "Foreign key to user(id)",
 					"isNullable": false,
 					"name": "userId",
 					"roles": [],
+					"scopes": [],
 					"type": "BIGINT"
 				},
-				{ "isNullable": false, "name": "amountCents", "roles": [], "type": "BIGINT" }
+				{ "isNullable": false, "name": "amountCents", "roles": [], "scopes": [], "type": "BIGINT" }
 			],
 			"foreignKeys": [
 				{
@@ -92,7 +125,8 @@
 			],
 			"name": "order",
 			"notify": "ALL",
-			"roles": []
+			"roles": [],
+			"scopes": []
 		},
 		{
 			"checkConstraints": [],
@@ -103,11 +137,26 @@
 					"isPrimary": true,
 					"name": "id",
 					"roles": [],
+					"scopes": [],
 					"type": "BIGSERIAL"
 				},
-				{ "default": "now()", "isNullable": false, "name": "createdOn", "roles": [], "type": "DATETIME" },
-				{ "default": "now()", "isNullable": false, "name": "modifiedOn", "roles": [], "type": "DATETIME" },
-				{ "isNullable": true, "length": 255, "name": "name", "roles": [], "type": "VARCHAR" }
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": true, "length": 255, "name": "name", "roles": [], "scopes": [], "type": "VARCHAR" }
 			],
 			"foreignKeys": [],
 			"indexes": [
@@ -115,7 +164,8 @@
 			],
 			"name": "company",
 			"notify": "ALL",
-			"roles": []
+			"roles": [],
+			"scopes": []
 		},
 		{
 			"checkConstraints": [],
@@ -126,40 +176,92 @@
 					"isPrimary": true,
 					"name": "id",
 					"roles": [],
+					"scopes": [],
 					"type": "BIGSERIAL"
 				},
-				{ "default": "now()", "isNullable": false, "name": "createdOn", "roles": [], "type": "DATETIME" },
-				{ "default": "now()", "isNullable": false, "name": "modifiedOn", "roles": [], "type": "DATETIME" },
-				{ "isNullable": false, "length": 30, "name": "firstName", "roles": [], "type": "VARCHAR" },
-				{ "isNullable": false, "length": 30, "name": "lastName", "roles": [], "type": "VARCHAR" },
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"isNullable": false,
+					"length": 30,
+					"name": "firstName",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{ "isNullable": false, "length": 30, "name": "lastName", "roles": [], "scopes": [], "type": "VARCHAR" },
 				{
 					"comment": "Foreign key to company(id)",
 					"isNullable": false,
 					"name": "companyId",
 					"roles": [],
+					"scopes": [],
 					"type": "BIGINT"
 				},
-				{ "isNullable": false, "length": 70, "name": "password", "roles": [], "type": "VARCHAR" },
-				{ "isNullable": false, "length": 100, "name": "email", "roles": [], "type": "VARCHAR" },
-				{ "isNullable": false, "name": "role", "roles": [], "type": "ENUM", "value": "'admin','user'" },
-				{ "default": "true", "isNullable": false, "name": "permissionLogin", "roles": [], "type": "BOOLEAN" },
-				{ "isNullable": true, "name": "lastLoginOn", "roles": [], "type": "DATETIME" },
-				{ "isNullable": true, "length": 30, "name": "phone", "roles": [], "type": "VARCHAR" },
+				{ "isNullable": false, "length": 70, "name": "password", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": false, "length": 100, "name": "email", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"isNullable": false,
+					"name": "role",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'admin','user'"
+				},
+				{
+					"default": "true",
+					"isNullable": false,
+					"name": "permissionLogin",
+					"roles": [],
+					"scopes": [],
+					"type": "BOOLEAN"
+				},
+				{ "isNullable": true, "name": "lastLoginOn", "roles": [], "scopes": [], "type": "DATETIME" },
+				{ "isNullable": true, "length": 30, "name": "phone", "roles": [], "scopes": [], "type": "VARCHAR" },
 				{
 					"comment": "When user was disabled",
 					"isNullable": true,
 					"name": "loginDisabledOn",
 					"roles": [],
+					"scopes": [],
 					"type": "DATETIME"
 				},
-				{ "isNullable": true, "length": 100, "name": "passwordResetGuid", "roles": [], "type": "VARCHAR" },
-				{ "isNullable": true, "name": "verifyEmailPin", "roles": [], "type": "MEDIUMINT" },
-				{ "isNullable": true, "name": "verifyEmailPinExpiresOn", "roles": [], "type": "DATETIME" },
+				{
+					"isNullable": true,
+					"length": 100,
+					"name": "passwordResetGuid",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{ "isNullable": true, "name": "verifyEmailPin", "roles": [], "scopes": [], "type": "MEDIUMINT" },
+				{
+					"isNullable": true,
+					"name": "verifyEmailPinExpiresOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
 				{
 					"default": "'view_only'",
 					"isNullable": false,
 					"name": "accountStatus",
 					"roles": [],
+					"scopes": [],
 					"type": "ENUM",
 					"value": "'banned','view_only','active'"
 				},
@@ -168,6 +270,7 @@
 					"isNullable": true,
 					"name": "passwordResetExpiresOn",
 					"roles": [],
+					"scopes": [],
 					"type": "DATETIME"
 				},
 				{
@@ -175,12 +278,34 @@
 					"isNullable": false,
 					"name": "onboardingStatus",
 					"roles": [],
+					"scopes": [],
 					"type": "ENUM",
 					"value": "'verify_email','complete'"
 				},
-				{ "isNullable": true, "length": 100, "name": "pendingEmail", "roles": [], "type": "VARCHAR" },
-				{ "default": "0", "isNullable": false, "name": "testAge", "roles": [], "type": "INTEGER" },
-				{ "default": "'{}'", "isNullable": false, "name": "metadata", "roles": [], "type": "JSON" }
+				{
+					"isNullable": true,
+					"length": 100,
+					"name": "pendingEmail",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"default": "0",
+					"isNullable": false,
+					"name": "testAge",
+					"roles": [],
+					"scopes": [],
+					"type": "INTEGER"
+				},
+				{
+					"default": "'{}'",
+					"isNullable": false,
+					"name": "metadata",
+					"roles": [],
+					"scopes": [],
+					"type": "JSON"
+				}
 			],
 			"foreignKeys": [
 				{
@@ -218,7 +343,8 @@
 			],
 			"name": "user",
 			"notify": ["id", "firstName", "lastName", "email", "phone"],
-			"roles": []
+			"roles": [],
+			"scopes": []
 		}
 	],
 	"endpoints": [
@@ -235,6 +361,7 @@
 					"path": "/user/me/avatar",
 					"request": [],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": ["admin", "user"],
 					"type": "CUSTOM_ONE"
 				},
@@ -253,6 +380,7 @@
 						{ "name": "email", "selector": "user.email" },
 						{ "name": "phone", "selector": "user.phone" }
 					],
+					"scopes": [],
 					"roles": ["user", "admin"],
 					"table": "user",
 					"type": "ONE",
@@ -276,6 +404,7 @@
 						}
 					],
 					"responseType": "AuthResponse",
+					"scopes": [],
 					"roles": [],
 					"type": "CUSTOM_ONE"
 				},
@@ -286,6 +415,7 @@
 					"path": "/user/refresh-token",
 					"request": [],
 					"responseType": "AuthResponse",
+					"scopes": [],
 					"roles": [],
 					"type": "CUSTOM_ONE"
 				},
@@ -302,6 +432,7 @@
 						}
 					],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": ["admin", "user"],
 					"type": "CUSTOM_ONE"
 				},
@@ -314,6 +445,7 @@
 						{ "name": "pin", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
 					],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": ["admin", "user"],
 					"type": "CUSTOM_ONE"
 				},
@@ -355,6 +487,7 @@
 						}
 					],
 					"responseType": "FilteredUser",
+					"scopes": [],
 					"roles": ["admin"],
 					"type": "CUSTOM_ONE"
 				},
@@ -392,6 +525,7 @@
 						}
 					],
 					"responseType": "FilteredUser",
+					"scopes": [],
 					"roles": ["admin"],
 					"type": "CUSTOM_ONE"
 				},
@@ -402,6 +536,7 @@
 					"path": "/user/logout",
 					"request": [],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": ["admin", "user"],
 					"type": "CUSTOM_ONE"
 				},
@@ -423,6 +558,7 @@
 						}
 					],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": [],
 					"type": "CUSTOM_ONE"
 				},
@@ -439,6 +575,7 @@
 						}
 					],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": ["admin", "athlete", "fan", "recruiter"],
 					"type": "CUSTOM_ONE"
 				},
@@ -449,6 +586,7 @@
 					"path": "/user/resend-verify-email",
 					"request": [],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": ["admin", "athlete", "fan", "recruiter"],
 					"type": "CUSTOM_ONE"
 				},
@@ -465,6 +603,7 @@
 						}
 					],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": [],
 					"type": "CUSTOM_ONE"
 				},
@@ -486,6 +625,7 @@
 						}
 					],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": ["admin", "user"],
 					"type": "CUSTOM_ONE"
 				},
@@ -507,6 +647,7 @@
 						}
 					],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": [],
 					"type": "CUSTOM_ONE"
 				},
@@ -519,6 +660,7 @@
 						{ "name": "pin", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
 					],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": ["admin", "user"],
 					"type": "CUSTOM_ONE"
 				},
@@ -535,6 +677,7 @@
 						}
 					],
 					"responseType": "boolean",
+					"scopes": [],
 					"roles": ["admin", "user"],
 					"type": "CUSTOM_ONE"
 				},
@@ -580,6 +723,7 @@
 						{ "name": "email", "selector": "user.email" },
 						{ "name": "phone", "selector": "user.phone" }
 					],
+					"scopes": [],
 					"roles": ["user", "admin"],
 					"table": "user",
 					"type": "ONE",
@@ -608,6 +752,7 @@
 						}
 					],
 					"responseType": "WeatherResponse",
+					"scopes": [],
 					"roles": ["user", "admin"],
 					"type": "CUSTOM_ONE"
 				}
@@ -615,5 +760,6 @@
 		}
 	],
 	"globalParams": ["companyId", "userId"],
-	"roles": ["admin", "user", "anonymous"]
+	"roles": ["admin", "user", "anonymous"],
+	"scopes": []
 }

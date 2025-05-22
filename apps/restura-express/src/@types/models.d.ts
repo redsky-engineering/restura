@@ -18,7 +18,7 @@ declare namespace Model {
 		id: number;
 		createdOn: string;
 		modifiedOn: string;
-		name?: string;
+		name: string | null;
 	}
 	export interface User {
 		id: number;
@@ -31,16 +31,16 @@ declare namespace Model {
 		email: string;
 		role: 'admin' | 'user';
 		permissionLogin: boolean;
-		lastLoginOn?: string;
-		phone?: string;
-		loginDisabledOn?: string;
-		passwordResetGuid?: string;
-		verifyEmailPin?: number;
-		verifyEmailPinExpiresOn?: string;
+		lastLoginOn: string | null;
+		phone: string | null;
+		loginDisabledOn: string | null;
+		passwordResetGuid: string | null;
+		verifyEmailPin: number | null;
+		verifyEmailPinExpiresOn: string | null;
 		accountStatus: 'banned' | 'view_only' | 'active';
-		passwordResetExpiresOn?: string;
+		passwordResetExpiresOn: string | null;
 		onboardingStatus: 'verify_email' | 'complete';
-		pendingEmail?: string;
+		pendingEmail: string | null;
 		testAge: number;
 		metadata: object;
 	}

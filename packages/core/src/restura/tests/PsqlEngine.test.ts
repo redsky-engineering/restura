@@ -27,6 +27,7 @@ const sampleSchema: ResturaSchema = {
 					hasAutoIncrement: true,
 					isNullable: false,
 					roles: [],
+					scopes: [],
 					isPrimary: true,
 					type: 'BIGINT'
 				},
@@ -35,21 +36,24 @@ const sampleSchema: ResturaSchema = {
 					isNullable: false,
 					default: 'now()',
 					roles: [],
+					scopes: [],
 					type: 'DATETIME'
 				},
-				{ name: 'modifiedOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME' },
+				{ name: 'modifiedOn', isNullable: false, default: 'now()', roles: [], scopes: [], type: 'DATETIME' },
 				{
 					roles: [],
 					name: 'name',
 					type: 'VARCHAR',
 					length: 255,
-					isNullable: true
+					isNullable: true,
+					scopes: []
 				}
 			],
 			checkConstraints: [],
 			foreignKeys: [],
 			indexes: [{ name: 'PRIMARY', columns: ['id'], isUnique: true, isPrimaryKey: true, order: 'ASC' }],
-			roles: []
+			roles: [],
+			scopes: []
 		},
 		{
 			name: 'order',
@@ -59,6 +63,7 @@ const sampleSchema: ResturaSchema = {
 					hasAutoIncrement: true,
 					isNullable: false,
 					roles: ['admin', 'user'],
+					scopes: [],
 					isPrimary: true,
 					type: 'BIGINT'
 				},
@@ -66,19 +71,22 @@ const sampleSchema: ResturaSchema = {
 					name: 'amountCents',
 					isNullable: false,
 					roles: ['admin', 'user'],
+					scopes: [],
 					type: 'BIGINT'
 				},
 				{
 					roles: ['admin', 'user'],
 					name: 'userId',
 					type: 'BIGINT',
-					isNullable: false
+					isNullable: false,
+					scopes: []
 				}
 			],
 			checkConstraints: [],
 			foreignKeys: [],
 			indexes: [{ name: 'PRIMARY', columns: ['id'], isUnique: true, isPrimaryKey: true, order: 'ASC' }],
 			roles: [],
+			scopes: [],
 			notify: 'ALL'
 		},
 		{
@@ -89,6 +97,7 @@ const sampleSchema: ResturaSchema = {
 					hasAutoIncrement: true,
 					isNullable: false,
 					roles: ['admin', 'user'],
+					scopes: [],
 					isPrimary: true,
 					type: 'BIGINT'
 				},
@@ -96,13 +105,15 @@ const sampleSchema: ResturaSchema = {
 					name: 'orderId',
 					isNullable: false,
 					roles: ['admin', 'user'],
+					scopes: [],
 					type: 'BIGINT'
 				}
 			],
 			checkConstraints: [],
 			foreignKeys: [],
 			indexes: [{ name: 'PRIMARY', columns: ['id'], isUnique: true, isPrimaryKey: true, order: 'ASC' }],
-			roles: []
+			roles: [],
+			scopes: []
 		},
 		{
 			name: 'user',
@@ -112,6 +123,7 @@ const sampleSchema: ResturaSchema = {
 					hasAutoIncrement: true,
 					isNullable: false,
 					roles: [],
+					scopes: [],
 					type: 'BIGINT'
 				},
 				{
@@ -119,31 +131,35 @@ const sampleSchema: ResturaSchema = {
 					isNullable: false,
 					default: 'now()',
 					roles: [],
+					scopes: [],
 					type: 'DATETIME'
 				},
-				{ name: 'modifiedOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME' },
+				{ name: 'modifiedOn', isNullable: false, default: 'now()', roles: [], scopes: [], type: 'DATETIME' },
 				{
 					roles: [],
 					name: 'firstName',
 					type: 'VARCHAR',
 					length: 30,
-					isNullable: false
+					isNullable: false,
+					scopes: []
 				},
-				{ roles: [], name: 'lastName', type: 'VARCHAR', length: 30, isNullable: false },
+				{ roles: [], name: 'lastName', type: 'VARCHAR', length: 30, isNullable: false, scopes: [] },
 				{
 					roles: [],
 					name: 'companyId',
 					type: 'BIGINT',
 					isNullable: false,
-					comment: 'Foreign key to company(id)'
+					comment: 'Foreign key to company(id)',
+					scopes: []
 				},
-				{ roles: [], name: 'password', type: 'VARCHAR', length: 70, isNullable: false },
+				{ roles: [], name: 'password', type: 'VARCHAR', length: 70, isNullable: false, scopes: [] },
 				{
 					roles: [],
 					name: 'email',
 					type: 'VARCHAR',
 					length: 100,
-					isNullable: false
+					isNullable: false,
+					scopes: []
 				},
 				{
 					roles: [],
@@ -151,52 +167,59 @@ const sampleSchema: ResturaSchema = {
 					type: 'ENUM',
 					isNullable: false,
 					value: "'admin','user'",
-					default: "'user'"
+					default: "'user'",
+					scopes: []
 				},
 				{
 					roles: [],
 					name: 'permissionLogin',
 					type: 'BOOLEAN',
 					isNullable: false,
-					default: 'true'
+					default: 'true',
+					scopes: []
 				},
-				{ roles: [], name: 'lastLoginOn', type: 'DATETIME', isNullable: true },
+				{ roles: [], name: 'lastLoginOn', type: 'DATETIME', isNullable: true, scopes: [] },
 				{
 					roles: [],
 					name: 'phone',
 					type: 'VARCHAR',
 					length: 30,
-					isNullable: true
+					isNullable: true,
+					scopes: []
 				},
 				{
 					roles: [],
 					name: 'loginDisabledOn',
 					type: 'DATETIME',
 					isNullable: true,
-					comment: 'When user was disabled'
+					comment: 'When user was disabled',
+					scopes: []
 				},
-				{ roles: [], name: 'passwordResetGuid', type: 'VARCHAR', length: 100, isNullable: true },
+				{ roles: [], name: 'passwordResetGuid', type: 'VARCHAR', length: 100, isNullable: true, scopes: [] },
 				{
 					roles: [],
 					name: 'verifyEmailPin',
 					type: 'MEDIUMINT',
-					isNullable: true
+					isNullable: true,
+					scopes: []
 				},
-				{ roles: [], name: 'verifyEmailPinExpiresOn', type: 'DATETIME', isNullable: true },
+				{ roles: [], name: 'verifyEmailPinExpiresOn', type: 'DATETIME', isNullable: true, scopes: [] },
 				{
 					roles: [],
 					name: 'accountStatus',
 					type: 'ENUM',
 					isNullable: false,
 					value: "'banned','view_only','active'",
-					default: "'view_only'"
+					default: "'view_only'",
+					scopes: []
 				},
 				{
 					roles: [],
 					name: 'passwordResetExpiresOn',
 					type: 'DATETIME',
 					isNullable: true,
-					comment: 'When guid is no longer valid'
+					comment: 'When guid is no longer valid',
+					scopes: []
 				},
 				{
 					roles: [],
@@ -204,14 +227,16 @@ const sampleSchema: ResturaSchema = {
 					type: 'ENUM',
 					isNullable: false,
 					value: "'verify_email','complete'",
-					default: "'verify_email'"
+					default: "'verify_email'",
+					scopes: []
 				},
 				{
 					roles: [],
 					name: 'pendingEmail',
 					type: 'VARCHAR',
 					length: 100,
-					isNullable: true
+					isNullable: true,
+					scopes: []
 				}
 			],
 			checkConstraints: [],
@@ -256,6 +281,7 @@ const sampleSchema: ResturaSchema = {
 				}
 			],
 			roles: [],
+			scopes: [],
 			notify: ['firstName', 'lastName', 'email', 'role', 'phone', 'accountStatus', 'onboardingStatus']
 		}
 	],
@@ -273,6 +299,7 @@ const sampleSchema: ResturaSchema = {
 					path: '/user/me',
 					table: 'user',
 					roles: ['user', 'admin'],
+					scopes: [],
 					request: [],
 					joins: [],
 					response: [
@@ -295,6 +322,7 @@ const sampleSchema: ResturaSchema = {
 					path: '/user/all',
 					table: 'user',
 					roles: ['user', 'admin'],
+					scopes: [],
 					request: [],
 					joins: [],
 					response: [
@@ -316,6 +344,7 @@ const sampleSchema: ResturaSchema = {
 					description: 'User login endpoint',
 					path: '/user/login',
 					roles: [],
+					scopes: [],
 					request: [
 						{
 							name: 'username',
@@ -334,7 +363,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Refreshes a Token',
 					description: 'Refresh an old, possibly expired token and returns a new token.',
 					path: '/user/refresh-token',
-					roles: []
+					roles: [],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -346,7 +376,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Change Email Request',
 					description: 'Request to change email. Sends a verification email with pin',
 					path: '/user/change-email',
-					roles: ['admin', 'user']
+					roles: ['admin', 'user'],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -356,7 +387,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Commit Email Change',
 					description: 'Commits an email change with a pin',
 					path: '/user/change-email/commit',
-					roles: ['admin', 'user']
+					roles: ['admin', 'user'],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -389,7 +421,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Create User',
 					description: 'Creates a user',
 					path: '/user',
-					roles: ['admin']
+					roles: ['admin'],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -422,7 +455,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Update User',
 					description: 'Update an existing user.',
 					path: '/user',
-					roles: ['admin']
+					roles: ['admin'],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -431,6 +465,7 @@ const sampleSchema: ResturaSchema = {
 					description: 'User logout endpoint',
 					path: '/user/logout',
 					roles: ['admin', 'user'],
+					scopes: [],
 					request: [],
 					responseType: 'boolean'
 				},
@@ -449,7 +484,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Check Available',
 					description: 'Checks if a given username or email or both are available or not',
 					path: '/user/check-available',
-					roles: []
+					roles: [],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -461,7 +497,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Verify User Password',
 					description: 'Verifies a user password to get past security checkpoints',
 					path: '/user/verify-password',
-					roles: ['admin', 'athlete', 'fan', 'recruiter']
+					roles: ['admin', 'athlete', 'fan', 'recruiter'],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -471,7 +508,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Resend Verify Email Pin',
 					description: 'Resend the email that sends out the verify email pin',
 					path: '/user/resend-verify-email',
-					roles: ['admin', 'athlete', 'fan', 'recruiter']
+					roles: ['admin', 'athlete', 'fan', 'recruiter'],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -481,7 +519,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Forgot Password',
 					description: 'Sends a forgot password request',
 					path: '/user/forgot-password',
-					roles: []
+					roles: [],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -498,7 +537,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Change Password',
 					description: 'Changes a password of the user',
 					path: '/user/change-password',
-					roles: ['admin', 'user']
+					roles: ['admin', 'user'],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -513,9 +553,10 @@ const sampleSchema: ResturaSchema = {
 					],
 					method: 'POST',
 					name: 'Reset Password',
-					description: 'Resets a password using a reset password guid',
+					description: 'Resets a password with a guid',
 					path: '/user/reset-password',
-					roles: []
+					roles: [],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -525,7 +566,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Verify Email',
 					description: 'Verifies an email given a pin',
 					path: '/user/verify-email',
-					roles: ['admin', 'user']
+					roles: ['admin', 'user'],
+					scopes: []
 				},
 				{
 					type: 'CUSTOM_ONE',
@@ -537,7 +579,8 @@ const sampleSchema: ResturaSchema = {
 					name: 'Delete Me',
 					description: "Deletes the user that calls this. This is a post so we don't show password on url.",
 					path: '/user/delete/me',
-					roles: ['admin', 'user']
+					roles: ['admin', 'user'],
+					scopes: []
 				},
 				{
 					type: 'ONE',
@@ -547,6 +590,7 @@ const sampleSchema: ResturaSchema = {
 					path: '/user/me',
 					table: 'user',
 					roles: ['user', 'admin'],
+					scopes: [],
 					request: [
 						{
 							name: 'firstName',
@@ -600,13 +644,70 @@ const sampleSchema: ResturaSchema = {
 					name: 'Get Weather Data',
 					description: 'Gets the weather data from openweather.org',
 					path: '/weather',
-					roles: ['user', 'admin']
+					roles: ['user', 'admin'],
+					scopes: []
+				},
+				{
+					type: 'CUSTOM_ONE',
+					responseType: 'boolean',
+					request: [
+						{
+							name: 'id',
+							required: true,
+							validator: [{ type: 'TYPE_CHECK', value: 'string' }]
+						}
+					],
+					method: 'GET',
+					name: 'Delete User',
+					description: 'Deletes a user',
+					path: '/user',
+					roles: ['admin'],
+					scopes: []
+				},
+				{
+					type: 'ONE',
+					method: 'PATCH',
+					name: 'Update User',
+					description: 'Update an existing user.',
+					path: '/user',
+					table: 'user',
+					roles: ['admin'],
+					scopes: [],
+					orderBy: {
+						tableName: 'user',
+						columnName: 'id',
+						order: 'DESC'
+					},
+					request: [],
+					joins: [],
+					response: [
+						{
+							name: 'id',
+							type: 'user',
+							selector: 'user.id'
+						}
+					],
+					assignments: [
+						{
+							name: 'id',
+							value: 'id'
+						}
+					],
+					where: [
+						{
+							tableName: 'user',
+							columnName: 'id',
+							operator: '=',
+							value: 'id'
+						}
+					]
 				}
 			]
 		}
 	],
 	globalParams: ['companyId', 'userId'],
 	roles: ['admin', 'user', 'anonymous'],
+	scopes: [],
 	customTypes: [
 		'export interface FilteredUser {    id: number;\tcompanyId: number;\tfirstName: string;\tlastName: string;\temail: string;\trole: string;\tphone: string;\tlastLoginOn: string;}export interface AuthResponse {    token: string;    tokenExp: string;    refreshToken: string;    refreshTokenExp: string;}export interface WeatherResponse {    currentTemperatureF: number;    sunrise: string;    sunset: string;    pressure: number;    humidityPercent: number;    windSpeedMph: number;    windDirection: string;    tomorrowHighF: number;    tomorrowLowF: number;}'
 	]
@@ -620,6 +721,7 @@ const patchUserClearGuidRouteData: RouteData = {
 	path: '/user/clear-password-reset-guid',
 	table: 'user',
 	roles: ['user', 'admin'],
+	scopes: [],
 	orderBy: {
 		columnName: 'lastName',
 		order: 'DESC',
@@ -645,6 +747,7 @@ const patchUserRouteData: RouteData = {
 	path: '/user/me',
 	table: 'user',
 	roles: ['user', 'admin'],
+	scopes: [],
 	orderBy: {
 		columnName: 'lastName',
 		order: 'DESC',
@@ -702,6 +805,7 @@ const deleteUserRouteData: StandardRouteData = {
 	path: '/user/me',
 	table: 'user',
 	roles: ['user', 'admin'],
+	scopes: [],
 	request: [
 		{
 			name: 'id',
@@ -727,6 +831,7 @@ const createOrderRouteData: RouteData = {
 	path: '/order',
 	table: 'order',
 	roles: ['user', 'admin'],
+	scopes: [],
 	orderBy: {
 		columnName: 'id',
 		order: 'DESC',
@@ -762,6 +867,7 @@ const deleteOrderRouteData: RouteData = {
 	path: '/order',
 	table: 'order',
 	roles: ['user', 'admin'],
+	scopes: [],
 	orderBy: {
 		columnName: 'id',
 		order: 'DESC',
@@ -797,6 +903,7 @@ const getAllRouteData: RouteData = {
 	path: '/user/all',
 	table: 'user',
 	roles: ['user', 'admin'],
+	scopes: [],
 	request: [],
 	joins: [],
 	response: [
@@ -903,6 +1010,7 @@ describe('PsqlEngine', function () {
 			const psqlTransaction = getPsqlTransaction();
 			const result = await psqlTransaction.runQuery(`SELECT * FROM "user" WHERE id = ANY(?);`, [[1, 2, 3]], {
 				role: 'admin',
+				scopes: [],
 				host: 'google.com',
 				ipAddress: '1.1.1.1'
 			});
@@ -1305,6 +1413,7 @@ EXECUTE FUNCTION notify_user_delete();
 			};
 			const requesterDetails: RequesterDetails = {
 				role: 'admin',
+				scopes: [],
 				host: 'google.com',
 				ipAddress: '1.1.1.1',
 				userId: 1
@@ -1413,6 +1522,7 @@ EXECUTE FUNCTION notify_user_delete();
 				};
 				const requesterDetails: RequesterDetails = {
 					role: 'admin',
+					scopes: [],
 					host: 'google.com',
 					ipAddress: '1.1.1.1',
 					userId: 1
@@ -1444,6 +1554,7 @@ EXECUTE FUNCTION notify_user_delete();
 			const updateRequest: RsRequest = {
 				requesterDetails: {
 					role: 'admin',
+					scopes: [],
 					host: 'google.com',
 					ipAddress: '1.1.1.1',
 					userId: 1
@@ -1466,6 +1577,7 @@ EXECUTE FUNCTION notify_user_delete();
 			const updateRequest: RsRequest = {
 				requesterDetails: {
 					role: 'admin',
+					scopes: [],
 					host: 'google.com',
 					ipAddress: '1.1.1.1',
 					userId: 1
@@ -1487,6 +1599,7 @@ EXECUTE FUNCTION notify_user_delete();
 			const createRequest: RsRequest = {
 				requesterDetails: {
 					role: 'admin',
+					scopes: [],
 					host: 'google.com',
 					ipAddress: '1.1.1.1',
 					userId: 1
@@ -1541,6 +1654,7 @@ EXECUTE FUNCTION notify_user_delete();
 				const createRequest: RsRequest = {
 					requesterDetails: {
 						role: 'admin',
+						scopes: [],
 						host: 'google.com',
 						ipAddress: '1.1.1.1',
 						userId: 1
@@ -1558,6 +1672,7 @@ EXECUTE FUNCTION notify_user_delete();
 				const deleteRequest: RsRequest = {
 					requesterDetails: {
 						role: 'admin',
+						scopes: [],
 						host: 'google.com',
 						ipAddress: '1.1.1.1',
 						userId: 1
@@ -1573,6 +1688,7 @@ EXECUTE FUNCTION notify_user_delete();
 			const createRequest: RsRequest = {
 				requesterDetails: {
 					role: 'admin',
+					scopes: [],
 					host: 'google.com',
 					ipAddress: '1.1.1.1',
 					userId: 1

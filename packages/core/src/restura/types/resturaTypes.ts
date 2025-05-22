@@ -40,16 +40,17 @@ export interface PageQuery {
 	[key: string]: string | number | boolean | object | null | undefined; // Other keys with any JSON-compatible value type
 }
 
-export interface AuthenticationUserDetails {
+export interface AuthenticatedRequesterDetails {
 	role: string;
+	scopes: string[];
 	userId?: number;
 	[key: string]: string | number | boolean | object | null | undefined; // Other keys with any JSON-compatible value type
 }
 
-export type ValidAuthenticationCallback = (userDetails: AuthenticationUserDetails) => void;
+export type OnValidAuthenticationCallback = (authenticatedRequesterDetails: AuthenticatedRequesterDetails) => void;
 
 export type AuthenticateHandler = (
 	req: RsRequest<unknown>,
 	res: RsResponse<unknown>,
-	onValid: ValidAuthenticationCallback
+	onValid: OnValidAuthenticationCallback
 ) => Promise<void>;

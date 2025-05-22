@@ -25,6 +25,7 @@ const { Client, types } = pg;
 
 const systemUser: RequesterDetails = {
 	role: '',
+	scopes: [],
 	host: '',
 	ipAddress: '',
 	isSystemUser: true
