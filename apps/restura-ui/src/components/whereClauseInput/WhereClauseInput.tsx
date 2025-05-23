@@ -122,6 +122,7 @@ const WhereClauseInput: React.FC<WhereClauseInputProps> = (props) => {
 									{ label: '>=', value: '>=' },
 									{ label: '!=', value: '!=' },
 									{ label: 'LIKE', value: 'LIKE' },
+									{ label: 'NOT LIKE', value: 'NOT LIKE' },
 									{ label: 'IN', value: 'IN' },
 									{ label: 'NOT IN', value: 'NOT IN' },
 									{ label: 'STARTS WITH', value: 'STARTS WITH' },

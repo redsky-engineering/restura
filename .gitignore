@@ -14,3 +14,4 @@ packages/core/coverage
 
 .nx/cache
 .nx/workspace-data
+.yalc

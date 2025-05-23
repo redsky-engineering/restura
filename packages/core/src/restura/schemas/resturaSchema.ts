@@ -27,7 +27,22 @@ const whereDataSchema = z
 		tableName: z.string().optional(),
 		columnName: z.string().optional(),
 		operator: z
-			.enum(['=', '<', '>', '<=', '>=', '!=', 'LIKE', 'IN', 'NOT IN', 'STARTS WITH', 'ENDS WITH', 'IS', 'IS NOT'])
+			.enum([
+				'=',
+				'<',
+				'>',
+				'<=',
+				'>=',
+				'!=',
+				'LIKE',
+				'NOT LIKE',
+				'IN',
+				'NOT IN',
+				'STARTS WITH',
+				'ENDS WITH',
+				'IS',
+				'IS NOT'
+			])
 			.optional(),
 		value: z.string().or(z.number()).optional(),
 		custom: z.string().optional(),

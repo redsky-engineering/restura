@@ -610,21 +610,26 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 				);
 
 			let operator = item.operator;
+			let value = item.value;
+
 			if (operator === 'LIKE') {
-				item.value = `'%${item.value}%'`;
+				value = `'%${value}%'`;
+			} else if (operator === 'NOT LIKE') {
+				value = `'%${value}%'`;
 			} else if (operator === 'STARTS WITH') {
 				operator = 'LIKE';
-				item.value = `'${item.value}%'`;
+				value = `'${value}%'`;
 			} else if (operator === 'ENDS WITH') {
 				operator = 'LIKE';
-				item.value = `'%${item.value}'`;
+				value = `'%${value}'`;
 			}
 
-			const replacedValue = this.replaceParamKeywords(item.value, routeData, req, sqlParams);
+			const replacedValue = this.replaceParamKeywords(value, routeData, req, sqlParams);
 			whereClause += `\t${item.conjunction || ''} "${item.tableName}"."${item.columnName}" ${operator.replace('LIKE', 'ILIKE')} ${
 				['IN', 'NOT IN'].includes(operator) ? `(${replacedValue})` : replacedValue
 			}\n`;
 		});
+
 		const data = req.data as PageQuery;
 		if (routeData.type === 'PAGED' && !!data?.filter) {
 			let statement = data.filter.replace(/\$[a-zA-Z][a-zA-Z0-9_]+/g, (value: string) => {

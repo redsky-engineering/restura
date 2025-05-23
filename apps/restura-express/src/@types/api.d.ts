@@ -201,6 +201,37 @@ declare namespace Api {
 					}
 				}
 			}
+			export namespace All {
+				// like test
+				//
+				export namespace Get {
+					export interface Req {}
+					export interface Res {
+						id: number;
+						createdOn: string;
+						modifiedOn: string;
+						firstName: string;
+						lastName: string;
+						companyId: number;
+						password: string;
+						email: string;
+						role: 'admin' | 'user';
+						permissionLogin: boolean;
+						lastLoginOn: string | null;
+						phone: string | null;
+						loginDisabledOn: string | null;
+						passwordResetGuid: string | null;
+						verifyEmailPin: number | null;
+						verifyEmailPinExpiresOn: string | null;
+						accountStatus: 'banned' | 'view_only' | 'active';
+						passwordResetExpiresOn: string | null;
+						onboardingStatus: 'verify_email' | 'complete';
+						pendingEmail: string | null;
+						testAge: number;
+						metadata: object;
+					}
+				}
+			}
 		}
 		export namespace Weather {
 			// Get Weather Data
