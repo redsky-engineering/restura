@@ -151,6 +151,7 @@ declare namespace Restura {
 			| '>='
 			| '!='
 			| 'LIKE'
+			| 'NOT LIKE'
 			| 'IN'
 			| 'NOT IN'
 			| 'STARTS WITH'
