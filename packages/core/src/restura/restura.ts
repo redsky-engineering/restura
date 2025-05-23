@@ -77,7 +77,7 @@ class ResturaEngine {
 		this.multerCommonUpload = getMulterUpload(this.resturaConfig.fileTempCachePath);
 		new TempCache(this.resturaConfig.fileTempCachePath);
 		this.psqlConnectionPool = psqlConnectionPool;
-		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool, true);
+		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool, true, this.resturaConfig.scratchDatabaseSuffix);
 
 		await customApiFactory.loadApiFiles(this.resturaConfig.customApiFolderPath);
 

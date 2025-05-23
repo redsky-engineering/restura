@@ -10,6 +10,7 @@ export const resturaConfigSchema = z.object({
 	schemaFilePath: z.string().default(process.cwd() + '/restura.schema.json'),
 	customApiFolderPath: z.string().default(process.cwd() + customApiFolderPath),
 	generatedTypesPath: z.string().default(process.cwd() + '/src/@types'),
-	fileTempCachePath: z.string().optional()
+	fileTempCachePath: z.string().optional(),
+	scratchDatabaseSuffix: z.string().optional()
 });
 export type ResturaConfigSchema = z.infer<typeof resturaConfigSchema>;

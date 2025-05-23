@@ -392,7 +392,7 @@ EXECUTE FUNCTION notify_user_delete();
 	});
 	describe('PsqlEngine createNestedSelect', () => {
 		xit('should call createNestedSelect', () => {
-			// const psqlEngine = new PsqlEngine({} as PsqlPool);
+			// const psqlEngine = new PsqlEngine(psqlPool);
 			// const responseData:ResponseData = {
 			// 	name: 'name',
 			// 	selector: 'company',
@@ -817,7 +817,7 @@ EXECUTE FUNCTION notify_user_delete();
 		});
 	});
 	describe('PsqlEngine generateGroupBy', () => {
-		const psqlEngine = new PsqlEngine({} as PsqlPool);
+		const psqlEngine = new PsqlEngine(psqlPool);
 		it('should format the GROUP BY', () => {
 			const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
 			routeData.groupBy = {
@@ -841,7 +841,7 @@ EXECUTE FUNCTION notify_user_delete();
 	});
 
 	describe('PsqlEngine generateOrderBy', () => {
-		const psqlEngine = new PsqlEngine({} as PsqlPool);
+		const psqlEngine = new PsqlEngine(psqlPool);
 		it('should format the ORDER BY', () => {
 			const orderBy = psqlEngine['generateOrderBy'](basicAdminRequest, patchUserRouteData);
 			expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "user"."lastName" DESC`);
@@ -876,7 +876,7 @@ EXECUTE FUNCTION notify_user_delete();
 
 	describe('PsqlEngine createNestedSelect', () => {
 		it('should call createNestedSelect twice to test recursion', () => {
-			const psqlEngine = new PsqlEngine({} as PsqlPool);
+			const psqlEngine = new PsqlEngine(psqlPool);
 			const responseData: ResponseData = {
 				name: 'firstName',
 				selector: 'user.firstName',
@@ -928,7 +928,7 @@ EXECUTE FUNCTION notify_user_delete();
 			expect(trimRedundantWhitespace(response)).to.equal(trimRedundantWhitespace(expected));
 		});
 		it('should call createNestedSelect twice to test recursion with a where clause', () => {
-			const psqlEngine = new PsqlEngine({} as PsqlPool);
+			const psqlEngine = new PsqlEngine(psqlPool);
 			const responseData: ResponseData = {
 				name: 'firstName',
 				selector: 'user.firstName',
@@ -987,7 +987,7 @@ EXECUTE FUNCTION notify_user_delete();
 			expect(trimRedundantWhitespace(response)).to.equal(trimRedundantWhitespace(expected));
 		});
 		it('should call createNestedSelect', () => {
-			const psqlEngine = new PsqlEngine({} as PsqlPool);
+			const psqlEngine = new PsqlEngine(psqlPool);
 			const responseData: ResponseData = {
 				name: 'firstName',
 				selector: 'user.firstName',
@@ -1020,7 +1020,7 @@ EXECUTE FUNCTION notify_user_delete();
 			expect(trimRedundantWhitespace(response)).to.equal(trimRedundantWhitespace(expected));
 		});
 		it('should call createNestedSelect with a where clause', () => {
-			const psqlEngine = new PsqlEngine({} as PsqlPool);
+			const psqlEngine = new PsqlEngine(psqlPool);
 			const responseData: ResponseData = {
 				name: 'firstName',
 				selector: 'user.firstName',
@@ -1060,7 +1060,7 @@ EXECUTE FUNCTION notify_user_delete();
 			expect(trimRedundantWhitespace(response)).to.equal(trimRedundantWhitespace(expected));
 		});
 		it('should call createNestedSelect with a where clause and column name', () => {
-			const psqlEngine = new PsqlEngine({} as PsqlPool);
+			const psqlEngine = new PsqlEngine(psqlPool);
 			const responseData: ResponseData = {
 				name: 'firstName',
 				selector: 'user.firstName',
@@ -1102,7 +1102,7 @@ EXECUTE FUNCTION notify_user_delete();
 	});
 
 	describe('PsqlEngine generateJoinStatements', () => {
-		const psqlEngine = new PsqlEngine({} as PsqlPool);
+		const psqlEngine = new PsqlEngine(psqlPool);
 		it('should generateJoinStatements', () => {
 			const joins: JoinData[] = [
 				{
@@ -1135,7 +1135,7 @@ EXECUTE FUNCTION notify_user_delete();
 		});
 	});
 	describe('PsqlEngine generateWhereClause', () => {
-		const psqlEngine = new PsqlEngine({} as PsqlPool);
+		const psqlEngine = new PsqlEngine(psqlPool);
 
 		it('should format the where clause for STARTS WITH', () => {
 			const whereData: WhereData[] = [

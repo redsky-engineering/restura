@@ -7,7 +7,8 @@
 	},
 	// The @restura/express configuration
 	restura: {
-		authToken: '12345'
+		authToken: '12345',
+		scratchDatabaseSuffix: 'josh'
 	},
 	// The @restura/logger configuration
 	logger: {

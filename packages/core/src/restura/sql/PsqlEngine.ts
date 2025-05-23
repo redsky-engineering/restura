@@ -34,10 +34,12 @@ const systemUser: RequesterDetails = {
 export class PsqlEngine extends SqlEngine {
 	setupTriggerListeners: Promise<void> | undefined;
 	private triggerClient: ClientType | undefined;
+	private scratchDbName: string = '';
 
 	constructor(
 		private psqlConnectionPool: PsqlPool,
-		shouldListenForDbTriggers: boolean = false
+		shouldListenForDbTriggers: boolean = false,
+		scratchDatabaseSuffix: string = ''
 	) {
 		super();
 
@@ -45,6 +47,8 @@ export class PsqlEngine extends SqlEngine {
 		if (shouldListenForDbTriggers) {
 			this.setupTriggerListeners = this.listenForDbTriggers();
 		}
+
+		this.scratchDbName = `${psqlConnectionPool.poolConfig.database}_scratch${scratchDatabaseSuffix ? `_${scratchDatabaseSuffix}` : ''}`;
 	}
 	async close() {
 		if (this.triggerClient) {
@@ -204,27 +208,23 @@ export class PsqlEngine extends SqlEngine {
 		return sqlStatements.join('\n\n');
 	}
 
-	private async getScratchPool(): Promise<PsqlPool> {
+	private async getNewPublicSchemaAndScratchPool(): Promise<PsqlPool> {
 		const scratchDbExists = await this.psqlConnectionPool.runQuery<DynamicObject>(
 			`SELECT *
              FROM pg_database
-             WHERE datname = '${this.psqlConnectionPool.poolConfig.database}_scratch';`,
+             WHERE datname = '${this.scratchDbName}';`,
 			[],
 			systemUser
 		);
 		if (scratchDbExists.length === 0) {
-			await this.psqlConnectionPool.runQuery(
-				`CREATE DATABASE ${this.psqlConnectionPool.poolConfig.database}_scratch;`,
-				[],
-				systemUser
-			);
+			await this.psqlConnectionPool.runQuery(`CREATE DATABASE ${this.scratchDbName};`, [], systemUser);
 		}
 
 		const scratchPool = new PsqlPool({
 			host: this.psqlConnectionPool.poolConfig.host,
 			port: this.psqlConnectionPool.poolConfig.port,
 			user: this.psqlConnectionPool.poolConfig.user,
-			database: this.psqlConnectionPool.poolConfig.database + '_scratch',
+			database: this.scratchDbName,
 			password: this.psqlConnectionPool.poolConfig.password,
 			max: this.psqlConnectionPool.poolConfig.max,
 			idleTimeoutMillis: this.psqlConnectionPool.poolConfig.idleTimeoutMillis,
@@ -237,10 +237,11 @@ export class PsqlEngine extends SqlEngine {
 			systemUser
 		);
 		const schemaComment = await this.psqlConnectionPool.runQuery<{ description: string }>(
-			`SELECT pg_description.description
-                                                                                               FROM pg_description
-                                                                                                        JOIN pg_namespace ON pg_namespace.oid = pg_description.objoid
-                                                                                   WHERE pg_namespace.nspname = 'public';`,
+			`
+			SELECT pg_description.description
+			FROM pg_description
+			JOIN pg_namespace ON pg_namespace.oid = pg_description.objoid
+			WHERE pg_namespace.nspname = 'public';`,
 			[],
 			systemUser
 		);
@@ -255,7 +256,7 @@ export class PsqlEngine extends SqlEngine {
 	}
 
 	async diffDatabaseToSchema(schema: ResturaSchema): Promise<string> {
-		const scratchPool = await this.getScratchPool();
+		const scratchPool = await this.getNewPublicSchemaAndScratchPool();
 		await this.createDatabaseFromSchema(schema, scratchPool);
 
 		const originalClient = new Client({
@@ -266,7 +267,7 @@ export class PsqlEngine extends SqlEngine {
 			port: this.psqlConnectionPool.poolConfig.port
 		});
 		const scratchClient = new Client({
-			database: this.psqlConnectionPool.poolConfig.database + '_scratch',
+			database: this.scratchDbName,
 			user: this.psqlConnectionPool.poolConfig.user,
 			password: this.psqlConnectionPool.poolConfig.password,
 			host: this.psqlConnectionPool.poolConfig.host,
