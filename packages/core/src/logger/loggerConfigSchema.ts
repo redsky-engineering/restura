@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 export const loggerConfigSchema = z.object({
 	level: z.enum(['info', 'warn', 'error', 'debug', 'silly']).default('info')

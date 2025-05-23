@@ -4,8 +4,6 @@ import winston from 'winston';
 import { format } from 'logform';
 import { loggerConfigSchema } from './loggerConfigSchema.js';
 
-const loggerConfig = config.validate('logger', loggerConfigSchema);
-
 const consoleFormat = format.combine(
 	format.timestamp({
 		format: 'YYYY-MM-DD HH:mm:ss.sss'
@@ -18,8 +16,9 @@ const consoleFormat = format.combine(
 	})
 );
 
+// Create a default logger that works immediately
 const logger = winston.createLogger({
-	level: loggerConfig.level,
+	level: 'info',
 	format: format.combine(
 		format.timestamp({
 			format: 'YYYY-MM-DD HH:mm:ss.sss'
@@ -27,17 +26,22 @@ const logger = winston.createLogger({
 		format.errors({ stack: true }),
 		format.json()
 	),
-	//defaultMeta: { service: 'user-service' },
-	transports: [
-		//
-		// - Write to all logs with level `info` and below to `combined.log`
-		// - Write all logs error (and below) to `error.log`.
-		// - Write all logs to standard out.
-		//
-		// new winston.transports.File({ filename: 'error.log', level: 'error' }),
-		// new winston.transports.File({ filename: 'combined.log' }),
-		new winston.transports.Console({ format: consoleFormat })
-	]
+	transports: [new winston.transports.Console({ format: consoleFormat })]
 });
+
+// Since config.validate is async because it loads the config from an esm file,
+// we need to wait for it to complete before we can update the logger level.
+// This could cause an issue if you log immediate after its first imported but
+// I don't think it's a big deal and could not find a better solution.
+config
+	.validate('logger', loggerConfigSchema)
+	.then((loggerConfig) => {
+		if (loggerConfig.level) {
+			logger.level = loggerConfig.level;
+		}
+	})
+	.catch((error) => {
+		logger.error('Failed to load logger config:', error);
+	});
 
 export { logger };

@@ -1,8 +1,10 @@
 export * from './logger/logger.js';
+export { type LoggerConfigSchema } from './logger/loggerConfigSchema.js';
 export * from './restura/eventManager.js';
 export { default as eventManager } from './restura/eventManager.js';
 export * from './restura/restura.js';
 export * from './restura/RsError.js';
+export { type ResturaConfigSchema } from './restura/schemas/resturaConfigSchema.js';
 export { default as filterPsqlParser } from './restura/sql/filterPsqlParser.js';
 export * from './restura/sql/PsqlConnection.js';
 export * from './restura/sql/PsqlEngine.js';

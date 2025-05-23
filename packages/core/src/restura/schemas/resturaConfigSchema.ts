@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 const isTsx = process.argv[1]?.endsWith('.ts');
 const isTsNode = process.env.TS_NODE_DEV || process.env.TS_NODE_PROJECT;

@@ -288,7 +288,7 @@ importers:
                 version: 3.17.0
             zod:
                 specifier: ^3.25.17
-                version: 3.25.20
+                version: 3.25.23
         devDependencies:
             '@types/bluebird':
                 specifier: ^3.5.42
@@ -332,12 +332,9 @@ importers:
 
     packages/internal:
         dependencies:
-            json5:
-                specifier: ^2.2.3
-                version: 2.2.3
             zod:
-                specifier: ^3.24.2
-                version: 3.25.20
+                specifier: ^3.25.23
+                version: 3.25.23
         devDependencies:
             tsup:
                 specifier: ^8.4.0
@@ -4541,10 +4538,10 @@ packages:
         engines: { node: '>=0.10.0' }
         hasBin: true
 
-    electron-to-chromium@1.5.155:
+    electron-to-chromium@1.5.157:
         resolution:
             {
-                integrity: sha512-ps5KcGGmwL8VaeJlvlDlu4fORQpv3+GIcF5I3f9tUKUlJ/wsysh6HU8P5L1XWRYeXfA0oJd4PyM8ds8zTFf6Ng==
+                integrity: sha512-/0ybgsQd1muo8QlnuTpKwtl0oX5YMlUGbm8xyqgDU00motRkKFFbUJySAQBWcY79rVqNLWIWa87BGVGClwAB2w==
             }
 
     electron-to-chromium@1.5.38:
@@ -9674,10 +9671,10 @@ packages:
             }
         engines: { node: '>=18' }
 
-    zod@3.25.20:
+    zod@3.25.23:
         resolution:
             {
-                integrity: sha512-z03fqpTMDF1G02VLKUMt6vyACE7rNWkh3gpXVHgPTw28NPtDFRGvcpTtPwn2kMKtQ0idtYJUTxchytmnqYswcw==
+                integrity: sha512-Od2bdMosahjSrSgJtakrwjMDb1zM1A3VIHCPGveZt/3/wlrTWBya2lmEh2OYe4OIu8mPTmmr0gnLHIWQXdtWBg==
             }
 
 snapshots:
@@ -11944,7 +11941,7 @@ snapshots:
     browserslist@4.24.5:
         dependencies:
             caniuse-lite: 1.0.30001718
-            electron-to-chromium: 1.5.155
+            electron-to-chromium: 1.5.157
             node-releases: 2.0.19
             update-browserslist-db: 1.1.3(browserslist@4.24.5)
 
@@ -12421,7 +12418,7 @@ snapshots:
         dependencies:
             jake: 10.9.2
 
-    electron-to-chromium@1.5.155: {}
+    electron-to-chromium@1.5.157: {}
 
     electron-to-chromium@1.5.38: {}
 
@@ -13841,7 +13838,7 @@ snapshots:
 
     jest-worker@27.5.1:
         dependencies:
-            '@types/node': 14.18.63
+            '@types/node': 22.15.21
             merge-stream: 2.0.0
             supports-color: 8.1.1
 
@@ -15969,4 +15966,4 @@ snapshots:
 
     yoctocolors-cjs@2.1.2: {}
 
-    zod@3.25.20: {}
+    zod@3.25.23: {}

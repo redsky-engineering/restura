@@ -72,7 +72,7 @@ class ResturaEngine {
 		psqlConnectionPool: PsqlPool
 	): Promise<void> {
 		// Try to load config first. If it fails, we can't continue.
-		this.resturaConfig = config.validate('restura', resturaConfigSchema) as ResturaConfigSchema;
+		this.resturaConfig = await config.validate('restura', resturaConfigSchema);
 
 		this.multerCommonUpload = getMulterUpload(this.resturaConfig.fileTempCachePath);
 		new TempCache(this.resturaConfig.fileTempCachePath);
@@ -281,12 +281,12 @@ class ResturaEngine {
 	}
 
 	@boundMethod
-	private async getSchema(req: express.Request, res: express.Response) {
+	private async getSchema(_req: express.Request, res: express.Response) {
 		res.send({ data: this.schema });
 	}
 
 	@boundMethod
-	private async getSchemaAndTypes(req: express.Request, res: express.Response) {
+	private async getSchemaAndTypes(_req: express.Request, res: express.Response) {
 		try {
 			const schema = await this.getLatestFileSystemSchema();
 			const apiText = await apiGenerator(schema);

@@ -1,4 +1,5 @@
 import { MiscUtils } from '@redskytech/core-utils';
+// @ts-expect-error - chai is an ESM module only but we are compling for CommonJS module
 import { expect } from 'chai';
 import cloneDeep from 'lodash.clonedeep';
 import { types } from 'pg';

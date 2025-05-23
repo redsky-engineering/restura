@@ -1,6 +1,6 @@
 import type { AuthenticateHandler } from '@restura/core';
 
-const authenticationHandler: AuthenticateHandler = async (req, res, onValid) => {
+const authenticationHandler: AuthenticateHandler = async (_req, _res, onValid) => {
 	onValid({ role: 'admin', userId: 1, scopes: [] });
 };
 export default authenticationHandler;

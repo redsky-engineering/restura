@@ -1,11 +1,6 @@
 {
 	"extends": "../../tsconfig.base.json",
-	"compilerOptions": {
-		"module": "ESNext",
-		"types": ["node"],
-		"target": "es2017",
-		"allowSyntheticDefaultImports": true
-	},
+	"compilerOptions": {},
 	"include": ["."],
 	"exclude": ["dist", "build", "node_modules"]
 }

@@ -1,6 +1,6 @@
 {
 	"name": "@restura/internal",
-	"version": "0.1.1",
+	"version": "1.0.0",
 	"description": "Internal utilities for Restura",
 	"types": "./dist/index.d.ts",
 	"repository": "https://github.com/redsky-engineering/restura",
@@ -10,9 +10,13 @@
 		"dist/**"
 	],
 	"main": "./dist/index.js",
+	"module": "./dist/index.mjs",
 	"exports": {
-		"import": "./dist/index.mjs",
-		"require": "./dist/index.js"
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		}
 	},
 	"keywords": [
 		"restura",
@@ -32,7 +36,6 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"json5": "^2.2.3",
-		"zod": "^3.24.2"
+		"zod": "^3.25.23"
 	}
 }

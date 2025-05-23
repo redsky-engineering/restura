@@ -1,6 +1,6 @@
 {
 	"name": "@restura/core",
-	"version": "0.2.0",
+	"version": "1.0.0",
 	"description": "Restura core utilities for No Code APIs",
 	"types": "./dist/index.d.ts",
 	"repository": "https://github.com/redsky-engineering/restura",
@@ -10,9 +10,13 @@
 		"dist/**"
 	],
 	"main": "./dist/index.js",
+	"module": "./dist/index.mjs",
 	"exports": {
-		"import": "./dist/index.mjs",
-		"require": "./dist/index.js"
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		}
 	},
 	"keywords": [
 		"restura",
