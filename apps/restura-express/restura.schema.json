@@ -755,6 +755,45 @@
 					"scopes": [],
 					"roles": ["user", "admin"],
 					"type": "CUSTOM_ONE"
+				},
+				{
+					"assignments": [],
+					"description": "",
+					"joins": [],
+					"method": "GET",
+					"name": "like test",
+					"path": "/user/all",
+					"request": [],
+					"response": [
+						{ "name": "id", "selector": "user.id" },
+						{ "name": "createdOn", "selector": "user.createdOn" },
+						{ "name": "modifiedOn", "selector": "user.modifiedOn" },
+						{ "name": "firstName", "selector": "user.firstName" },
+						{ "name": "lastName", "selector": "user.lastName" },
+						{ "name": "companyId", "selector": "user.companyId" },
+						{ "name": "password", "selector": "user.password" },
+						{ "name": "email", "selector": "user.email" },
+						{ "name": "role", "selector": "user.role" },
+						{ "name": "permissionLogin", "selector": "user.permissionLogin" },
+						{ "name": "lastLoginOn", "selector": "user.lastLoginOn" },
+						{ "name": "phone", "selector": "user.phone" },
+						{ "name": "loginDisabledOn", "selector": "user.loginDisabledOn" },
+						{ "name": "passwordResetGuid", "selector": "user.passwordResetGuid" },
+						{ "name": "verifyEmailPin", "selector": "user.verifyEmailPin" },
+						{ "name": "verifyEmailPinExpiresOn", "selector": "user.verifyEmailPinExpiresOn" },
+						{ "name": "accountStatus", "selector": "user.accountStatus" },
+						{ "name": "passwordResetExpiresOn", "selector": "user.passwordResetExpiresOn" },
+						{ "name": "onboardingStatus", "selector": "user.onboardingStatus" },
+						{ "name": "pendingEmail", "selector": "user.pendingEmail" },
+						{ "name": "testAge", "selector": "user.testAge" },
+						{ "name": "metadata", "selector": "user.metadata" }
+					],
+					"roles": [],
+					"table": "user",
+					"type": "ARRAY",
+					"where": [
+						{ "columnName": "firstName", "operator": "NOT LIKE", "tableName": "user", "value": "bill" }
+					]
 				}
 			]
 		}

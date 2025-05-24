@@ -11,7 +11,7 @@ import CodeGenSection from './codeGenSection/CodeGenSection.js';
 
 interface RouteEditorProps {}
 
-const RouteEditor: React.FC<RouteEditorProps> = (props) => {
+const RouteEditor: React.FC<RouteEditorProps> = (_props) => {
 	const [editMode, setEditMode] = useRecoilState<EditMode>(globalState.editMode);
 
 	function renderTabHeader() {
