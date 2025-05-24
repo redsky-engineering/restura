@@ -1,5 +1,5 @@
 import { ObjectUtils } from '@redskytech/core-utils';
-import { RsError } from '../RsError';
+import { RsError } from '../RsError.js';
 import {
 	JoinData,
 	ResponseData,

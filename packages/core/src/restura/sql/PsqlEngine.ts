@@ -3,7 +3,7 @@ import getDiff from '@wmfs/pg-diff-sync';
 import pgInfo from '@wmfs/pg-info';
 import type { Client as ClientType } from 'pg';
 import pg from 'pg';
-import { RsError } from '../RsError';
+import { RsError } from '../RsError.js';
 import eventManager, { MutationType, TriggerResult } from '../eventManager.js';
 import {
 	CustomRouteData,
@@ -18,8 +18,8 @@ import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpre
 import { PageQuery } from '../types/resturaTypes.js';
 import { PsqlPool } from './PsqlPool.js';
 import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
-import SqlEngine from './SqlEngine';
-import { SqlUtils } from './SqlUtils';
+import SqlEngine from './SqlEngine.js';
+import { SqlUtils } from './SqlUtils.js';
 import filterPsqlParser from './filterPsqlParser.js';
 const { Client, types } = pg;
 

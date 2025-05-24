@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { logger } from '../../logger/logger';
-import { validatorDataSchema } from './validatorDataSchema';
+import { logger } from '../../logger/logger.js';
+import { validatorDataSchema } from './validatorDataSchema.js';
 
 // Zod schemas with strict mode
 const orderBySchema = z

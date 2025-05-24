@@ -1,5 +1,5 @@
 import { ObjectUtils } from '@redskytech/core-utils';
-import { RsError } from '../RsError';
+import { RsError } from '../RsError.js';
 import {
 	JoinData,
 	ResponseData,
@@ -9,8 +9,8 @@ import {
 	WhereData
 } from '../schemas/resturaSchema.js';
 import { DynamicObject, RsRequest } from '../types/customExpressTypes.js';
-import SqlEngine from './SqlEngine';
-import { SqlUtils } from './SqlUtils';
+import SqlEngine from './SqlEngine.js';
+import { SqlUtils } from './SqlUtils.js';
 
 function dbNow() {
 	return new Date().toISOString().slice(0, 19).replace('T', ' ');

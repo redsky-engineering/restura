@@ -1,7 +1,8 @@
 {
 	"name": "@restura/internal",
-	"version": "1.0.0",
+	"version": "1.0.0-beta.2",
 	"description": "Internal utilities for Restura",
+	"type": "module",
 	"types": "./dist/index.d.ts",
 	"repository": "https://github.com/redsky-engineering/restura",
 	"author": "Joshua Hintze",
@@ -10,12 +11,10 @@
 		"dist/**"
 	],
 	"main": "./dist/index.js",
-	"module": "./dist/index.mjs",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.mjs",
-			"require": "./dist/index.js"
+			"import": "./dist/index.js"
 		}
 	},
 	"keywords": [
