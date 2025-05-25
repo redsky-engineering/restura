@@ -27,6 +27,7 @@ const FileUploadInput: React.FC<FileUploadInputProps> = (props: FileUploadInputP
 	if (!selectedRoute || !routeData) return <></>;
 
 	if (!props.routeData) return null;
+	if (props.routeData.method === 'GET' || props.routeData.method === 'DELETE') return <></>;
 
 	// Check if we are a custom route
 	if (!SchemaService.isCustomRouteData(routeData)) console.log('Not a custom route');

@@ -1,12 +1,12 @@
-import * as React from 'react';
-import './MethodPathInput.scss';
 import { Box, InputText, Label, rsToastify, Select } from '@redskytech/framework/ui';
-import themes from '../../themes/themes.scss?export';
-import serviceFactory from '../../services/serviceFactory';
-import SchemaService, { SelectedRoute } from '../../services/schema/SchemaService';
-import { useRecoilState, useRecoilValue } from 'recoil';
-import globalState from '../../state/globalState';
+import * as React from 'react';
 import { useEffect, useState } from 'react';
+import { useRecoilState, useRecoilValue } from 'recoil';
+import SchemaService, { SelectedRoute } from '../../services/schema/SchemaService';
+import serviceFactory from '../../services/serviceFactory';
+import globalState from '../../state/globalState';
+import themes from '../../themes/themes.scss?export';
+import './MethodPathInput.scss';
 
 interface MethodPathInputProps {
 	routeData: Restura.RouteData | undefined;
@@ -79,7 +79,14 @@ const MethodPathInput: React.FC<MethodPathInputProps> = (props) => {
 
 						if (isDuplicate(props.routeData.path, newValue.value)) return;
 
-						schemaService.updateRouteData({ ...props.routeData, method: newValue.value });
+						// Handle the case where we are changing the method on a custom route to one that doesn't support file upload.
+						const updatedRouteData = { ...props.routeData, method: newValue.value };
+						if (SchemaService.isCustomRouteData(updatedRouteData)) {
+							if (newValue.value === 'GET' || newValue.value === 'DELETE') {
+								delete updatedRouteData.fileUploadType;
+							}
+						}
+						schemaService.updateRouteData(updatedRouteData);
 						setSelectedRoute({ ...selectedRoute, method: newValue.value });
 					}}
 				/>
