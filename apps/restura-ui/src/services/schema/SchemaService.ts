@@ -123,6 +123,22 @@ export default class SchemaService extends Service {
 		setRecoilExternalValue<Restura.Schema | undefined>(globalState.schema, updatedSchema);
 	}
 
+	updateFileUploadType(fileUploadType: Restura.CustomRouteData['fileUploadType'] | 'NONE') {
+		let schema = getRecoilExternalValue<Restura.Schema | undefined>(globalState.schema);
+		if (!schema) return;
+		let updatedSchema = cloneDeep(schema);
+		let indices = SchemaService.getIndexesToSelectedRoute(schema);
+		const route = updatedSchema.endpoints[indices.endpointIndex].routes[indices.routeIndex];
+
+		if (!SchemaService.isCustomRouteData(route) || fileUploadType === 'NONE') {
+			// remove the file upload type
+			delete (route as Restura.CustomRouteData).fileUploadType;
+		} else {
+			route.fileUploadType = fileUploadType;
+		}
+		setRecoilExternalValue<Restura.Schema | undefined>(globalState.schema, updatedSchema);
+	}
+
 	addJoin(joinData: Restura.JoinData) {
 		let schema = getRecoilExternalValue<Restura.Schema | undefined>(globalState.schema);
 		if (!schema) return;

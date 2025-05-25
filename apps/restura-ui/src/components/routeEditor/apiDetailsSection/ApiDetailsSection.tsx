@@ -1,24 +1,25 @@
-import * as React from 'react';
-import './ApiDetailsSection.scss';
 import { Box } from '@redskytech/framework/ui';
+import cloneDeep from 'lodash.clonedeep';
+import * as React from 'react';
 import { useRecoilValue } from 'recoil';
-import globalState from '../../../state/globalState.js';
-import MethodPathInput from '../../methodPathInput/MethodPathInput';
-import RouteTypeInput from '../../routeTypeInput/RouteTypeInput';
-import PermissionInput from '../../permissionInput/PermissionInput';
-import BaseTableInput from '../../baseTableInput/BaseTableInput';
-import RequestParamInput from '../../requestParamInput/RequestParamInput';
-import RouteNameInput from '../../routeNameInput/RouteNameInput';
-import RouteDescriptionInput from '../../routeDescriptionInput/RouteDescriptionInput';
-import JoinTableInput from '../../joinTableInput/JoinTableInput';
-import WhereClauseInput from '../../whereClauseInput/WhereClauseInput';
-import GroupByInput from '../../groupByInput/GroupByInput';
-import OrderByInput from '../../orderByInput/OrderByInput';
 import useRouteData from '../../../customHooks/useRouteData';
 import SchemaService, { SelectedRoute } from '../../../services/schema/SchemaService';
-import AssignmentInput from '../../assignmentInput/AssignmentInput.js';
 import serviceFactory from '../../../services/serviceFactory.js';
-import cloneDeep from 'lodash.clonedeep';
+import globalState from '../../../state/globalState.js';
+import AssignmentInput from '../../assignmentInput/AssignmentInput.js';
+import BaseTableInput from '../../baseTableInput/BaseTableInput';
+import FileUploadInput from '../../fileUploadInput/FileUploadInput.js';
+import GroupByInput from '../../groupByInput/GroupByInput';
+import JoinTableInput from '../../joinTableInput/JoinTableInput';
+import MethodPathInput from '../../methodPathInput/MethodPathInput';
+import OrderByInput from '../../orderByInput/OrderByInput';
+import PermissionInput from '../../permissionInput/PermissionInput';
+import RequestParamInput from '../../requestParamInput/RequestParamInput';
+import RouteDescriptionInput from '../../routeDescriptionInput/RouteDescriptionInput';
+import RouteNameInput from '../../routeNameInput/RouteNameInput';
+import RouteTypeInput from '../../routeTypeInput/RouteTypeInput';
+import WhereClauseInput from '../../whereClauseInput/WhereClauseInput';
+import './ApiDetailsSection.scss';
 
 interface ApiDetailsSectionProps {}
 
@@ -51,7 +52,7 @@ const ApiDetailsSection: React.FC<ApiDetailsSectionProps> = (props) => {
 					}}
 				/>
 				<AssignmentInput routeData={routeData} />
-				<RequestParamInput routeData={routeData} />
+				<FileUploadInput routeData={routeData} />
 				<JoinTableInput
 					routeData={routeData}
 					joins={routeData.joins}
@@ -124,6 +125,7 @@ const ApiDetailsSection: React.FC<ApiDetailsSectionProps> = (props) => {
 				<PermissionInput routeData={routeData} />
 				<MethodPathInput routeData={routeData} />
 				<RequestParamInput routeData={routeData} />
+				<FileUploadInput routeData={routeData} />
 			</>
 		);
 	}

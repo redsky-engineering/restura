@@ -789,6 +789,7 @@
 						{ "name": "metadata", "selector": "user.metadata" }
 					],
 					"roles": [],
+					"scopes": [],
 					"table": "user",
 					"type": "ARRAY",
 					"where": [
