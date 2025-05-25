@@ -564,14 +564,34 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 			if (item.custom) {
 				const customReplaced = this.replaceParamKeywords(item.custom, routeData, req, sqlParams);
 				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)}${
-					item.alias ? `AS "${item.alias}"` : ''
+					item.alias ? ` AS "${item.alias}"` : ''
 				} ON ${customReplaced}\n`;
 			} else {
-				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)}${
-					item.alias ? `AS "${item.alias}"` : ''
-				} ON "${baseTable}"."${item.localColumnName}" = ${escapeColumnName(item.alias ? item.alias : item.table)}.${escapeColumnName(
-					item.foreignColumnName
-				)}\n`;
+				// INNER JOIN "user" AS "userId_user" ON "order"."userId" = "userId_user"."id" <-- Simple Join
+				// INNER JOIN "company" AS "companyId_company" on "userId_user"."companyId" = "companyId_company"."id"
+				/*
+				{
+					table: 'company',
+					foreignColumnName: 'id',
+					localTable: 'user',
+					localTableAlias: 'userId_user',
+					localColumnName: 'companyId',
+					type: 'INNER',
+					alias: 'companyId_company'
+				}
+					*/
+				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)}`;
+				joinStatements += `${item.alias ? ` AS "${item.alias}"` : ''}`;
+
+				if (item.localTable) {
+					joinStatements += ` ON ${escapeColumnName(item.localTableAlias)}.${escapeColumnName(item.localColumnName)} = ${escapeColumnName(item.alias)}.${escapeColumnName(
+						item.foreignColumnName
+					)}\n`;
+				} else {
+					joinStatements += ` ON ${escapeColumnName(baseTable)}.${escapeColumnName(item.localColumnName)} = ${escapeColumnName(item.alias ? item.alias : item.table)}.${escapeColumnName(
+						item.foreignColumnName
+					)}\n`;
+				}
 			}
 		});
 		return joinStatements;

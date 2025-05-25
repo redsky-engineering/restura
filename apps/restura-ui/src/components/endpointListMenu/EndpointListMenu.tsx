@@ -51,6 +51,7 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (_props) => {
 			description: '',
 			path: randomPath,
 			roles: [],
+			scopes: [],
 			request: [],
 			response: [],
 			type: 'ONE',

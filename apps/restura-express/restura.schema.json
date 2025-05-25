@@ -361,8 +361,8 @@
 					"path": "/user/me/avatar",
 					"request": [],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": ["admin", "user"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -380,8 +380,8 @@
 						{ "name": "email", "selector": "user.email" },
 						{ "name": "phone", "selector": "user.phone" }
 					],
-					"scopes": [],
 					"roles": ["user", "admin"],
+					"scopes": [],
 					"table": "user",
 					"type": "ONE",
 					"where": [{ "columnName": "id", "operator": "=", "tableName": "user", "value": "#userId" }]
@@ -404,8 +404,8 @@
 						}
 					],
 					"responseType": "AuthResponse",
-					"scopes": [],
 					"roles": [],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -415,8 +415,8 @@
 					"path": "/user/refresh-token",
 					"request": [],
 					"responseType": "AuthResponse",
-					"scopes": [],
 					"roles": [],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -432,8 +432,8 @@
 						}
 					],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": ["admin", "user"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -445,8 +445,8 @@
 						{ "name": "pin", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
 					],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": ["admin", "user"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -487,8 +487,8 @@
 						}
 					],
 					"responseType": "FilteredUser",
-					"scopes": [],
 					"roles": ["admin"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -525,8 +525,8 @@
 						}
 					],
 					"responseType": "FilteredUser",
-					"scopes": [],
 					"roles": ["admin"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -536,8 +536,8 @@
 					"path": "/user/logout",
 					"request": [],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": ["admin", "user"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -558,8 +558,8 @@
 						}
 					],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": [],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -575,8 +575,8 @@
 						}
 					],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": ["admin", "athlete", "fan", "recruiter"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -586,8 +586,8 @@
 					"path": "/user/resend-verify-email",
 					"request": [],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": ["admin", "athlete", "fan", "recruiter"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -603,8 +603,8 @@
 						}
 					],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": [],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -625,8 +625,8 @@
 						}
 					],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": ["admin", "user"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -647,8 +647,8 @@
 						}
 					],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": [],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -660,8 +660,8 @@
 						{ "name": "pin", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
 					],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": ["admin", "user"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -677,8 +677,8 @@
 						}
 					],
 					"responseType": "boolean",
-					"scopes": [],
 					"roles": ["admin", "user"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -723,8 +723,8 @@
 						{ "name": "email", "selector": "user.email" },
 						{ "name": "phone", "selector": "user.phone" }
 					],
-					"scopes": [],
 					"roles": ["user", "admin"],
+					"scopes": [],
 					"table": "user",
 					"type": "ONE",
 					"where": [{ "columnName": "id", "operator": "=", "tableName": "user", "value": "#userId" }]
@@ -752,8 +752,8 @@
 						}
 					],
 					"responseType": "WeatherResponse",
-					"scopes": [],
 					"roles": ["user", "admin"],
+					"scopes": [],
 					"type": "CUSTOM_ONE"
 				},
 				{
@@ -795,6 +795,43 @@
 					"where": [
 						{ "columnName": "firstName", "operator": "NOT LIKE", "tableName": "user", "value": "bill" }
 					]
+				},
+				{
+					"assignments": [],
+					"description": "Multi Join",
+					"joins": [
+						{
+							"alias": "userId_user",
+							"foreignColumnName": "id",
+							"localColumnName": "userId",
+							"table": "user",
+							"type": "INNER"
+						},
+						{
+							"alias": "companyId_company",
+							"foreignColumnName": "id",
+							"localColumnName": "companyId",
+							"localTable": "user",
+							"localTableAlias": "userId_user",
+							"table": "company",
+							"type": "INNER"
+						}
+					],
+					"method": "GET",
+					"name": "Orders With Joins",
+					"path": "/order/all",
+					"request": [],
+					"response": [
+						{ "name": "id", "selector": "order.id" },
+						{ "name": "userFirstName", "selector": "userId_user.firstName" },
+						{ "name": "userLastName", "selector": "userId_user.lastName" },
+						{ "name": "companyName", "selector": "companyId_company.name" }
+					],
+					"roles": [],
+					"scopes": [],
+					"table": "order",
+					"type": "ARRAY",
+					"where": []
 				}
 			]
 		}

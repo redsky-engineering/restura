@@ -245,6 +245,21 @@ declare namespace Api {
 				export type Res = CustomTypes.WeatherResponse;
 			}
 		}
+		export namespace Order {
+			export namespace All {
+				// Orders With Joins
+				// Multi Join
+				export namespace Get {
+					export interface Req {}
+					export interface Res {
+						id: number;
+						userFirstName: string;
+						userLastName: string;
+						companyName: string | null;
+					}
+				}
+			}
+		}
 	}
 }
 

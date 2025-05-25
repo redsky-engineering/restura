@@ -52,7 +52,7 @@ const ApiDetailsSection: React.FC<ApiDetailsSectionProps> = (props) => {
 					}}
 				/>
 				<AssignmentInput routeData={routeData} />
-				<FileUploadInput routeData={routeData} />
+				<RequestParamInput routeData={routeData} />
 				<JoinTableInput
 					routeData={routeData}
 					joins={routeData.joins}

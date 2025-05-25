@@ -64,11 +64,13 @@ export type AssignmentData = z.infer<typeof assignmentDataSchema>;
 const joinDataSchema = z
 	.object({
 		table: z.string(),
+		localTable: z.string().optional(), // Defaults to base table if not specificed
+		localTableAlias: z.string().optional(), // If we are joining a table off of a previous join, this is the alias of the previous join
 		localColumnName: z.string().optional(),
 		foreignColumnName: z.string().optional(),
 		custom: z.string().optional(),
-		type: z.enum(['LEFT', 'INNER']),
-		alias: z.string().optional()
+		type: z.enum(['LEFT', 'INNER', 'RIGHT']),
+		alias: z.string()
 	})
 	.strict();
 

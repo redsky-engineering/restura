@@ -120,16 +120,19 @@ declare namespace Restura {
 
 	export interface JoinData {
 		table: string;
+		localTable?: string; // Defaults to base table if not specificed
+		localTableAlias?: string; // If we are joining a table off of a previous join, this is the alias of the previous join
 		localColumnName?: string;
 		foreignColumnName?: string;
 		custom?: string;
 		type: 'INNER' | 'LEFT';
-		alias?: string; // Alias should follow format "localColumnName_table". This allows us to properly look up the types
+		alias: string; // Alias should follow format "localColumnName_table". This allows us to properly look up the types
 	}
 
 	export interface ResponseData {
 		name: string;
 		selector?: string;
+		type?: string;
 		subquery?: {
 			table: string;
 			joins: JoinData[];
@@ -180,6 +183,7 @@ declare namespace Restura {
 		description: string;
 		path: string;
 		roles: string[];
+		scopes: string[];
 	}
 
 	export interface AssignData {

@@ -72,7 +72,6 @@ const CodeGenSection: React.FC<CodeGenSectionProps> = (_props) => {
 			const curlCommands: string[] = [];
 			curlCommands.push(`curl --request ${routeData.method} \\`);
 			curlCommands.push(`    --url ${fullpath} \\`);
-			curlCommands.push(`    --header 'x-auth-token: {{token}}' \\`);
 			curlCommands.push(`    --header 'Content-Type: application/json' \\`);
 			curlCommands.push(`    --data '${bodyJsonStr}'`);
 			setCodeGenText(curlCommands.join('\n'));

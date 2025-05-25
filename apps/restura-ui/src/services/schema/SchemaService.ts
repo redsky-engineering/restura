@@ -526,9 +526,9 @@ export default class SchemaService extends Service {
 		let column = table.columns.find((item) => item.name === columnName);
 		if (!column) return 'unknown';
 
-		return `${column.isNullable ? '(?)' : ''} ${SchemaService.convertSqlTypeToTypescriptType(
+		return `${SchemaService.convertSqlTypeToTypescriptType(
 			column.type,
 			column.value
-		)}`;
+		)}${column.isNullable ? ' | null' : ''}`;
 	}
 }

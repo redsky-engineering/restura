@@ -881,6 +881,46 @@ export const deleteOrderRouteData: StandardRouteData = {
 	where: []
 };
 
+export const getAllOrdersWithMultiJoinsRouteData: StandardRouteData = {
+	type: 'PAGED',
+	method: 'GET',
+	name: 'get all orders with multi joins',
+	description: 'Get all orders with multi joins',
+	path: '/order/all',
+	table: 'order',
+	roles: ['admin'],
+	scopes: [],
+	request: [],
+	joins: [
+		{
+			type: 'INNER',
+			table: 'user',
+			localColumnName: 'userId',
+			foreignColumnName: 'id',
+			alias: 'userId_user'
+		},
+		{
+			type: 'INNER',
+			table: 'company',
+			localTable: 'user',
+			localColumnName: 'companyId',
+			foreignColumnName: 'id',
+			alias: 'companyId_company'
+		}
+	],
+	response: [
+		{ name: 'orderId', selector: 'order.id' },
+		{
+			name: 'firstName',
+			selector: 'userId_user.firstName'
+		},
+		{ name: 'lastName', selector: 'userId_user.lastName' },
+		{ name: 'companyName', selector: 'companyId_company.name' }
+	],
+	assignments: [],
+	where: []
+};
+
 export const getAllUsersRoleAdminRouteData: StandardRouteData = {
 	type: 'PAGED',
 	method: 'GET',

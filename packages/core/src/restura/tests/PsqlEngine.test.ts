@@ -1,5 +1,4 @@
 import { MiscUtils } from '@redskytech/core-utils';
-// @ts-expect-error - chai is an ESM module only but we are compling for CommonJS module
 import { expect } from 'chai';
 import cloneDeep from 'lodash.clonedeep';
 import { types } from 'pg';
@@ -22,6 +21,7 @@ import {
 	createOrderRouteData,
 	deleteOrderRouteData,
 	deleteUserRouteData,
+	getAllOrdersWithMultiJoinsRouteData,
 	getAllUsersRoleAdminRouteData,
 	getAllUsersScopeTestRouteData,
 	patchUserClearGuidRouteData,
@@ -1110,13 +1110,15 @@ EXECUTE FUNCTION notify_user_delete();
 					table: 'company',
 					localColumnName: 'companyId',
 					foreignColumnName: 'id',
-					type: 'LEFT'
+					type: 'LEFT',
+					alias: 'companyId_company'
 				},
 				{
 					table: 'order',
 					localColumnName: 'id',
 					foreignColumnName: 'userId',
-					type: 'INNER'
+					type: 'INNER',
+					alias: 'userId_order'
 				}
 			];
 			const baseTable: string = 'user';
@@ -1131,7 +1133,41 @@ EXECUTE FUNCTION notify_user_delete();
 				[]
 			);
 			expect(trimRedundantWhitespace(response)).to.equal(
-				'LEFT JOIN "company" ON "user"."companyId" = "company"."id" INNER JOIN "order" ON "user"."id" = "order"."userId"'
+				'LEFT JOIN "company" AS "companyId_company" ON "user"."companyId" = "companyId_company"."id" INNER JOIN "order" AS "userId_order" ON "user"."id" = "userId_order"."userId"'
+			);
+		});
+		it('should generateJoinStatements with multi joins', () => {
+			const joins: JoinData[] = [
+				{
+					table: 'user',
+					foreignColumnName: 'id',
+					localColumnName: 'userId',
+					type: 'INNER',
+					alias: 'userId_user'
+				},
+				{
+					table: 'company',
+					foreignColumnName: 'id',
+					localTable: 'user',
+					localTableAlias: 'userId_user',
+					localColumnName: 'companyId',
+					type: 'INNER',
+					alias: 'companyId_company'
+				}
+			];
+			const baseTable: string = 'order';
+			const routeData: StandardRouteData | CustomRouteData = getAllOrdersWithMultiJoinsRouteData;
+			const schema: ResturaSchema = sampleSchema;
+			const response = psqlEngine['generateJoinStatements'](
+				basicAdminRequest,
+				joins,
+				baseTable,
+				routeData,
+				schema,
+				[]
+			);
+			expect(trimRedundantWhitespace(response)).to.equal(
+				'INNER JOIN "user" AS "userId_user" ON "order"."userId" = "userId_user"."id" INNER JOIN "company" AS "companyId_company" ON "userId_user"."companyId" = "companyId_company"."id"'
 			);
 		});
 	});

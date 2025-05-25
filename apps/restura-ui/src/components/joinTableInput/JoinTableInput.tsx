@@ -22,7 +22,8 @@ const JoinTableInput: React.FC<JoinTableInputProps> = (props) => {
 	function handleAddJoin() {
 		popupController.open<JoinSelectorPopupProps>(JoinSelectorPopup, {
 			baseTable: props.baseTableName,
-			onSelect: (type, localColumn, foreignTable, foreignColumn) => {
+			joins: props.joins,
+			onSelect: (type, localTable, localTableAlias, localColumn, foreignTable, foreignColumn) => {
 				// Check if there is already a join that has the same table and columns
 				// If so, don't add the join
 				if (
@@ -40,10 +41,12 @@ const JoinTableInput: React.FC<JoinTableInputProps> = (props) => {
 				const newJoin: Restura.JoinData = {
 					type: 'INNER',
 					table: foreignTable,
+					alias: type === 'STANDARD' ? `${localColumn}_${foreignTable}` : `${foreignTable}_custom`,
 					...(type === 'STANDARD' && {
 						foreignColumnName: foreignColumn,
 						localColumnName: localColumn,
-						alias: `${localColumn}_${foreignTable}`
+						...(localTable && { localTable }),
+						...(localTableAlias && { localTableAlias })
 					}),
 					...(type === 'CUSTOM' && {
 						custom: `${props.baseTableName}.${localColumn} = ${foreignTable}.${foreignColumn}`
@@ -85,7 +88,8 @@ const JoinTableInput: React.FC<JoinTableInputProps> = (props) => {
 					{!joinData.custom ? (
 						<Box className={'standardJoin'}>
 							<Label variant={'body1'} weight={'regular'} className={'keyword'}>
-								{props.baseTableName}.{joinData.localColumnName}
+								{joinData.localTable ? joinData.localTable : props.baseTableName}.
+								{joinData.localColumnName}
 							</Label>
 							<Label variant={'body1'} weight={'regular'}>
 								on
