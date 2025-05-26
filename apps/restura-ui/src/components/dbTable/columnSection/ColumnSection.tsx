@@ -103,11 +103,15 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 	}
 
 	function columnHasUniqueIndex(name: string, tableData: Restura.TableData): boolean {
-		return tableData.indexes.find((item) => item.columns.includes(name) && item.isUnique) !== undefined;
+		return (
+			tableData.indexes.find(
+				(item) => item.columns.includes(name) && item.columns.length === 1 && item.isUnique
+			) !== undefined
+		);
 	}
 
 	function columnHasAnyIndex(name: string, tableData: Restura.TableData): boolean {
-		return tableData.indexes.find((item) => item.columns.includes(name)) !== undefined;
+		return tableData.indexes.find((item) => item.columns.includes(name) && item.columns.length === 1) !== undefined;
 	}
 
 	function renderColumnHeaderRow() {
