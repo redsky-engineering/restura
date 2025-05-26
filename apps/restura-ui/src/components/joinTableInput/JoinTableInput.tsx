@@ -49,7 +49,7 @@ const JoinTableInput: React.FC<JoinTableInputProps> = (props) => {
 						...(localTableAlias && { localTableAlias })
 					}),
 					...(type === 'CUSTOM' && {
-						custom: `${props.baseTableName}.${localColumn} = ${foreignTable}.${foreignColumn}`
+						custom: `"${props.baseTableName}"."${localColumn}" = "${foreignTable}"."${foreignColumn}"`
 					})
 				};
 				props.onAddJoin(newJoin);
