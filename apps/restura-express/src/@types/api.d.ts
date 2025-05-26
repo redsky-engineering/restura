@@ -232,6 +232,21 @@ declare namespace Api {
 					}
 				}
 			}
+			export namespace Before {
+				// Users Before Join
+				//
+				export namespace Get {
+					export interface Req {
+						date: string;
+					}
+					export interface Res {
+						id: number;
+						firstName: string;
+						lastName: string;
+						companyName: string | null;
+					}
+				}
+			}
 		}
 		export namespace Weather {
 			// Get Weather Data

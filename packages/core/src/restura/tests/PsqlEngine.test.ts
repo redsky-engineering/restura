@@ -22,6 +22,7 @@ import {
 	deleteOrderRouteData,
 	deleteUserRouteData,
 	getAllOrdersWithMultiJoinsRouteData,
+	getAllUsersBeforeDateRouteData,
 	getAllUsersRoleAdminRouteData,
 	getAllUsersScopeTestRouteData,
 	patchUserClearGuidRouteData,
@@ -1168,6 +1169,23 @@ EXECUTE FUNCTION notify_user_delete();
 			);
 			expect(trimRedundantWhitespace(response)).to.equal(
 				'INNER JOIN "user" AS "userId_user" ON "order"."userId" = "userId_user"."id" INNER JOIN "company" AS "companyId_company" ON "userId_user"."companyId" = "companyId_company"."id"'
+			);
+		});
+		it('should generateJoinStatements with custom join condition', () => {
+			const joins: JoinData[] = getAllUsersBeforeDateRouteData.joins;
+			const baseTable: string = 'user';
+			const routeData: StandardRouteData | CustomRouteData = getAllUsersBeforeDateRouteData;
+			const schema: ResturaSchema = sampleSchema;
+			const response = psqlEngine['generateJoinStatements'](
+				basicAdminRequest,
+				joins,
+				baseTable,
+				routeData,
+				schema,
+				[]
+			);
+			expect(trimRedundantWhitespace(response)).to.equal(
+				'LEFT JOIN "company" AS "company_newer" ON "user"."companyId" = "company_newer"."id" AND "user"."createdOn" < ?'
 			);
 		});
 	});

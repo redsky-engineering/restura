@@ -969,6 +969,47 @@ export const getAllUsersScopeTestRouteData: StandardRouteData = {
 	where: []
 };
 
+// Used in testing custom joins
+export const getAllUsersBeforeDateRouteData: StandardRouteData = {
+	type: 'ARRAY',
+	method: 'GET',
+	name: 'Get users before date',
+	description: 'Get users created before specified date',
+	path: '/user/before',
+	table: 'user',
+	roles: ['user', 'admin'],
+	scopes: [],
+	orderBy: {
+		columnName: 'lastName',
+		order: 'DESC',
+		tableName: 'user'
+	},
+	request: [
+		{
+			name: 'date',
+			required: true,
+			validator: [{ type: 'TYPE_CHECK', value: 'string' }]
+		}
+	],
+	joins: [
+		{
+			table: 'company',
+			alias: 'company_newer',
+			type: 'LEFT',
+			custom: '"user"."companyId" = "company_newer"."id" AND "user"."createdOn" < $date'
+		}
+	],
+	response: [
+		{ name: 'id', selector: 'user.id' },
+		{ name: 'firstName', selector: 'user.firstName' },
+		{ name: 'lastName', selector: 'user.lastName' },
+		{ name: 'email', selector: 'user.email' },
+		{ name: 'companyName', selector: 'company_newer.name' }
+	],
+	assignments: [],
+	where: []
+};
+
 export const basicAdminRequest: RsRequest = {
 	requesterDetails: {
 		role: 'admin',

@@ -41,7 +41,7 @@ const JoinTableInput: React.FC<JoinTableInputProps> = (props) => {
 				const newJoin: Restura.JoinData = {
 					type: 'INNER',
 					table: foreignTable,
-					alias: type === 'STANDARD' ? `${localColumn}_${foreignTable}` : `${foreignTable}_custom`,
+					alias: type === 'STANDARD' ? `${localColumn}_${foreignTable}` : `custom_${foreignTable}`,
 					...(type === 'STANDARD' && {
 						foreignColumnName: foreignColumn,
 						localColumnName: localColumn,

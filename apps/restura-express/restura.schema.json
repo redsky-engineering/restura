@@ -832,6 +832,35 @@
 					"table": "order",
 					"type": "ARRAY",
 					"where": []
+				},
+				{
+					"assignments": [],
+					"description": "",
+					"joins": [
+						{
+							"alias": "custom_company",
+							"custom": "\"user\".\"companyId\" = \"custom_company\".\"id\" AND \"user\".\"createdOn\" < $date",
+							"table": "company",
+							"type": "INNER"
+						}
+					],
+					"method": "GET",
+					"name": "Users Before Join",
+					"path": "/user/before",
+					"request": [
+						{ "name": "date", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "string" }] }
+					],
+					"response": [
+						{ "name": "id", "selector": "user.id" },
+						{ "name": "firstName", "selector": "user.firstName" },
+						{ "name": "lastName", "selector": "user.lastName" },
+						{ "name": "companyName", "selector": "custom_company.name" }
+					],
+					"roles": [],
+					"scopes": [],
+					"table": "user",
+					"type": "ARRAY",
+					"where": []
 				}
 			]
 		}
