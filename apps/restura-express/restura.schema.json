@@ -36,7 +36,7 @@
 				},
 				{
 					"comment": "Foreign key to order(id)",
-					"isNullable": false,
+					"isNullable": true,
 					"name": "orderId",
 					"roles": [],
 					"scopes": [],
@@ -857,8 +857,102 @@
 						{ "name": "companyName", "selector": "custom_company.name" }
 					],
 					"roles": [],
-					"scopes": [],
+					"scopes": ["read:user"],
 					"table": "user",
+					"type": "ARRAY",
+					"where": []
+				},
+				{
+					"assignments": [],
+					"description": "Gets all the users with a custom select for order counts",
+					"joins": [],
+					"method": "GET",
+					"name": "Get All Users With Order Count",
+					"path": "/user/all/orders",
+					"request": [],
+					"response": [
+						{ "name": "firstName", "selector": "user.firstName" },
+						{ "name": "lastName", "selector": "user.lastName" },
+						{
+							"name": "orderCount",
+							"selector": "(SELECT COUNT(*) FROM \"order\"                 WHERE \"order\".\"userId\" = \"user\".\"id\")",
+							"type": "number"
+						}
+					],
+					"roles": [],
+					"scopes": ["read:user"],
+					"table": "user",
+					"type": "ARRAY",
+					"where": [
+						{
+							"custom": "EXISTS (         SELECT 1 FROM \"order\" WHERE \"order\".\"userId\" = \"user\".\"id\" )"
+						}
+					]
+				},
+				{
+					"assignments": [],
+					"description": "Get a list of users with their orders",
+					"joins": [],
+					"method": "GET",
+					"name": "Users With Orders",
+					"path": "/user/with-orders",
+					"request": [],
+					"response": [
+						{ "name": "id", "selector": "user.id" },
+						{ "name": "firstName", "selector": "user.firstName" },
+						{ "name": "lastName", "selector": "user.lastName" },
+						{
+							"name": "order",
+							"subquery": {
+								"joins": [],
+								"properties": [
+									{ "name": "id", "selector": "order.id" },
+									{ "name": "createdOn", "selector": "order.createdOn" },
+									{ "name": "modifiedOn", "selector": "order.modifiedOn" }
+								],
+								"table": "order",
+								"where": [
+									{
+										"columnName": "userId",
+										"operator": "=",
+										"tableName": "order",
+										"value": "\"user\".\"id\""
+									}
+								]
+							}
+						}
+					],
+					"roles": [],
+					"scopes": ["read:user"],
+					"table": "user",
+					"type": "ARRAY",
+					"where": []
+				},
+				{
+					"assignments": [],
+					"description": "Test to see if left join on orders will have nullable properly",
+					"joins": [
+						{
+							"alias": "orderId_order",
+							"foreignColumnName": "id",
+							"localColumnName": "orderId",
+							"table": "order",
+							"type": "LEFT"
+						}
+					],
+					"method": "GET",
+					"name": "Get All Items with Orders Joined",
+					"path": "/item/all",
+					"request": [],
+					"response": [
+						{ "name": "id", "selector": "item.id" },
+						{ "name": "createdOn", "selector": "item.createdOn" },
+						{ "name": "modifiedOn", "selector": "item.modifiedOn" },
+						{ "name": "orderAmountCents", "selector": "orderId_order.amountCents" }
+					],
+					"roles": [],
+					"scopes": [],
+					"table": "item",
 					"type": "ARRAY",
 					"where": []
 				}
@@ -867,5 +961,5 @@
 	],
 	"globalParams": ["companyId", "userId"],
 	"roles": ["admin", "user", "anonymous"],
-	"scopes": []
+	"scopes": ["read:user", "write:user", "read:company", "write:company"]
 }

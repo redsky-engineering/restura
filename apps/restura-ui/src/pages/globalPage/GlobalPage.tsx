@@ -9,11 +9,12 @@ import CustomTypeSection from './customTypeSection/CustomTypeSection';
 import './GlobalPage.scss';
 import GlobalParamSection from './globalParamSection/GlobalParamSection';
 import RoleSection from './roleSection/RoleSection';
+import ScopeSection from './scopeSection/ScopeSection.js';
 
 interface GlobalPageProps {}
 
 const GlobalPage: React.FC<GlobalPageProps> = (_props) => {
-	const [displayedSection, setDisplayedSection] = useState<'CUSTOM_TYPES' | 'GLOBAL_PARAMS' | 'ROLES'>(
+	const [displayedSection, setDisplayedSection] = useState<'CUSTOM_TYPES' | 'GLOBAL_PARAMS' | 'ROLES' | 'SCOPES'>(
 		'CUSTOM_TYPES'
 	);
 	const schema = useRecoilValue<Restura.Schema | undefined>(globalState.schema);
@@ -45,6 +46,14 @@ const GlobalPage: React.FC<GlobalPageProps> = (_props) => {
 						Roles
 					</Label>
 				</Box>
+				<Box
+					className={classNames('tab', { isSelected: displayedSection === 'SCOPES' })}
+					onClick={() => setDisplayedSection('SCOPES')}
+				>
+					<Label variant={'subheader2'} weight={'semiBold'}>
+						Scopes
+					</Label>
+				</Box>
 			</Box>
 		);
 	}
@@ -55,6 +64,7 @@ const GlobalPage: React.FC<GlobalPageProps> = (_props) => {
 				{displayedSection === 'CUSTOM_TYPES' && <CustomTypeSection />}
 				{displayedSection === 'GLOBAL_PARAMS' && <GlobalParamSection />}
 				{displayedSection === 'ROLES' && <RoleSection />}
+				{displayedSection === 'SCOPES' && <ScopeSection />}
 			</Box>
 		</Page>
 	);

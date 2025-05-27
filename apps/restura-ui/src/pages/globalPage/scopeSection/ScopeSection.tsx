@@ -5,58 +5,58 @@ import { useState } from 'react';
 import { useRecoilState } from 'recoil';
 import globalState from '../../../state/globalState';
 import themes from '../../../themes/themes.scss?export';
-import './RoleSection.scss';
+import './ScopeSection.scss';
 
-interface RoleSectionProps {}
+interface ScopeSectionProps {}
 
-const RoleSection: React.FC<RoleSectionProps> = (props) => {
+const ScopeSection: React.FC<ScopeSectionProps> = (props) => {
 	const [schema, setSchema] = useRecoilState<Restura.Schema | undefined>(globalState.schema);
-	const [newRoleName, setNewRoleName] = useState<string>('');
+	const [newScopeName, setNewScopeName] = useState<string>('');
 
-	function handleAddRole() {
+	function handleAddScope() {
 		if (!schema) return;
-		if (!newRoleName) {
-			rsToastify.error('Please enter a name for the new role', 'Name Required');
+		if (!newScopeName) {
+			rsToastify.error('Please enter a name for the new scope', 'Name Required');
 			return;
 		}
 
 		// Make sure there are no duplicates
-		if (schema.roles.find((item) => item === newRoleName)) {
-			rsToastify.error('A role with that name already exists', 'Duplicate Name');
+		if (schema.scopes.find((item) => item === newScopeName)) {
+			rsToastify.error('A scope with that name already exists', 'Duplicate Name');
 			return;
 		}
 
-		// Add the new role
+		// Add the new scope
 		let updatedSchema = cloneDeep(schema);
-		updatedSchema.roles.push(newRoleName);
+		updatedSchema.scopes.push(newScopeName);
 		setSchema(updatedSchema);
-		setNewRoleName('');
+		setNewScopeName('');
 	}
 
 	if (!schema) return <></>;
 
 	return (
-		<Box className={'rsRoleSection'}>
+		<Box className={'rsScopeSection'}>
 			<Box display={'flex'} gap={16} alignItems={'center'}>
 				<Box width={'100%'}>
 					<InputText
-						value={newRoleName}
+						value={newScopeName}
 						inputMode={'text'}
-						placeholder={'New Role (e.g. admin, user, etc.)'}
-						onChange={(value) => setNewRoleName(value)}
+						placeholder={'New Scope (e.g. read:user, write:admin, etc.)'}
+						onChange={(value) => setNewScopeName(value)}
 						onKeyDown={(event) => {
-							if (event.key === 'Enter') handleAddRole();
+							if (event.key === 'Enter') handleAddScope();
 						}}
 					/>
 				</Box>
-				<Button look={'outlinedPrimary'} onClick={handleAddRole}>
+				<Button look={'outlinedPrimary'} onClick={handleAddScope}>
 					Add
 				</Button>
 			</Box>
 			<Box display={'flex'} flexDirection={'column'} gap={16} mt={16}>
-				{schema.roles.map((role) => {
+				{schema.scopes.map((scope) => {
 					return (
-						<Box key={role} className={'roleItem'}>
+						<Box key={scope} className={'scopeItem'}>
 							<Icon
 								iconImg={'icon-delete'}
 								fontSize={16}
@@ -64,12 +64,12 @@ const RoleSection: React.FC<RoleSectionProps> = (props) => {
 								onClick={() => {
 									if (!schema) return;
 									let updatedSchema = cloneDeep(schema);
-									updatedSchema.roles = updatedSchema.roles.filter((item) => item !== role);
+									updatedSchema.scopes = updatedSchema.scopes.filter((item) => item !== scope);
 									setSchema(updatedSchema);
 								}}
 							/>
 							<Label variant={'body1'} weight={'regular'} color={themes.neutralWhite}>
-								{role}
+								{scope}
 							</Label>
 						</Box>
 					);
@@ -79,4 +79,4 @@ const RoleSection: React.FC<RoleSectionProps> = (props) => {
 	);
 };
 
-export default RoleSection;
+export default ScopeSection;

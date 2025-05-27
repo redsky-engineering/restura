@@ -82,6 +82,7 @@ declare namespace Restura {
 			| PostgresColumnJsonTypes;
 		isNullable: boolean;
 		roles: string[];
+		scopes: string[];
 		comment?: string;
 		default?: string;
 		value?: string;
@@ -103,6 +104,7 @@ declare namespace Restura {
 		foreignKeys: ForeignKeyData[];
 		checkConstraints: CheckConstraintData[];
 		roles: string[];
+		scopes: string[];
 		notify?: 'ALL' | string[];
 	}
 
@@ -225,6 +227,7 @@ declare namespace Restura {
 		endpoints: EndpointData[];
 		globalParams: string[];
 		roles: string[];
+		scopes: string[];
 		customTypes: string[];
 	}
 
@@ -238,6 +241,7 @@ declare namespace Restura {
 		endPoints: SchemaChangeValue[];
 		globalParams: SchemaChangeValue[];
 		roles: SchemaChangeValue[];
+		scopes: SchemaChangeValue[];
 		customTypes: boolean;
 	}
 

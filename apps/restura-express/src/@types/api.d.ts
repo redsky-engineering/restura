@@ -231,6 +231,18 @@ declare namespace Api {
 						metadata: object;
 					}
 				}
+				export namespace Orders {
+					// Get All Users With Order Count
+					// Gets all the users with a custom select for order counts
+					export namespace Get {
+						export interface Req {}
+						export interface Res {
+							firstName: string;
+							lastName: string;
+							orderCount: number;
+						}
+					}
+				}
 			}
 			export namespace Before {
 				// Users Before Join
@@ -244,6 +256,23 @@ declare namespace Api {
 						firstName: string;
 						lastName: string;
 						companyName: string | null;
+					}
+				}
+			}
+			export namespace WithOrders {
+				// Users With Orders
+				// Get a list of users with their orders
+				export namespace Get {
+					export interface Req {}
+					export interface Res {
+						id: number;
+						firstName: string;
+						lastName: string;
+						order: {
+							id: number;
+							createdOn: string;
+							modifiedOn: string;
+						}[];
 					}
 				}
 			}
@@ -271,6 +300,21 @@ declare namespace Api {
 						userFirstName: string;
 						userLastName: string;
 						companyName: string | null;
+					}
+				}
+			}
+		}
+		export namespace Item {
+			export namespace All {
+				// Get All Items with Orders Joined
+				// Test to see if left join on orders will have nullable properly
+				export namespace Get {
+					export interface Req {}
+					export interface Res {
+						id: number;
+						createdOn: string;
+						modifiedOn: string;
+						orderAmountCents: number | null;
 					}
 				}
 			}
@@ -309,4 +353,10 @@ declare namespace CustomTypes {
 	export interface Test extends Restura.PageQuery {
 		test: string;
 	}
+}
+
+declare namespace NotificationTypes {
+	export type Order = Pick<Model.Order, 'id' | 'createdOn' | 'modifiedOn' | 'userId' | 'amountCents'>;
+	export type Company = Pick<Model.Company, 'id' | 'createdOn' | 'modifiedOn' | 'name'>;
+	export type User = Pick<Model.User, 'id' | 'firstName' | 'lastName' | 'email' | 'phone'>;
 }

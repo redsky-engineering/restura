@@ -154,7 +154,10 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 					FK (Column)
 				</Label>
 				<Label mb={8} variant={'caption1'} weight={'semiBold'} color={themes.neutralBeige500}>
-					Permissions
+					Permissions (role)
+				</Label>
+				<Label mb={8} variant={'caption1'} weight={'semiBold'} color={themes.neutralBeige500}>
+					Permissions (scope)
 				</Label>
 				<Box /> {/* Empty box for the delete button */}
 			</>
@@ -259,19 +262,6 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 		const column = tableData.columns.find((item) => item.name === columnName);
 		isPrimary ||= column.isPrimary;
 		return isPrimary;
-	}
-
-	function getAllRoles(): string[] {
-		const roles: string[] = [];
-		if (!schema) return roles;
-		for (const table of schema.database) {
-			roles.push(...table.roles);
-			for (const column of table.columns) {
-				roles.push(...column.roles);
-			}
-		}
-		const roleSet = new Set(roles);
-		return Array.from(roleSet);
 	}
 
 	function renderColumns() {
@@ -505,6 +495,21 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 								setSchema(updatedSchema);
 							}}
 						/>
+						<DbTableCell
+							cellType={'multiSelect'}
+							selectOptions={schema.scopes}
+							value={column.scopes}
+							onMultiSelectChange={(value) => {
+								const updatedSchema = cloneDeep(schema);
+								const columnData = SchemaService.getColumnData(
+									updatedSchema,
+									props.tableName,
+									column.name
+								);
+								columnData.scopes = value;
+								setSchema(updatedSchema);
+							}}
+						/>
 						<Box display={'flex'} alignItems={'center'}>
 							<Icon
 								iconImg={'icon-delete'}
@@ -536,7 +541,8 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 			name: newColumnName,
 			type: 'VARCHAR',
 			length: 255,
-			isNullable: false
+			isNullable: false,
+			scopes: []
 		});
 		setSchema(updatedSchema);
 		setTimeout(() => {

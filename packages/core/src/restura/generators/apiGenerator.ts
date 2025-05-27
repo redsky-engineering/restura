@@ -1,5 +1,6 @@
 import { ObjectUtils, StringUtils } from '@redskytech/core-utils';
 import prettier from 'prettier';
+import { logger } from '../../logger/logger.js';
 import type {
 	EndpointData,
 	JoinData,
@@ -215,6 +216,39 @@ class ApiTree {
 	}
 }
 
+function createNotificationTypes(databases: Array<TableData>): string {
+	let result = 'declare namespace NotificationTypes {';
+	for (const database of databases) {
+		if (!database.notify) continue;
+		if (database.notify === 'ALL') {
+			// We need to get all the columns from the database and create a type for each one.
+			result += `export type ${StringUtils.capitalizeFirst(database.name)} = Pick<Model.${StringUtils.capitalizeFirst(database.name)}, `;
+			const columnStrings: string[] = [];
+			for (const column of database.columns) {
+				columnStrings.push(`'${column.name}'`);
+			}
+			result += columnStrings.join(' | ');
+			result += `>;`;
+		} else {
+			// database.notify is an array of column names
+			result += `export type ${StringUtils.capitalizeFirst(database.name)} = Pick<Model.${StringUtils.capitalizeFirst(database.name)}, `;
+			const columnStrings: string[] = [];
+			for (const column of database.notify) {
+				const columnData = database.columns.find((c) => c.name === column);
+				if (!columnData) {
+					logger.warn(`Notification: Could not find column: ${column} in table: ${database.name}`);
+					continue;
+				}
+				columnStrings.push(`'${column}'`);
+			}
+			result += columnStrings.join(' | ');
+			result += `>;`;
+		}
+	}
+	result += `}`;
+	return result;
+}
+
 function pathToNamespaces(path: string): string[] {
 	return path
 		.split('/')
@@ -224,6 +258,7 @@ function pathToNamespaces(path: string): string[] {
 
 export default function apiGenerator(schema: ResturaSchema): Promise<string> {
 	let apiString = `/** Auto generated file. DO NOT MODIFY **/\n`;
+	// Routes
 	const rootNamespace = ApiTree.createRootNode(schema.database);
 	for (const endpoint of schema.endpoints) {
 		const endpointNamespaces = pathToNamespaces(endpoint.baseUrl);
@@ -234,12 +269,18 @@ export default function apiGenerator(schema: ResturaSchema): Promise<string> {
 		}
 	}
 	apiString += rootNamespace.createApiModels();
+
+	// Custom Types
 	if (schema.customTypes.length > 0) {
 		apiString += `\n
 		declare namespace CustomTypes {
 			${schema.customTypes.join('\n')}
 		}`;
 	}
+
+	// Notification Types
+	apiString += `\n\n`;
+	apiString += createNotificationTypes(schema.database);
 
 	return prettier.format(apiString, {
 		parser: 'typescript',

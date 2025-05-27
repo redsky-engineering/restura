@@ -428,15 +428,29 @@ class ResturaEngine {
 	private validateAuthorization(req: RsRequest<unknown>, routeData: RouteData) {
 		const requesterRole = req.requesterDetails.role;
 		const requesterScopes = req.requesterDetails.scopes;
-		if (routeData.roles.length === 0 && routeData.scopes.length === 0) return;
-		if (requesterRole && routeData.roles.length > 0 && !routeData.roles.includes(requesterRole))
-			throw new RsError('FORBIDDEN', 'Not authorized to access this endpoint');
-		if (
-			requesterScopes.length > 0 &&
-			routeData.scopes.length > 0 &&
-			!routeData.scopes.some((scope) => requesterScopes.includes(scope))
-		)
-			throw new RsError('FORBIDDEN', 'Not authorized to access this endpoint');
+
+		// If route has no roles or scopes, it's public - allow access
+		if (routeData.roles.length === 0 && routeData.scopes.length === 0) {
+			return;
+		}
+
+		// If route requires roles, check if user has the required role
+		if (routeData.roles.length > 0) {
+			if (!requesterRole || !routeData.roles.includes(requesterRole)) {
+				throw new RsError('FORBIDDEN', 'Not authorized to access this endpoint - role required');
+			}
+		}
+
+		// If route requires scopes, check if user has ALL required scopes
+		if (routeData.scopes.length > 0) {
+			const missingScopes = routeData.scopes.filter((requiredScope) => !requesterScopes.includes(requiredScope));
+			if (missingScopes.length > 0) {
+				throw new RsError(
+					'FORBIDDEN',
+					`Not authorized to access this endpoint - missing required scopes: ${missingScopes.join(', ')}`
+				);
+			}
+		}
 	}
 
 	private getRouteData(method: string, baseUrl: string, path: string): RouteData {
