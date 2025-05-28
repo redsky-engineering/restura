@@ -76,7 +76,7 @@ export default abstract class SqlEngine {
 			}
 			if (ObjectUtils.isArrayWithData(columnSchema.scopes)) {
 				if (!requesterScopes) return false;
-				return columnSchema.scopes.some((scope) => requesterScopes.includes(scope));
+				return columnSchema.scopes.every((scope) => requesterScopes.includes(scope));
 			}
 			return true; // Public column, any role can access
 		}
