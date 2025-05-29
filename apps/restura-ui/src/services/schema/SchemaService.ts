@@ -461,6 +461,8 @@ export default class SchemaService extends Service {
 				return 'Date';
 			case 'datetime':
 				return 'Date';
+			case 'timestamp':
+				return 'Date';
 			case 'tinyint':
 			case 'boolean':
 				return 'boolean';
