@@ -112,7 +112,7 @@ class ResturaEngine {
 		this.expressApp = app;
 
 		await this.reloadEndpoints();
-		await this.validateGeneratedTypesFolder();
+		await this.initializeGeneratedTypesFolder();
 
 		logger.info('Restura Engine Initialized');
 	}
@@ -233,7 +233,7 @@ class ResturaEngine {
 		logger.info(`Restura loaded (${routeCount}) endpoint${routeCount > 1 ? 's' : ''}`);
 	}
 
-	private async validateGeneratedTypesFolder() {
+	private async initializeGeneratedTypesFolder() {
 		if (!fs.existsSync(this.resturaConfig.generatedTypesPath)) {
 			fs.mkdirSync(this.resturaConfig.generatedTypesPath, { recursive: true });
 		}
