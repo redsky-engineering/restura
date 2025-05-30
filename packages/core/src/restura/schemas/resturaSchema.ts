@@ -347,7 +347,8 @@ export async function isSchemaValid(schemaToCheck: unknown): Promise<boolean> {
 		return true;
 	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
-			logger.error(z.prettifyError(error));
+			logger.error('Schema failed to validate with the following error:');
+			console.error(z.prettifyError(error));
 		} else {
 			logger.error(error);
 		}
