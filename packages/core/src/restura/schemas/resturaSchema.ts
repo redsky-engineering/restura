@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import { logger } from '../../logger/logger.js';
 import { validatorDataSchema } from './validatorDataSchema.js';
 
@@ -96,7 +96,9 @@ const responseDataSchema = z
 				table: z.string(),
 				joins: z.array(joinDataSchema),
 				where: z.array(whereDataSchema),
-				properties: z.array(z.lazy((): z.ZodSchema => responseDataSchema)), // Explicit type for the lazy schema
+				get properties() {
+					return z.array(responseDataSchema);
+				},
 				groupBy: groupBySchema.optional(),
 				orderBy: orderBySchema.optional()
 			})
@@ -343,8 +345,12 @@ export async function isSchemaValid(schemaToCheck: unknown): Promise<boolean> {
 	try {
 		resturaSchema.parse(schemaToCheck);
 		return true;
-	} catch (error) {
-		logger.error(error);
+	} catch (error: unknown) {
+		if (error instanceof z.ZodError) {
+			z.prettifyError(error);
+		} else {
+			logger.error(error);
+		}
 		return false;
 	}
 }

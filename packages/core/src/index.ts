@@ -16,3 +16,4 @@ export * from './restura/sql/PsqlTransaction.js';
 export * from './restura/sql/PsqlUtils.js';
 export * from './restura/types/customExpressTypes.js';
 export * from './restura/types/resturaTypes.js';
+export { isSchemaValid } from './restura/schemas/resturaSchema.js';

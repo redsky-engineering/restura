@@ -1,8 +1,8 @@
 import { ObjectUtils } from '@redskytech/core-utils';
 import jsonschema, { Schema } from 'jsonschema';
 import { Definition } from 'typescript-json-schema';
-import { z } from 'zod';
-import { RsError } from '../RsError';
+import { z } from 'zod/v4';
+import { RsError } from '../RsError.js';
 import { RequestData, RouteData } from '../schemas/resturaSchema.js';
 import { ValidatorData, ValidatorDataSchemeValue, validatorDataSchemeValue } from '../schemas/validatorDataSchema.js';
 import type { DynamicObject, RsRequest } from '../types/customExpressTypes.js';
