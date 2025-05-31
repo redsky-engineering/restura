@@ -1,5 +1,5 @@
-import { AxiosError } from 'axios';
 import { HttpClient } from '@redskytech/framework/utils';
+import { AxiosError } from 'axios';
 
 export enum HttpStatusCode {
 	BAD_REQUEST = 400,
@@ -36,11 +36,7 @@ http.addResponseIntercepter(
 	(error) => {
 		if (error.isAxiosError) {
 			let axiosError = error as AxiosError;
-			if (
-				axiosError.response &&
-				(axiosError.response.status === HttpStatusCode.UNAUTHORIZED ||
-					axiosError.response.status === HttpStatusCode.FORBIDDEN)
-			) {
+			if (axiosError.response && axiosError.response.status === HttpStatusCode.UNAUTHORIZED) {
 				console.log('Received an forbidden, should probably logout user');
 			}
 		}

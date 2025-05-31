@@ -1,16 +1,16 @@
-import React from 'react';
 import '@redskytech/framework/index.css';
+import React from 'react';
 import './App.scss';
 import './icons/style.css';
 
-import Menu from './components/menu/Menu';
-import useLoginState, { LoginStatus } from './customHooks/useLoginState';
-import AppBar from './components/appBar/AppBar';
-import { useLoadInitialPath } from './utils/router';
-import { Box, popupController, rsToastify, ToastContainer } from '@redskytech/framework/ui';
 import { View } from '@redskytech/framework/996';
-import useIsAtBreakpoint from './customHooks/useIsAtBreakpoint';
+import { Box, popupController, ToastContainer } from '@redskytech/framework/ui';
 import classNames from 'classnames';
+import AppBar from './components/appBar/AppBar';
+import Menu from './components/menu/Menu';
+import useIsAtBreakpoint from './customHooks/useIsAtBreakpoint';
+import useLoginState, { LoginStatus } from './customHooks/useLoginState';
+import { useLoadInitialPath } from './utils/router';
 
 function App() {
 	const isSmallerThan1920 = useIsAtBreakpoint(1919);
@@ -57,7 +57,7 @@ function App() {
 		>
 			{renderViewsBasedOnLoginStatus()}
 			{popupController.instance}
-			<ToastContainer />
+			<ToastContainer position={'bottom-right'} />
 		</Box>
 	);
 }

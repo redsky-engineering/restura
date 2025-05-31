@@ -1,0 +1,11 @@
+meta {
+  name: User Order Count
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{host}}/api/v1/user/all/orders
+  body: none
+  auth: inherit
+}

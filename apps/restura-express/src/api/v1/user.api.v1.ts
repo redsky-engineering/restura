@@ -17,7 +17,7 @@ export default class UserApiV1 {
 		});
 	}
 	async postUserMeAvatar(
-		req: RsRequest<Api.V1.User.Me.Avatar.Post.Req>,
+		_req: RsRequest<Api.V1.User.Me.Avatar.Post.Req>,
 		res: RsResponse<Api.V1.User.Me.Avatar.Post.Res>
 	) {
 		res.sendData(true);

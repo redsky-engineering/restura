@@ -1,5 +1,3 @@
-import * as React from 'react';
-import './ColumnPickerPopup.scss';
 import {
 	Box,
 	Button,
@@ -11,12 +9,14 @@ import {
 	PopupProps,
 	rsToastify
 } from '@redskytech/framework/ui';
-import themes from '../../themes/themes.scss?export';
+import classNames from 'classnames';
+import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRecoilValue } from 'recoil';
-import globalState from '../../state/globalState';
-import classNames from 'classnames';
 import SchemaService from '../../services/schema/SchemaService';
+import globalState from '../../state/globalState';
+import themes from '../../themes/themes.scss?export';
+import './ColumnPickerPopup.scss';
 
 export type TableWithJoinColumn = { table: string; joinColumn?: string };
 
@@ -27,6 +27,7 @@ export interface ColumnPickerPopupProps extends PopupProps {
 	onColumnSelect: (tableWithJoinColumn: TableWithJoinColumn, columnData: Restura.ColumnData) => void;
 	onCustomSelect?: () => void;
 	autoCloseOnSelect?: boolean;
+	joins?: { table: string }[];
 }
 
 const ColumnPickerPopup: React.FC<ColumnPickerPopupProps> = (props) => {
@@ -35,22 +36,41 @@ const ColumnPickerPopup: React.FC<ColumnPickerPopupProps> = (props) => {
 	const schema = useRecoilValue<Restura.Schema | undefined>(globalState.schema);
 	const [selectedTable, setSelectedTable] = useState<TableWithJoinColumn | undefined>();
 
-	const tableList = useMemo<TableWithJoinColumn[]>(() => {
-		if (!schema) return [{ table: props.baseTable }];
+	const tableOptions = useMemo<{ table: string; joinColumn?: string }[]>(() => {
+		if (!schema) return [];
 		let table = schema.database.find((item) => item.name === props.baseTable);
-		if (!table) return [{ table: props.baseTable }];
-		if (props.baseTableOnly) return [{ table: props.baseTable }];
-		return [
+		if (!table) return [];
+
+		let options = [
 			{ table: props.baseTable },
 			...table.foreignKeys.map((item) => ({ table: item.refTable, joinColumn: item.column }))
 		];
-	}, [schema]);
+
+		// Add options from existing joins
+		if (props.joins) {
+			console.log('props.joins', props.joins);
+			props.joins.forEach((join) => {
+				const joinedTable = schema.database.find((item) => item.name === join.table);
+				if (joinedTable) {
+					options = [
+						...options,
+						...joinedTable.foreignKeys.map((item) => ({
+							table: item.refTable,
+							joinColumn: item.column
+						}))
+					];
+				}
+			});
+		}
+
+		return options;
+	}, [schema, props.baseTable, props.joins]);
 
 	useEffect(() => {
-		if (tableList.length === 0) return;
+		if (tableOptions.length === 0) return;
 		if (selectedTable) return;
-		setSelectedTable(tableList[0]);
-	}, [tableList]);
+		setSelectedTable(tableOptions[0]);
+	}, [tableOptions]);
 
 	function handleClose() {
 		popupController.close(ColumnPickerPopup);
@@ -115,7 +135,7 @@ const ColumnPickerPopup: React.FC<ColumnPickerPopupProps> = (props) => {
 	}
 
 	function renderTableList() {
-		return tableList.map((table) => {
+		return tableOptions.map((table) => {
 			return (
 				<Box
 					key={`${table.table}_${table.joinColumn}`}
@@ -154,8 +174,8 @@ const ColumnPickerPopup: React.FC<ColumnPickerPopupProps> = (props) => {
 							{columnData.name}
 						</Label>
 						<Label variant={'caption2'} weight={'regular'} color={themes.neutralBeige600}>
-							{columnData.isNullable ? '(?)' : ''}
 							{SchemaService.convertSqlTypeToTypescriptType(columnData.type)}
+							{columnData.isNullable ? ' | null' : ''}
 						</Label>
 					</Box>
 				);

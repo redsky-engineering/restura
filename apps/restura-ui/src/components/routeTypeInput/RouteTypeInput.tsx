@@ -91,7 +91,8 @@ const RouteTypeInput: React.FC<RouteTypeInputProps> = (props) => {
 									name: updatedRouteData.name,
 									description: updatedRouteData.description,
 									path: updatedRouteData.path,
-									roles: updatedRouteData.roles
+									roles: updatedRouteData.roles,
+									scopes: updatedRouteData.scopes
 								};
 							}
 						} else if (newValue.value === 'PAGED') {
@@ -137,7 +138,8 @@ const RouteTypeInput: React.FC<RouteTypeInputProps> = (props) => {
 								assignments: (updatedRouteData as Restura.StandardRouteData).assignments,
 								where: (updatedRouteData as Restura.StandardRouteData).where,
 								joins: (updatedRouteData as Restura.StandardRouteData).joins,
-								roles: updatedRouteData.roles
+								roles: updatedRouteData.roles,
+								scopes: updatedRouteData.scopes
 							};
 						}
 

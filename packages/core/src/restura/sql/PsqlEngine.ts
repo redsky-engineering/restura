@@ -3,7 +3,7 @@ import getDiff from '@wmfs/pg-diff-sync';
 import pgInfo from '@wmfs/pg-info';
 import type { Client as ClientType } from 'pg';
 import pg from 'pg';
-import { RsError } from '../RsError';
+import { RsError } from '../RsError.js';
 import eventManager, { MutationType, TriggerResult } from '../eventManager.js';
 import {
 	CustomRouteData,
@@ -18,13 +18,14 @@ import { DynamicObject, RequesterDetails, RsRequest } from '../types/customExpre
 import { PageQuery } from '../types/resturaTypes.js';
 import { PsqlPool } from './PsqlPool.js';
 import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
-import SqlEngine from './SqlEngine';
-import { SqlUtils } from './SqlUtils';
+import SqlEngine from './SqlEngine.js';
+import { SqlUtils } from './SqlUtils.js';
 import filterPsqlParser from './filterPsqlParser.js';
 const { Client, types } = pg;
 
 const systemUser: RequesterDetails = {
 	role: '',
+	scopes: [],
 	host: '',
 	ipAddress: '',
 	isSystemUser: true
@@ -33,10 +34,12 @@ const systemUser: RequesterDetails = {
 export class PsqlEngine extends SqlEngine {
 	setupTriggerListeners: Promise<void> | undefined;
 	private triggerClient: ClientType | undefined;
+	private scratchDbName: string = '';
 
 	constructor(
 		private psqlConnectionPool: PsqlPool,
-		shouldListenForDbTriggers: boolean = false
+		shouldListenForDbTriggers: boolean = false,
+		scratchDatabaseSuffix: string = ''
 	) {
 		super();
 
@@ -44,6 +47,8 @@ export class PsqlEngine extends SqlEngine {
 		if (shouldListenForDbTriggers) {
 			this.setupTriggerListeners = this.listenForDbTriggers();
 		}
+
+		this.scratchDbName = `${psqlConnectionPool.poolConfig.database}_scratch${scratchDatabaseSuffix ? `_${scratchDatabaseSuffix}` : ''}`;
 	}
 	async close() {
 		if (this.triggerClient) {
@@ -203,27 +208,23 @@ export class PsqlEngine extends SqlEngine {
 		return sqlStatements.join('\n\n');
 	}
 
-	private async getScratchPool(): Promise<PsqlPool> {
+	private async getNewPublicSchemaAndScratchPool(): Promise<PsqlPool> {
 		const scratchDbExists = await this.psqlConnectionPool.runQuery<DynamicObject>(
 			`SELECT *
              FROM pg_database
-             WHERE datname = '${this.psqlConnectionPool.poolConfig.database}_scratch';`,
+             WHERE datname = '${this.scratchDbName}';`,
 			[],
 			systemUser
 		);
 		if (scratchDbExists.length === 0) {
-			await this.psqlConnectionPool.runQuery(
-				`CREATE DATABASE ${this.psqlConnectionPool.poolConfig.database}_scratch;`,
-				[],
-				systemUser
-			);
+			await this.psqlConnectionPool.runQuery(`CREATE DATABASE ${this.scratchDbName};`, [], systemUser);
 		}
 
 		const scratchPool = new PsqlPool({
 			host: this.psqlConnectionPool.poolConfig.host,
 			port: this.psqlConnectionPool.poolConfig.port,
 			user: this.psqlConnectionPool.poolConfig.user,
-			database: this.psqlConnectionPool.poolConfig.database + '_scratch',
+			database: this.scratchDbName,
 			password: this.psqlConnectionPool.poolConfig.password,
 			max: this.psqlConnectionPool.poolConfig.max,
 			idleTimeoutMillis: this.psqlConnectionPool.poolConfig.idleTimeoutMillis,
@@ -236,10 +237,11 @@ export class PsqlEngine extends SqlEngine {
 			systemUser
 		);
 		const schemaComment = await this.psqlConnectionPool.runQuery<{ description: string }>(
-			`SELECT pg_description.description
-                                                                                               FROM pg_description
-                                                                                                        JOIN pg_namespace ON pg_namespace.oid = pg_description.objoid
-                                                                                   WHERE pg_namespace.nspname = 'public';`,
+			`
+			SELECT pg_description.description
+			FROM pg_description
+			JOIN pg_namespace ON pg_namespace.oid = pg_description.objoid
+			WHERE pg_namespace.nspname = 'public';`,
 			[],
 			systemUser
 		);
@@ -254,7 +256,7 @@ export class PsqlEngine extends SqlEngine {
 	}
 
 	async diffDatabaseToSchema(schema: ResturaSchema): Promise<string> {
-		const scratchPool = await this.getScratchPool();
+		const scratchPool = await this.getNewPublicSchemaAndScratchPool();
 		await this.createDatabaseFromSchema(schema, scratchPool);
 
 		const originalClient = new Client({
@@ -265,7 +267,7 @@ export class PsqlEngine extends SqlEngine {
 			port: this.psqlConnectionPool.poolConfig.port
 		});
 		const scratchClient = new Client({
-			database: this.psqlConnectionPool.poolConfig.database + '_scratch',
+			database: this.scratchDbName,
 			user: this.psqlConnectionPool.poolConfig.user,
 			password: this.psqlConnectionPool.poolConfig.password,
 			host: this.psqlConnectionPool.poolConfig.host,
@@ -288,17 +290,19 @@ export class PsqlEngine extends SqlEngine {
 		schema: ResturaSchema,
 		item: ResponseData,
 		routeData: StandardRouteData,
-		userRole: string | undefined,
 		sqlParams: string[]
 	): string {
 		if (!item.subquery) return '';
 		if (
 			!ObjectUtils.isArrayWithData(
 				item.subquery.properties.filter((nestedItem) => {
-					return this.doesRoleHavePermissionToColumn(req.requesterDetails.role, schema, nestedItem, [
-						...routeData.joins,
-						...item.subquery!.joins
-					]);
+					return this.canRequesterAccessColumn(
+						req.requesterDetails.role,
+						req.requesterDetails.scopes,
+						schema,
+						nestedItem,
+						[...routeData.joins, ...item.subquery!.joins]
+					);
 				})
 			)
 		) {
@@ -309,10 +313,13 @@ export class PsqlEngine extends SqlEngine {
 			${item.subquery.properties
 				.map((nestedItem) => {
 					if (
-						!this.doesRoleHavePermissionToColumn(req.requesterDetails.role, schema, nestedItem, [
-							...routeData.joins,
-							...item.subquery!.joins
-						])
+						!this.canRequesterAccessColumn(
+							req.requesterDetails.role,
+							req.requesterDetails.scopes,
+							schema,
+							nestedItem,
+							[...routeData.joins, ...item.subquery!.joins]
+						)
 					) {
 						return;
 					}
@@ -323,7 +330,6 @@ export class PsqlEngine extends SqlEngine {
 							schema,
 							nestedItem,
 							routeData,
-							userRole,
 							sqlParams
 						)}`;
 					}
@@ -334,7 +340,7 @@ export class PsqlEngine extends SqlEngine {
 						)) 
 						FROM
 							"${item.subquery.table}"
-							${this.generateJoinStatements(req, item.subquery.joins, item.subquery.table, routeData, schema, userRole, sqlParams)}
+							${this.generateJoinStatements(req, item.subquery.joins, item.subquery.table, routeData, schema, sqlParams)}
 							${this.generateWhereClause(req, item.subquery.where, routeData, sqlParams)}
 					), '[]')`;
 	}
@@ -378,13 +384,21 @@ export class PsqlEngine extends SqlEngine {
 		const DEFAULT_PAGED_PER_PAGE_NUMBER = 25;
 		const sqlParams: string[] = [];
 
-		const userRole = req.requesterDetails.role;
 		let sqlStatement = '';
 
 		const selectColumns: ResponseData[] = [];
 		routeData.response.forEach((item) => {
 			// For a subquery, we will check the permission when generating the subquery statement, so pass it through
-			if (item.subquery || this.doesRoleHavePermissionToColumn(userRole, schema, item, routeData.joins))
+			if (
+				item.subquery ||
+				this.canRequesterAccessColumn(
+					req.requesterDetails.role,
+					req.requesterDetails.scopes,
+					schema,
+					item,
+					routeData.joins
+				)
+			)
 				selectColumns.push(item);
 		});
 		if (!selectColumns.length) throw new RsError('FORBIDDEN', `You do not have permission to access this data.`);
@@ -392,7 +406,7 @@ export class PsqlEngine extends SqlEngine {
 		selectStatement += `\t${selectColumns
 			.map((item) => {
 				if (item.subquery) {
-					return `${this.createNestedSelect(req, schema, item, routeData, userRole, sqlParams)} AS ${escapeColumnName(
+					return `${this.createNestedSelect(req, schema, item, routeData, sqlParams)} AS ${escapeColumnName(
 						item.name
 					)}`;
 				}
@@ -406,7 +420,6 @@ export class PsqlEngine extends SqlEngine {
 			routeData.table,
 			routeData,
 			schema,
-			userRole,
 			sqlParams
 		);
 
@@ -516,7 +529,6 @@ export class PsqlEngine extends SqlEngine {
 			routeData.table,
 			routeData,
 			schema,
-			req.requesterDetails.role,
 			sqlParams
 		);
 		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
@@ -536,24 +548,35 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		baseTable: string,
 		routeData: StandardRouteData | CustomRouteData,
 		schema: ResturaSchema,
-		userRole: string | undefined,
 		sqlParams: string[]
 	): string {
 		let joinStatements = '';
 		joins.forEach((item) => {
-			if (!this.doesRoleHavePermissionToTable(userRole, schema, item.table))
+			if (
+				!this.canRequesterAccessTable(
+					req.requesterDetails.role,
+					req.requesterDetails.scopes,
+					schema,
+					item.table
+				)
+			)
 				throw new RsError('FORBIDDEN', 'You do not have permission to access this table');
 			if (item.custom) {
 				const customReplaced = this.replaceParamKeywords(item.custom, routeData, req, sqlParams);
-				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)}${
-					item.alias ? `AS "${item.alias}"` : ''
-				} ON ${customReplaced}\n`;
+				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)} AS ${escapeColumnName(item.alias)} ON ${customReplaced}\n`;
 			} else {
-				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)}${
-					item.alias ? `AS "${item.alias}"` : ''
-				} ON "${baseTable}"."${item.localColumnName}" = ${escapeColumnName(item.alias ? item.alias : item.table)}.${escapeColumnName(
-					item.foreignColumnName
-				)}\n`;
+				joinStatements += `\t${item.type} JOIN ${escapeColumnName(item.table)}`;
+				joinStatements += ` AS ${escapeColumnName(item.alias)}`;
+
+				if (item.localTable) {
+					joinStatements += ` ON ${escapeColumnName(item.localTableAlias)}.${escapeColumnName(item.localColumnName)} = ${escapeColumnName(item.alias)}.${escapeColumnName(
+						item.foreignColumnName
+					)}\n`;
+				} else {
+					joinStatements += ` ON ${escapeColumnName(baseTable)}.${escapeColumnName(item.localColumnName)} = ${escapeColumnName(item.alias)}.${escapeColumnName(
+						item.foreignColumnName
+					)}\n`;
+				}
 			}
 		});
 		return joinStatements;

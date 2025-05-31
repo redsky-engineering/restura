@@ -130,6 +130,11 @@ B%')`,
 			`(isNull("id")) AND  NOT ("totalPriceCents" < '3071')`
 		);
 
+		test(
+			`(column:order.billingAddress.zip,value:47,type:contains)`,
+			`("order"."billingAddress"->>'zip' ILIKE '%47%')`
+		);
+
 		done();
 	});
 	it('Should reject invalid strings', function (done: Done) {
@@ -151,6 +156,7 @@ B%')`,
 		testBadInput(
 			'(colum:orderV2.id,value:215)AND(column:orderV2.totalPriceCents,value:3070,type:greaterThanEqual)xor(value:3070,column:totalPriceCents,,type:lessThanEqual)'
 		);
+		testBadInput('(column:order.billingAddress.zip.zip2,value:47,type:contains)');
 		done();
 	});
 });

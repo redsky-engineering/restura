@@ -1,11 +1,11 @@
-import * as React from 'react';
-import './RoleSection.scss';
 import { Box, Button, Icon, InputText, Label, rsToastify } from '@redskytech/framework/ui';
-import themes from '../../../themes/themes.scss?export';
+import cloneDeep from 'lodash.clonedeep';
+import * as React from 'react';
+import { useState } from 'react';
 import { useRecoilState } from 'recoil';
 import globalState from '../../../state/globalState';
-import { useState } from 'react';
-import cloneDeep from 'lodash.clonedeep';
+import themes from '../../../themes/themes.scss?export';
+import './RoleSection.scss';
 
 interface RoleSectionProps {}
 
@@ -42,7 +42,7 @@ const RoleSection: React.FC<RoleSectionProps> = (props) => {
 					<InputText
 						value={newRoleName}
 						inputMode={'text'}
-						placeholder={'New Param'}
+						placeholder={'New Role (e.g. admin, user, etc.)'}
 						onChange={(value) => setNewRoleName(value)}
 						onKeyDown={(event) => {
 							if (event.key === 'Enter') handleAddRole();

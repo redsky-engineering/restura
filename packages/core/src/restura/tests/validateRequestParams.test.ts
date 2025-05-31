@@ -12,6 +12,7 @@ describe('validateRequestParams', () => {
 		path: '/user/me',
 		table: 'user',
 		roles: ['user', 'admin'],
+		scopes: [],
 		request: [],
 		joins: [],
 		response: [

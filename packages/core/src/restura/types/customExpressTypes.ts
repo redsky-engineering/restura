@@ -11,7 +11,8 @@ export interface RsHeaders extends IncomingHttpHeaders {
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 
 export type RequesterDetails<T extends object = {}> = {
-	role: string; // The role of the user, blank if anonymous
+	role: string; // The role of the user, blank if anonymous or not applicable
+	scopes: string[]; // The scopes of the user, blank if anonymous or not applicable
 	host: string;
 	ipAddress: string;
 	userId?: number;

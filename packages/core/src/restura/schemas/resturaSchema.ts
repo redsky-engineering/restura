@@ -1,6 +1,6 @@
-import { z } from 'zod';
-import { logger } from '../../logger/logger';
-import { validatorDataSchema } from './validatorDataSchema';
+import { z } from 'zod/v4';
+import { logger } from '../../logger/logger.js';
+import { validatorDataSchema } from './validatorDataSchema.js';
 
 // Zod schemas with strict mode
 const orderBySchema = z
@@ -64,11 +64,13 @@ export type AssignmentData = z.infer<typeof assignmentDataSchema>;
 const joinDataSchema = z
 	.object({
 		table: z.string(),
+		localTable: z.string().optional(), // Defaults to base table if not specificed
+		localTableAlias: z.string().optional(), // If we are joining a table off of a previous join, this is the alias of the previous join
 		localColumnName: z.string().optional(),
 		foreignColumnName: z.string().optional(),
 		custom: z.string().optional(),
-		type: z.enum(['LEFT', 'INNER']),
-		alias: z.string().optional()
+		type: z.enum(['LEFT', 'INNER', 'RIGHT']),
+		alias: z.string()
 	})
 	.strict();
 
@@ -94,12 +96,14 @@ const responseDataSchema = z
 				table: z.string(),
 				joins: z.array(joinDataSchema),
 				where: z.array(whereDataSchema),
-				properties: z.array(z.lazy((): z.ZodSchema => responseDataSchema)), // Explicit type for the lazy schema
+				get properties() {
+					return z.array(responseDataSchema);
+				},
 				groupBy: groupBySchema.optional(),
 				orderBy: orderBySchema.optional()
 			})
 			.optional(),
-		type: z.string().optional()
+		type: z.string().optional() // Type allows you to override the type of the response, used in custom selectors
 	})
 	.strict();
 
@@ -111,7 +115,8 @@ const routeDataBaseSchema = z
 		name: z.string(),
 		description: z.string(),
 		path: z.string(),
-		roles: z.array(z.string())
+		roles: z.array(z.string()),
+		scopes: z.array(z.string())
 	})
 	.strict();
 
@@ -239,6 +244,7 @@ const columnDataSchema = z
 		]),
 		isNullable: z.boolean(),
 		roles: z.array(z.string()),
+		scopes: z.array(z.string()),
 		comment: z.string().optional(),
 		default: z.string().optional(),
 		value: z.string().optional(),
@@ -303,6 +309,7 @@ const tableDataSchema = z
 		foreignKeys: z.array(foreignKeyDataSchema),
 		checkConstraints: z.array(checkConstraintDataSchema),
 		roles: z.array(z.string()),
+		scopes: z.array(z.string()),
 		notify: z.union([z.literal('ALL'), z.array(z.string())]).optional()
 	})
 	.strict();
@@ -327,6 +334,7 @@ export const resturaSchema = z
 		endpoints: z.array(endpointDataSchema),
 		globalParams: z.array(z.string()),
 		roles: z.array(z.string()),
+		scopes: z.array(z.string()),
 		customTypes: z.array(z.string())
 	})
 	.strict();
@@ -337,8 +345,13 @@ export async function isSchemaValid(schemaToCheck: unknown): Promise<boolean> {
 	try {
 		resturaSchema.parse(schemaToCheck);
 		return true;
-	} catch (error) {
-		logger.error(error);
+	} catch (error: unknown) {
+		if (error instanceof z.ZodError) {
+			logger.error('Schema failed to validate with the following error:');
+			console.error(z.prettifyError(error));
+		} else {
+			logger.error(error);
+		}
 		return false;
 	}
 }

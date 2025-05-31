@@ -123,6 +123,22 @@ export default class SchemaService extends Service {
 		setRecoilExternalValue<Restura.Schema | undefined>(globalState.schema, updatedSchema);
 	}
 
+	updateFileUploadType(fileUploadType: Restura.CustomRouteData['fileUploadType'] | 'NONE') {
+		let schema = getRecoilExternalValue<Restura.Schema | undefined>(globalState.schema);
+		if (!schema) return;
+		let updatedSchema = cloneDeep(schema);
+		let indices = SchemaService.getIndexesToSelectedRoute(schema);
+		const route = updatedSchema.endpoints[indices.endpointIndex].routes[indices.routeIndex];
+
+		if (!SchemaService.isCustomRouteData(route) || fileUploadType === 'NONE') {
+			// remove the file upload type
+			delete (route as Restura.CustomRouteData).fileUploadType;
+		} else {
+			route.fileUploadType = fileUploadType;
+		}
+		setRecoilExternalValue<Restura.Schema | undefined>(globalState.schema, updatedSchema);
+	}
+
 	addJoin(joinData: Restura.JoinData) {
 		let schema = getRecoilExternalValue<Restura.Schema | undefined>(globalState.schema);
 		if (!schema) return;
@@ -445,6 +461,8 @@ export default class SchemaService extends Service {
 				return 'Date';
 			case 'datetime':
 				return 'Date';
+			case 'timestamp':
+				return 'Date';
 			case 'tinyint':
 			case 'boolean':
 				return 'boolean';
@@ -510,9 +528,9 @@ export default class SchemaService extends Service {
 		let column = table.columns.find((item) => item.name === columnName);
 		if (!column) return 'unknown';
 
-		return `${column.isNullable ? '(?)' : ''} ${SchemaService.convertSqlTypeToTypescriptType(
+		return `${SchemaService.convertSqlTypeToTypescriptType(
 			column.type,
 			column.value
-		)}`;
+		)}${column.isNullable ? ' | null' : ''}`;
 	}
 }

@@ -72,10 +72,32 @@ negate = "!"
 operator = "and"i / "or"i
 
 	   
-column = left:text "." right:text { return  \`\${quoteSqlIdentity(left)}.\${quoteSqlIdentity(right)}\`; } 
-    / 
-    text:text { return quoteSqlIdentity(text); } 
+column = first:text rest:("." text)* { 
+    const partsArray = [first];
+    if (rest && rest.length > 0) {
+        partsArray.push(...rest.map(item => item[1]));
+    }
     
+    if (partsArray.length > 3) {
+        throw new SyntaxError('Column path cannot have more than 3 parts (table.column.jsonField)');
+    }
+    
+    if (partsArray.length === 1) {
+        return quoteSqlIdentity(partsArray[0]);
+    }
+    const tableName = quoteSqlIdentity(partsArray[0]);
+    
+    // If we only have two parts (table.column), use regular dot notation
+    if (partsArray.length === 2) {
+        return tableName + "." + quoteSqlIdentity(partsArray[1]);
+    }
+    
+    // For JSON paths (more than 2 parts), first part is a column, last part uses ->>
+    const jsonColumn = quoteSqlIdentity(partsArray[1]);
+    const lastPart = partsArray[partsArray.length - 1];
+    const result = tableName + "." + jsonColumn + "->>'" + lastPart + "'";
+    return result;
+}
 
 text = text:[a-z0-9 \\t\\r\\n\\-_:@']i+ { return text.join(""); }
 

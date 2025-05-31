@@ -1,10 +1,10 @@
-import * as React from 'react';
-import './WhereClauseInput.scss';
 import { Box, Button, Icon, Label, popupController, Select } from '@redskytech/framework/ui';
-import ColumnPickerPopup, { ColumnPickerPopupProps } from '../../popups/columnPickerPopup/ColumnPickerPopup';
-import AutoComplete from '../autoComplete/AutoComplete';
+import * as React from 'react';
 import { useRecoilValue } from 'recoil';
+import ColumnPickerPopup, { ColumnPickerPopupProps } from '../../popups/columnPickerPopup/ColumnPickerPopup';
 import globalState from '../../state/globalState';
+import AutoComplete from '../autoComplete/AutoComplete';
+import './WhereClauseInput.scss';
 
 interface WhereClauseInputProps {
 	routeData: Restura.StandardRouteData;
@@ -35,9 +35,10 @@ const WhereClauseInput: React.FC<WhereClauseInputProps> = (props) => {
 				});
 			},
 			onCustomSelect: () => {
+				let whereClauseLength = props.where.length;
 				props.onAddWhereClause({
 					custom: 'TRUE',
-					conjunction: 'AND'
+					...(whereClauseLength > 0 && { conjunction: 'AND' })
 				});
 			}
 		});

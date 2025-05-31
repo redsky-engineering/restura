@@ -1,3 +1,4 @@
+import { logger } from '../../logger/logger.js';
 import { RsError } from '../RsError.js';
 
 import {
@@ -14,7 +15,7 @@ import { SqlUtils } from '../sql/SqlUtils.js';
 export type ValidatorString = 'boolean' | 'string' | 'number' | 'object' | 'any';
 
 interface ResponseType {
-	isOptional?: boolean;
+	isOptionalOrNullable?: boolean;
 	isArray?: boolean;
 	validator: ValidatorString | ResponseTypeMap | string[];
 }
@@ -58,7 +59,7 @@ export default class ResponseValidator {
 	private getRouteResponseType(route: StandardRouteData): ResponseType {
 		const map: ResponseTypeMap = {};
 		for (const field of route.response) {
-			map[field.name] = this.getFieldResponseType(field, route.table);
+			map[field.name] = this.getFieldResponseType(field, route.table, route);
 		}
 
 		if (route.type === 'PAGED') {
@@ -79,7 +80,7 @@ export default class ResponseValidator {
 		return { validator: map, isArray: route.type === 'ARRAY' };
 	}
 
-	private getFieldResponseType(field: ResponseData, tableName: string): ResponseType {
+	private getFieldResponseType(field: ResponseData, tableName: string, routeData: StandardRouteData): ResponseType {
 		if (field.type) {
 			if (ResponseValidator.validatorIsValidString(field.type)) {
 				return { validator: field.type };
@@ -89,33 +90,59 @@ export default class ResponseValidator {
 			}
 			return { validator: 'object' };
 		} else if (field.selector) {
-			return this.getTypeFromTable(field.selector, tableName);
+			return this.getTypeFromTable(field.selector, tableName, routeData);
 		} else if (field.subquery) {
 			const table = this.database.find((t) => t.name == tableName);
 			if (!table) return { isArray: true, validator: 'any' };
-			const isOptional = table.roles.length > 0;
+			const isOptionalOrNullable = table.roles.length > 0 || table.scopes.length > 0;
 			const validator: ResponseTypeMap = {};
 			for (const prop of field.subquery.properties) {
-				validator[prop.name] = this.getFieldResponseType(prop, field.subquery.table);
+				validator[prop.name] = this.getFieldResponseType(prop, field.subquery.table, routeData);
 			}
 			return {
 				isArray: true,
-				isOptional,
+				isOptionalOrNullable,
 				validator
 			};
 		}
 		return { validator: 'any' };
 	}
 
-	private getTypeFromTable(selector: string, name: string): ResponseType {
-		const path = selector.split('.');
-		if (path.length === 0 || path.length > 2 || path[0] === '') return { validator: 'any', isOptional: false };
+	private getTypeFromTable(selector: string, name: string, routeData: StandardRouteData): ResponseType {
+		const selectorParts = selector.split('.');
+		if (selectorParts.length === 0 || selectorParts.length > 2 || selectorParts[0] === '') {
+			// Here we can't tell what type it is, so we return any, but make an assumption that it's not optional.
+			// We should investigate if this is a good assumption.
+			logger.warn(`ResponseValidator: Could not determine type for selector: ${selector} in table: ${name}`);
+			return { validator: 'any', isOptionalOrNullable: false };
+		}
 
-		const tableName = path.length == 2 ? path[0] : name,
-			columnName = path.length == 2 ? path[1] : path[0];
-		const table = this.database.find((t) => t.name == tableName);
-		const column = table?.columns.find((c) => c.name == columnName);
-		if (!table || !column) return { validator: 'any', isOptional: false };
+		const tableOrAliasName = selectorParts.length == 2 ? selectorParts[0] : name;
+		const columnName = selectorParts.length == 2 ? selectorParts[1] : selectorParts[0];
+
+		let table = this.database.find((t) => t.name == tableOrAliasName);
+		let isNullable = false;
+		if (!table) {
+			// Try to look for the alias in the joins
+			const join = routeData.joins.find((j) => j.alias == tableOrAliasName);
+			if (join) {
+				table = this.database.find((t) => t.name == join.table);
+				if (join.type === 'LEFT' || join.type === 'RIGHT') isNullable = true;
+			}
+		}
+		if (!table) {
+			logger.warn(
+				`ResponseValidator: Could not find table: ${tableOrAliasName} in database using selector: ${selector}`
+			);
+			return { validator: 'any', isOptionalOrNullable: false };
+		}
+		const column = table.columns.find((c) => c.name == columnName);
+		if (!column) {
+			logger.warn(
+				`ResponseValidator: Could not find column: ${columnName} in table: ${tableOrAliasName} using selector: ${selector}`
+			);
+			return { validator: 'any', isOptionalOrNullable: false };
+		}
 
 		let validator: ValidatorString | string | string[] = SqlUtils.convertDatabaseTypeToTypescript(
 			column.type,
@@ -125,7 +152,7 @@ export default class ResponseValidator {
 
 		return {
 			validator,
-			isOptional: column.roles.length > 0 || column.isNullable
+			isOptionalOrNullable: isNullable || column.roles.length > 0 || column.scopes.length > 0 || column.isNullable
 		};
 	}
 
@@ -138,12 +165,12 @@ export default class ResponseValidator {
 	private validateAndCoerceMap(
 		name: string,
 		value: unknown,
-		{ isOptional, isArray, validator }: ResponseTypeMap[string]
+		{ isOptionalOrNullable, isArray, validator }: ResponseTypeMap[string]
 	): unknown {
 		if (validator === 'any') return value;
 		const valueType = typeof value;
 		if (value == null) {
-			if (isOptional) return value;
+			if (isOptionalOrNullable) return value;
 			throw new RsError('DATABASE_ERROR', `Response param (${name}) is required`);
 		}
 		if (isArray) {

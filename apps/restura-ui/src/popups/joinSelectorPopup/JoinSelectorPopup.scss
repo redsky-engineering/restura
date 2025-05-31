@@ -3,7 +3,7 @@
 .rsJoinSelectorPopup {
 	width: fit-content;
 	min-width: 350px;
-	max-width: 500px;
+	max-width: 600px;
 	position: absolute;
 	background: theme-var($neutralBeige900);
 	box-shadow: 1px 3px 8px -4px rgba(0, 0, 0, 0.3);
@@ -28,7 +28,7 @@
 
 	.keyGrid {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr) 65px;
+		grid-template-columns: repeat(4, 1fr) 65px;
 
 		.tableHeader {
 			color: theme-var($neutralBeige500);

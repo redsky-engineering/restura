@@ -5,7 +5,7 @@ declare namespace Model {
 		id: number;
 		createdOn: string;
 		modifiedOn: string;
-		orderId: number;
+		orderId: number | null;
 	}
 	export interface Order {
 		id: number;

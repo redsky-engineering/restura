@@ -4,7 +4,7 @@
 	.tableColumnDetailsGrid {
 		display: grid;
 		gap: 0 16px;
-		grid-template-columns: repeat(14, fit-content(400px));
+		grid-template-columns: repeat(15, fit-content(400px));
 		position: relative;
 
 		// Background of table header

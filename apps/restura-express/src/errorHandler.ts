@@ -10,7 +10,7 @@ import type { NextFunction } from 'express';
 
 export default function errorHandler(
 	err: RsErrorInternalData,
-	req: RsRequest<unknown>,
+	_req: RsRequest<unknown>,
 	res: RsResponse<unknown>,
 	next: NextFunction
 ) {

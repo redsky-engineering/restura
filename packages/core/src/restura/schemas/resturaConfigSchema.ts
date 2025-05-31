@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 const isTsx = process.argv[1]?.endsWith('.ts');
 const isTsNode = process.env.TS_NODE_DEV || process.env.TS_NODE_PROJECT;
@@ -10,6 +10,7 @@ export const resturaConfigSchema = z.object({
 	schemaFilePath: z.string().default(process.cwd() + '/restura.schema.json'),
 	customApiFolderPath: z.string().default(process.cwd() + customApiFolderPath),
 	generatedTypesPath: z.string().default(process.cwd() + '/src/@types'),
-	fileTempCachePath: z.string().optional()
+	fileTempCachePath: z.string().optional(),
+	scratchDatabaseSuffix: z.string().optional()
 });
 export type ResturaConfigSchema = z.infer<typeof resturaConfigSchema>;

@@ -39,15 +39,17 @@ const DatabasePage: React.FC<DatabasePageProps> = () => {
 					isNullable: false,
 					roles: [],
 					type: 'BIGSERIAL',
-					isPrimary: true
+					isPrimary: true,
+					scopes: []
 				},
-				{ name: 'createdOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME' },
-				{ name: 'modifiedOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME' }
+				{ name: 'createdOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME', scopes: [] },
+				{ name: 'modifiedOn', isNullable: false, default: 'now()', roles: [], type: 'DATETIME', scopes: [] }
 			],
 			foreignKeys: [],
 			checkConstraints: [],
 			indexes: [],
-			roles: []
+			roles: [],
+			scopes: []
 		});
 		setSchema(updatedSchema);
 	}

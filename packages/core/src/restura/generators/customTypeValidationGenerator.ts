@@ -6,6 +6,11 @@ import { restura } from '../restura.js';
 import { ResturaSchema } from '../schemas/resturaSchema.js';
 import type { ValidationDictionary } from '../validators/requestValidator.js';
 
+/**
+ * This function generates a temporary file with the custom types and then uses typescript-json-schema to generate a JSON schema for each custom type.
+ * @param currentSchema - The current schema to generate the validation dictionary for.
+ * @returns A dictionary of custom type names and their corresponding JSON schemas.
+ */
 export default function customTypeValidationGenerator(currentSchema: ResturaSchema): ValidationDictionary {
 	const schemaObject: ValidationDictionary = {};
 	const customInterfaceNames = currentSchema.customTypes

@@ -1,7 +1,7 @@
 import { StringUtils } from '@redskytech/core-utils';
 import prettier from 'prettier';
 import type { ResturaSchema, TableData } from '../schemas/resturaSchema.js';
-import { SqlUtils } from '../sql/SqlUtils';
+import { SqlUtils } from '../sql/SqlUtils.js';
 
 export default function modelGenerator(schema: ResturaSchema): Promise<string> {
 	let modelString = `/** Auto generated file. DO NOT MODIFY **/\n\n`;

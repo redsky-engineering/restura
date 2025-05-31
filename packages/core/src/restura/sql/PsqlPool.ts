@@ -11,7 +11,13 @@ export class PsqlPool extends PsqlConnection {
 		super();
 		this.pool = new Pool(poolConfig);
 		// Run a test query to ensure the connection is working
-		this.queryOne('SELECT NOW();', [], { isSystemUser: true, role: '', host: 'localhost', ipAddress: '' })
+		this.queryOne('SELECT NOW();', [], {
+			isSystemUser: true,
+			role: '',
+			host: 'localhost',
+			ipAddress: '',
+			scopes: []
+		})
 			.then(() => {
 				logger.info('Connected to PostgreSQL database');
 			})

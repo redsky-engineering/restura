@@ -1,8 +1,13 @@
 export * from './logger/logger.js';
+export { type LoggerConfigSchema } from './logger/loggerConfigSchema.js';
 export * from './restura/eventManager.js';
 export { default as eventManager } from './restura/eventManager.js';
+export { default as apiGenerator } from './restura/generators/apiGenerator.js';
+export { default as modelGenerator } from './restura/generators/modelGenerator.js';
+export { default as resturaGlobalTypesGenerator } from './restura/generators/resturaGlobalTypesGenerator.js';
 export * from './restura/restura.js';
 export * from './restura/RsError.js';
+export { type ResturaConfigSchema } from './restura/schemas/resturaConfigSchema.js';
 export { default as filterPsqlParser } from './restura/sql/filterPsqlParser.js';
 export * from './restura/sql/PsqlConnection.js';
 export * from './restura/sql/PsqlEngine.js';
@@ -11,3 +16,4 @@ export * from './restura/sql/PsqlTransaction.js';
 export * from './restura/sql/PsqlUtils.js';
 export * from './restura/types/customExpressTypes.js';
 export * from './restura/types/resturaTypes.js';
+export { isSchemaValid } from './restura/schemas/resturaSchema.js';

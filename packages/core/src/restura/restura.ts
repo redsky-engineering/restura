@@ -19,7 +19,7 @@ import customTypeValidationGenerator from './generators/customTypeValidationGene
 import modelGenerator from './generators/modelGenerator.js';
 import resturaGlobalTypesGenerator from './generators/resturaGlobalTypesGenerator.js';
 import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
-import { authenticateUser } from './middleware/authenticateUser.js';
+import { authenticateRequester } from './middleware/authenticateRequester.js';
 import { getMulterUpload } from './middleware/getMulterUpload.js';
 import { schemaValidation } from './middleware/schemaValidation.js';
 import { resturaConfigSchema, type ResturaConfigSchema } from './schemas/resturaConfigSchema.js';
@@ -72,12 +72,12 @@ class ResturaEngine {
 		psqlConnectionPool: PsqlPool
 	): Promise<void> {
 		// Try to load config first. If it fails, we can't continue.
-		this.resturaConfig = config.validate('restura', resturaConfigSchema) as ResturaConfigSchema;
+		this.resturaConfig = await config.validate('restura', resturaConfigSchema);
 
 		this.multerCommonUpload = getMulterUpload(this.resturaConfig.fileTempCachePath);
 		new TempCache(this.resturaConfig.fileTempCachePath);
 		this.psqlConnectionPool = psqlConnectionPool;
-		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool, true);
+		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool, true, this.resturaConfig.scratchDatabaseSuffix);
 
 		await customApiFactory.loadApiFiles(this.resturaConfig.customApiFolderPath);
 
@@ -92,7 +92,7 @@ class ResturaEngine {
 		app.disable('x-powered-by');
 
 		app.use('/', addApiResponseFunctions as unknown as express.RequestHandler);
-		app.use('/api/', authenticateUser(this.authenticationHandler) as unknown as express.RequestHandler);
+		app.use('/api/', authenticateRequester(this.authenticationHandler) as unknown as express.RequestHandler);
 		app.use('/restura', this.resturaAuthentication);
 
 		// Routes specific to Restura
@@ -112,14 +112,14 @@ class ResturaEngine {
 		this.expressApp = app;
 
 		await this.reloadEndpoints();
-		await this.validateGeneratedTypesFolder();
+		await this.initializeGeneratedTypesFolder();
 
 		logger.info('Restura Engine Initialized');
 	}
 
 	/**
 	 * Determines if a given endpoint is public based on the HTTP method and full URL. This
-	 * is determined on whether the endpoint in the schema has no roles assigned to it.
+	 * is determined on whether the endpoint in the schema has no roles or scopes assigned to it.
 	 *
 	 * @param method - The HTTP method (e.g., 'GET', 'POST', 'PUT', 'PATCH', 'DELETE').
 	 * @param fullUrl - The full URL of the endpoint.
@@ -218,7 +218,8 @@ class ResturaEngine {
 				route.path = route.path.endsWith('/') ? route.path.slice(0, -1) : route.path;
 				const fullUrl = `${baseUrl}${route.path}`;
 
-				if (route.roles.length === 0) this.publicEndpoints[route.method].push(fullUrl);
+				if (route.roles.length === 0 && route.scopes.length === 0)
+					this.publicEndpoints[route.method].push(fullUrl);
 
 				this.resturaRouter[route.method.toLowerCase() as Lowercase<typeof route.method>](
 					route.path, // <-- Notice we only use path here since the baseUrl is already added to the router.
@@ -232,7 +233,7 @@ class ResturaEngine {
 		logger.info(`Restura loaded (${routeCount}) endpoint${routeCount > 1 ? 's' : ''}`);
 	}
 
-	private async validateGeneratedTypesFolder() {
+	private async initializeGeneratedTypesFolder() {
 		if (!fs.existsSync(this.resturaConfig.generatedTypesPath)) {
 			fs.mkdirSync(this.resturaConfig.generatedTypesPath, { recursive: true });
 		}
@@ -280,12 +281,12 @@ class ResturaEngine {
 	}
 
 	@boundMethod
-	private async getSchema(req: express.Request, res: express.Response) {
+	private async getSchema(_req: express.Request, res: express.Response) {
 		res.send({ data: this.schema });
 	}
 
 	@boundMethod
-	private async getSchemaAndTypes(req: express.Request, res: express.Response) {
+	private async getSchemaAndTypes(_req: express.Request, res: express.Response) {
 		try {
 			const schema = await this.getLatestFileSystemSchema();
 			const apiText = await apiGenerator(schema);
@@ -328,7 +329,7 @@ class ResturaEngine {
 			// Locate the route in the schema
 			const routeData = this.getRouteData(req.method, req.baseUrl, req.path);
 
-			// Validate the user has access to the endpoint
+			// Validate the requester has access to the endpoint
 			this.validateAuthorization(req, routeData);
 
 			// Check for file uploads
@@ -425,9 +426,31 @@ class ResturaEngine {
 	}
 
 	private validateAuthorization(req: RsRequest<unknown>, routeData: RouteData) {
-		const role = req.requesterDetails.role;
-		if (routeData.roles.length === 0 || !role) return;
-		if (!routeData.roles.includes(role)) throw new RsError('FORBIDDEN', 'Not authorized to access this endpoint');
+		const requesterRole = req.requesterDetails.role;
+		const requesterScopes = req.requesterDetails.scopes;
+
+		// If route has no roles or scopes, it's public - allow access
+		if (routeData.roles.length === 0 && routeData.scopes.length === 0) {
+			return;
+		}
+
+		// If route requires roles, check if user has the required role
+		if (routeData.roles.length > 0) {
+			if (!requesterRole || !routeData.roles.includes(requesterRole)) {
+				throw new RsError('FORBIDDEN', 'Not authorized to access this endpoint - role required');
+			}
+		}
+
+		// If route requires scopes, check if user has ALL required scopes
+		if (routeData.scopes.length > 0) {
+			const missingScopes = routeData.scopes.filter((requiredScope) => !requesterScopes.includes(requiredScope));
+			if (missingScopes.length > 0) {
+				throw new RsError(
+					'FORBIDDEN',
+					`Not authorized to access this endpoint - missing required scopes: ${missingScopes.join(', ')}`
+				);
+			}
+		}
 	}
 
 	private getRouteData(method: string, baseUrl: string, path: string): RouteData {

@@ -51,6 +51,7 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (_props) => {
 			description: '',
 			path: randomPath,
 			roles: [],
+			scopes: [],
 			request: [],
 			response: [],
 			type: 'ONE',
@@ -155,7 +156,7 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (_props) => {
 				return route.path.includes(filterValue);
 			})
 			.map((route) => {
-				const isPublic = route.roles.length === 0;
+				const isPublic = route.roles.length === 0 && route.scopes.length === 0;
 				return (
 					<Box
 						key={`${route.method}_${route.path}`}

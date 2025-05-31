@@ -1,7 +1,5 @@
-import * as fs from 'fs';
-import JSON5 from 'json5';
 import * as path from 'path';
-import { ZodSchema } from 'zod';
+import type { z } from 'zod/v4';
 
 export class Config {
 	private configData: { [key: string]: unknown } | null = null;
@@ -10,9 +8,9 @@ export class Config {
 		return this.configData;
 	}
 
-	public validate<T>(domain: string, schema: ZodSchema<T>): T {
+	public async validate<T extends z.ZodType>(domain: string, schema: T): Promise<z.infer<T>> {
 		if (!this.configData) {
-			this.load();
+			await this.load();
 		}
 
 		if (!this.configData || typeof this.configData !== 'object' || !(domain in this.configData)) {
@@ -23,8 +21,8 @@ export class Config {
 		const result = schema.safeParse(this.configData[domain]);
 
 		if (!result.success) {
-			const errorDetails = result.error.errors
-				.map((e) => `Path: ${e.path.join('.')}, Message: ${e.message}`)
+			const errorDetails = result.error.issues
+				.map((issue) => `Path: ${issue.path.join('.')}, Message: ${issue.message}`)
 				.join('; ');
 
 			console.error(`Validation failed for config \"${domain}\": ${errorDetails}`);
@@ -34,9 +32,16 @@ export class Config {
 		return result.data;
 	}
 
-	private load() {
-		const content = fs.readFileSync(path.join(process.cwd(), 'config.json5'), { encoding: 'utf8' });
-		this.configData = JSON5.parse(content);
+	private async load() {
+		try {
+			const configPath = path.join(process.cwd(), 'restura.config.mjs');
+			const configModule = await import(configPath);
+			this.configData = configModule.default;
+		} catch (error) {
+			console.error('FATAL: Failed to load restura.config.mjs, restura will not start!!!');
+			console.error(error);
+			process.exit(1);
+		}
 	}
 }
 

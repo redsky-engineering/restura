@@ -1,5 +1,5 @@
 import { ObjectUtils } from '@redskytech/core-utils';
-import { RsError } from '../RsError';
+import { RsError } from '../RsError.js';
 import {
 	JoinData,
 	ResponseData,
@@ -9,8 +9,8 @@ import {
 	WhereData
 } from '../schemas/resturaSchema.js';
 import { DynamicObject, RsRequest } from '../types/customExpressTypes.js';
-import SqlEngine from './SqlEngine';
-import { SqlUtils } from './SqlUtils';
+import SqlEngine from './SqlEngine.js';
+import { SqlUtils } from './SqlUtils.js';
 
 function dbNow() {
 	return new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -150,7 +150,7 @@ class MySqlEngine extends SqlEngine {
 		if (
 			!ObjectUtils.isArrayWithData(
 				item.subquery.properties.filter((nestedItem) => {
-					return this.doesRoleHavePermissionToColumn(req.requesterDetails.role, schema, nestedItem, [
+					return this.canRequesterAccessColumn(req.requesterDetails.role, schema, nestedItem, [
 						...routeData.joins,
 						...item.subquery!.joins
 					]);
@@ -166,7 +166,7 @@ class MySqlEngine extends SqlEngine {
 								${item.subquery.properties
 									.map((nestedItem) => {
 										if (
-											!this.doesRoleHavePermissionToColumn(
+											!this.canRequesterAccessColumn(
 												req.requesterDetails.role,
 												schema,
 												nestedItem,
@@ -246,7 +246,7 @@ class MySqlEngine extends SqlEngine {
 		const selectColumns: ResponseData[] = [];
 		routeData.response.forEach((item) => {
 			// For a subquery, we will check the permission when generating the subquery statement, so pass it through
-			if (item.subquery || this.doesRoleHavePermissionToColumn(userRole, schema, item, routeData.joins))
+			if (item.subquery || this.canRequesterAccessColumn(userRole, schema, item, routeData.joins))
 				selectColumns.push(item);
 		});
 		if (!selectColumns.length) throw new RsError('FORBIDDEN', `You do not have permission to access this data.`);

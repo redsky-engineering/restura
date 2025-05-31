@@ -75,6 +75,7 @@ const ResponseSection: React.FC<ResponseSectionProps> = (_props) => {
 		popupController.open<ColumnPickerPopupProps>(ColumnPickerPopup, {
 			baseTable: routeData.table,
 			headerText: 'Select Column',
+			joins: routeData.joins,
 			onColumnSelect: async (tableWithJoinColumn, columnData) => {
 				let name = '';
 				let selectorBase = tableWithJoinColumn.table;
@@ -118,6 +119,13 @@ const ResponseSection: React.FC<ResponseSectionProps> = (_props) => {
 				schemaService.addResponseParameter('root', {
 					name,
 					selector: `${selectorBase}.${columnData.name}`
+				});
+			},
+			onCustomSelect: () => {
+				schemaService.addResponseParameter('root', {
+					name: `custom_${Math.random().toString(36).substring(2, 8)}`,
+					selector: `TRUE`,
+					type: 'any'
 				});
 			}
 		});
