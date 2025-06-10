@@ -25,7 +25,7 @@
 	],
 	"scripts": {
 		"test": "echo \"Todo: add tests\"",
-		"build": "tsup ./src/index.ts",
+		"build": "tsup ./src/index.ts --format esm",
 		"lint": "eslint src"
 	},
 	"devDependencies": {
