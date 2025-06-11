@@ -958,7 +958,7 @@ export const getUserLikeFirstNameRouteData: StandardRouteData = {
 		{
 			name: 'search',
 			required: true,
-			validator: []
+			validator: [{ type: 'TYPE_CHECK', value: 'string' }]
 		}
 	],
 	joins: [],
