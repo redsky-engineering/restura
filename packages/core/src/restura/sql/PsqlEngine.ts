@@ -636,15 +636,15 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 			let value = item.value;
 
 			if (operator === 'LIKE') {
-				value = `'%${value}%'`;
+				value = `'%' || ${value} || '%'`;
 			} else if (operator === 'NOT LIKE') {
-				value = `'%${value}%'`;
+				value = `'%' || ${value} || '%'`;
 			} else if (operator === 'STARTS WITH') {
 				operator = 'LIKE';
-				value = `'${value}%'`;
+				value = `${value} || '%'`;
 			} else if (operator === 'ENDS WITH') {
 				operator = 'LIKE';
-				value = `'%${value}'`;
+				value = `'%' || ${value}`;
 			}
 
 			const replacedValue = this.replaceParamKeywords(value, routeData, req, sqlParams);

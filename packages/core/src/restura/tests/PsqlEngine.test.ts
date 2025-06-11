@@ -25,6 +25,7 @@ import {
 	getAllUsersBeforeDateRouteData,
 	getAllUsersRoleAdminRouteData,
 	getAllUsersScopeTestRouteData,
+	getUserLikeFirstNameRouteData,
 	patchUserClearGuidRouteData,
 	patchUserRouteData,
 	permissionCheckScopeOnlyRequest,
@@ -428,6 +429,23 @@ EXECUTE FUNCTION notify_user_delete();
 			};
 			expect(response?.data.length).to.greaterThan(1);
 			expect(response?.total).to.greaterThan(1);
+		});
+		it('should executeGetRequest with like', async () => {
+			const searchRequest: RsRequest = {
+				requesterDetails: {
+					role: 'admin',
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				},
+				data: { search: 'Tan' }
+			} as unknown as RsRequest;
+			const response = (await psqlEngine['executeGetRequest'](
+				searchRequest,
+				getUserLikeFirstNameRouteData,
+				sampleSchema
+			)) as DynamicObject;
+			expect(response?.length).to.be.greaterThan(0);
 		});
 		it('should executeGetRequest', async () => {
 			const response = (await psqlEngine['executeGetRequest'](
@@ -1203,7 +1221,7 @@ EXECUTE FUNCTION notify_user_delete();
 			];
 			// use array notation ['generateWhereClause'] to access private methods for unit testing
 			const response = psqlEngine['generateWhereClause'](basicAdminRequest, whereData, patchUserRouteData, []);
-			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE 'T%'`);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE T || '%'`);
 		});
 		it('should format the where clause for ENDS WITH', () => {
 			const whereData: WhereData[] = [
@@ -1216,7 +1234,7 @@ EXECUTE FUNCTION notify_user_delete();
 			];
 			// use array notation ['generateWhereClause'] to access private methods for unit testing
 			const response = psqlEngine['generateWhereClause'](basicAdminRequest, whereData, patchUserRouteData, []);
-			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE '%T'`);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE '%' || T`);
 		});
 		it('should format the where clause for LIKE', () => {
 			const whereData: WhereData[] = [
@@ -1229,7 +1247,7 @@ EXECUTE FUNCTION notify_user_delete();
 			];
 			// use array notation ['generateWhereClause'] to access private methods for unit testing
 			const response = psqlEngine['generateWhereClause'](basicAdminRequest, whereData, patchUserRouteData, []);
-			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE '%T%'`);
+			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."firstName" ILIKE '%' || T || '%'`);
 		});
 		it('should format the where clause for =', () => {
 			const whereData: WhereData[] = [
