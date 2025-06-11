@@ -945,6 +945,36 @@ export const getAllUsersRoleAdminRouteData: StandardRouteData = {
 	where: []
 };
 
+export const getUserLikeFirstNameRouteData: StandardRouteData = {
+	type: 'ARRAY',
+	method: 'GET',
+	name: 'get all users like first name',
+	description: 'Get all users like first name',
+	path: '/user/like/firstName',
+	table: 'user',
+	roles: ['admin'],
+	scopes: [],
+	request: [
+		{
+			name: 'search',
+			required: true,
+			validator: [{ type: 'TYPE_CHECK', value: 'string' }]
+		}
+	],
+	joins: [],
+	response: [
+		{ name: 'id', selector: 'user.id' },
+		{
+			name: 'firstName',
+			selector: 'user.firstName'
+		},
+		{ name: 'lastName', selector: 'user.lastName' },
+		{ name: 'email', selector: 'user.email' }
+	],
+	assignments: [],
+	where: [{ tableName: 'user', columnName: 'firstName', operator: 'LIKE', value: '$search' }]
+};
+
 export const getAllUsersScopeTestRouteData: StandardRouteData = {
 	type: 'PAGED',
 	method: 'GET',
