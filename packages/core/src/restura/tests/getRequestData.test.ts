@@ -91,6 +91,18 @@ describe('getRequestData', () => {
 				mixed: [1, true, 'John', 42]
 			});
 		});
+
+		it('should handle array parameters with only one value', () => {
+			const request = {
+				method: 'GET',
+				query: { 'ids[]': ['1'] }
+			} as unknown as RsRequest<unknown>;
+
+			const result = getRequestData(request);
+			expect(result).to.deep.equal({
+				ids: [1]
+			});
+		});
 	});
 
 	describe('POST/PUT/PATCH requests', () => {
