@@ -187,29 +187,45 @@ export function getRequestData(req: RsRequest<unknown>): DynamicObject {
 	const bodyData = req[body as keyof typeof req]; // Cast once and store in a variable
 
 	if (bodyData && body === 'query') {
-		// When sending data in the query, it is always a string, we need to try to coerce it to correct types
+		const normalizedData: DynamicObject = {};
+
 		for (const attr in bodyData) {
+			// Remove [] from the key if it exists
+			const cleanAttr = attr.replace(/\[\]$/, '');
+
 			if (bodyData[attr] instanceof Array) {
-				const attrList = [];
-				for (const value of bodyData[attr]) {
-					if (isNaN(Number(value))) continue;
-					attrList.push(Number(value));
-				}
-				if (ObjectUtils.isArrayWithData(attrList)) {
-					bodyData[attr] = attrList;
-				}
+				const parsedList = bodyData[attr].map((value: unknown) => {
+					if (value === 'true') return true;
+					if (value === 'false') return false;
+					if (value === undefined) return undefined;
+					if (value === '') return '';
+					const parsed = ObjectUtils.safeParse(value);
+					return isNaN(Number(parsed)) ? parsed : Number(parsed);
+				});
+
+				normalizedData[cleanAttr] = parsedList;
 			} else {
-				if (bodyData[attr] === 'true') {
-					bodyData[attr] = true;
-				} else if (bodyData[attr] === 'false') {
-					bodyData[attr] = false;
+				let value = bodyData[attr];
+				if (value === 'true') {
+					value = true;
+				} else if (value === 'false') {
+					value = false;
+				} else if (value === undefined) {
+					value = undefined;
+				} else if (value === '') {
+					value = '';
 				} else {
-					bodyData[attr] = ObjectUtils.safeParse(bodyData[attr]);
-					if (isNaN(Number(bodyData[attr]))) continue;
-					bodyData[attr] = Number(bodyData[attr]);
+					value = ObjectUtils.safeParse(value);
+					if (!isNaN(Number(value))) {
+						value = Number(value);
+					}
 				}
+				normalizedData[cleanAttr] = value;
 			}
 		}
+
+		return normalizedData;
 	}
+
 	return bodyData;
 }
