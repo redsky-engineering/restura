@@ -194,21 +194,26 @@ export function getRequestData(req: RsRequest<unknown>): DynamicObject {
 			const cleanAttr = attr.replace(/\[\]$/, '');
 
 			if (bodyData[attr] instanceof Array) {
-				const attrList = [];
-				for (const value of bodyData[attr]) {
-					if (!isNaN(Number(value))) {
-						attrList.push(Number(value));
-					}
-				}
-				if (ObjectUtils.isArrayWithData(attrList)) {
-					normalizedData[cleanAttr] = attrList;
-				}
+				const parsedList = bodyData[attr].map((value: unknown) => {
+					if (value === 'true') return true;
+					if (value === 'false') return false;
+					if (value === undefined) return undefined;
+					if (value === '') return '';
+					const parsed = ObjectUtils.safeParse(value);
+					return isNaN(Number(parsed)) ? parsed : Number(parsed);
+				});
+
+				normalizedData[cleanAttr] = parsedList;
 			} else {
 				let value = bodyData[attr];
 				if (value === 'true') {
 					value = true;
 				} else if (value === 'false') {
 					value = false;
+				} else if (value === undefined) {
+					value = undefined;
+				} else if (value === '') {
+					value = '';
 				} else {
 					value = ObjectUtils.safeParse(value);
 					if (!isNaN(Number(value))) {
