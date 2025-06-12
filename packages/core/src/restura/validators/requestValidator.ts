@@ -190,6 +190,10 @@ export function getRequestData(req: RsRequest<unknown>): DynamicObject {
 		const normalizedData: DynamicObject = {};
 
 		for (const attr in bodyData) {
+			if (attr.includes('[]') && !(bodyData[attr] instanceof Array)) {
+				bodyData[attr] = [bodyData[attr]];
+			}
+
 			// Remove [] from the key if it exists
 			const cleanAttr = attr.replace(/\[\]$/, '');
 
