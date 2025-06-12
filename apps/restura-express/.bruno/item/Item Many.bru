@@ -1,0 +1,16 @@
+meta {
+  name: Item Many
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:3001/api/v1/item/many?ids[]=1&ids[]=2
+  body: none
+  auth: none
+}
+
+params:query {
+  ids[]: 1
+  ids[]: 2
+}

@@ -318,6 +318,16 @@ declare namespace Api {
 					}
 				}
 			}
+			export namespace Many {
+				// Get Item Details Many
+				// Get multiple detailed information about an item from an array of ids.
+				export namespace Get {
+					export interface Req {
+						ids: number[];
+					}
+					export type Res = boolean;
+				}
+			}
 		}
 	}
 }

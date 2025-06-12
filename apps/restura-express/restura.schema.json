@@ -955,6 +955,23 @@
 					"table": "item",
 					"type": "ARRAY",
 					"where": []
+				},
+				{
+					"description": "Get multiple detailed information about an item from an array of ids.",
+					"method": "GET",
+					"name": "Get Item Details Many",
+					"path": "/item/many",
+					"request": [
+						{
+							"name": "ids",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number[]" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": [],
+					"scopes": [],
+					"type": "CUSTOM_ARRAY"
 				}
 			]
 		}
