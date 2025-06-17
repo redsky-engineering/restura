@@ -3,6 +3,7 @@ import getDiff from '@wmfs/pg-diff-sync';
 import pgInfo from '@wmfs/pg-info';
 import type { Client as ClientType } from 'pg';
 import pg from 'pg';
+import { logger } from '../../logger/logger.js';
 import { RsError } from '../RsError.js';
 import eventManager, { MutationType, TriggerResult } from '../eventManager.js';
 import {
@@ -35,6 +36,9 @@ export class PsqlEngine extends SqlEngine {
 	setupTriggerListeners: Promise<void> | undefined;
 	private triggerClient: ClientType | undefined;
 	private scratchDbName: string = '';
+	private reconnectAttempts = 0;
+	private readonly MAX_RECONNECT_ATTEMPTS = 5;
+	private readonly INITIAL_RECONNECT_DELAY = 5000; // 5 seconds
 
 	constructor(
 		private psqlConnectionPool: PsqlPool,
@@ -70,6 +74,42 @@ export class PsqlEngine extends SqlEngine {
 		});
 	}
 
+	private async reconnectTriggerClient() {
+		if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
+			logger.error('Max reconnection attempts reached for trigger client. Stopping reconnection attempts.');
+			return;
+		}
+
+		if (this.triggerClient) {
+			try {
+				await this.triggerClient.end();
+			} catch (error) {
+				logger.error(`Error closing trigger client: ${error}`);
+			}
+		}
+
+		// Exponential backoff: 5s, 10s, 20s, 40s, 80s
+		const delay = this.INITIAL_RECONNECT_DELAY * Math.pow(2, this.reconnectAttempts);
+		logger.info(
+			`Attempting to reconnect trigger client in ${delay / 1000} seconds... (Attempt ${this.reconnectAttempts + 1}/${this.MAX_RECONNECT_ATTEMPTS})`
+		);
+
+		await new Promise((resolve) => setTimeout(resolve, delay));
+
+		this.reconnectAttempts++;
+
+		try {
+			await this.listenForDbTriggers();
+			// Reset reconnect attempts on successful connection
+			this.reconnectAttempts = 0;
+		} catch (error) {
+			logger.error(`Reconnection attempt ${this.reconnectAttempts} failed: ${error}`);
+			if (this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS) {
+				await this.reconnectTriggerClient();
+			}
+		}
+	}
+
 	private async listenForDbTriggers() {
 		this.triggerClient = new Client({
 			user: this.psqlConnectionPool.poolConfig.user,
@@ -80,20 +120,36 @@ export class PsqlEngine extends SqlEngine {
 			connectionTimeoutMillis: this.psqlConnectionPool.poolConfig.connectionTimeoutMillis
 		});
 
-		await this.triggerClient.connect();
+		try {
+			await this.triggerClient.connect();
 
-		const promises = [];
-		promises.push(this.triggerClient.query('LISTEN insert'));
-		promises.push(this.triggerClient.query('LISTEN update'));
-		promises.push(this.triggerClient.query('LISTEN delete'));
-		await Promise.all(promises);
-		// Handle notifications
-		this.triggerClient.on('notification', async (msg) => {
-			if (msg.channel === 'insert' || msg.channel === 'update' || msg.channel === 'delete') {
-				const payload: TriggerResult = ObjectUtils.safeParse(msg.payload) as TriggerResult;
-				await this.handleTrigger(payload, msg.channel.toUpperCase() as MutationType);
-			}
-		});
+			const promises = [];
+			promises.push(this.triggerClient.query('LISTEN insert'));
+			promises.push(this.triggerClient.query('LISTEN update'));
+			promises.push(this.triggerClient.query('LISTEN delete'));
+			await Promise.all(promises);
+
+			// Add error handling for the connection
+			this.triggerClient.on('error', async (error) => {
+				logger.error(`Trigger client error: ${error}`);
+				// Attempt to reconnect
+				await this.reconnectTriggerClient();
+			});
+
+			// Handle notifications
+			this.triggerClient.on('notification', async (msg) => {
+				if (msg.channel === 'insert' || msg.channel === 'update' || msg.channel === 'delete') {
+					const payload: TriggerResult = ObjectUtils.safeParse(msg.payload) as TriggerResult;
+					await this.handleTrigger(payload, msg.channel.toUpperCase() as MutationType);
+				}
+			});
+
+			logger.info('Successfully connected to database triggers');
+		} catch (error) {
+			logger.error(`Failed to setup trigger listeners: ${error}`);
+			// Attempt to reconnect
+			await this.reconnectTriggerClient();
+		}
 	}
 
 	private async handleTrigger(payload: TriggerResult, mutationType: MutationType) {
