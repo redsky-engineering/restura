@@ -2,6 +2,7 @@ import crypto, { UUID } from 'crypto';
 import { QueryConfigValues, QueryResult, QueryResultRow } from 'pg';
 import format from 'pg-format';
 import { format as sqlFormat } from 'sql-formatter';
+import { z } from 'zod/v4';
 import { logger } from '../../logger/logger.js';
 import { RsError } from '../RsError.js';
 import { QueryMetadata } from '../eventManager.js';
@@ -19,8 +20,7 @@ export abstract class PsqlConnection {
 		values?: QueryConfigValues<T>
 	): Promise<QueryResult<R>>;
 
-	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	async queryOne<T>(query: string, options: any[], requesterDetails: RequesterDetails): Promise<T> {
+	async queryOne<T>(query: string, options: unknown[], requesterDetails: RequesterDetails): Promise<T> {
 		const formattedQuery = questionMarksToOrderedParams(query);
 		const meta: QueryMetadata = { connectionInstanceId: this.instanceId, ...requesterDetails };
 		this.logSqlStatement(formattedQuery, options, meta);
@@ -28,8 +28,7 @@ export abstract class PsqlConnection {
 
 		const startTime = process.hrtime();
 		try {
-			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<any>);
+			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<unknown>);
 
 			this.logQueryDuration(startTime);
 
@@ -49,16 +48,35 @@ export abstract class PsqlConnection {
 		}
 	}
 
-	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	async runQuery<T>(query: string, options: any[], requesterDetails: RequesterDetails): Promise<T[]> {
+	async queryOneSchema<T>(
+		query: string,
+		params: unknown[],
+		requesterDetails: RequesterDetails,
+		zodSchema: z.ZodSchema<T>
+	): Promise<T> {
+		const result = await this.queryOne(query, params, requesterDetails);
+		try {
+			return zodSchema.parse(result);
+		} catch (error) {
+			if (error instanceof z.ZodError) {
+				logger.error('Invalid data returned from database:');
+				logger.silly('\n' + JSON.stringify(result, null, 2));
+				logger.error('\n' + z.prettifyError(error));
+			} else {
+				logger.error(error);
+			}
+			throw new RsError('DATABASE_ERROR', `Invalid data returned from database`);
+		}
+	}
+
+	async runQuery<T>(query: string, options: unknown[], requesterDetails: RequesterDetails): Promise<T[]> {
 		const formattedQuery = questionMarksToOrderedParams(query);
 		const meta: QueryMetadata = { connectionInstanceId: this.instanceId, ...requesterDetails };
 		this.logSqlStatement(formattedQuery, options, meta);
 		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(meta)})\n`;
 		const startTime = process.hrtime();
 		try {
-			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<any>);
+			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<unknown>);
 
 			this.logQueryDuration(startTime);
 
@@ -72,6 +90,27 @@ export abstract class PsqlConnection {
 		}
 	}
 
+	async runQuerySchema<T>(
+		query: string,
+		params: unknown[],
+		requesterDetails: RequesterDetails,
+		zodSchema: z.ZodSchema<T>
+	): Promise<T[]> {
+		const result = await this.runQuery(query, params, requesterDetails);
+		try {
+			return z.array(zodSchema).parse(result);
+		} catch (error) {
+			if (error instanceof z.ZodError) {
+				logger.error('Invalid data returned from database:');
+				logger.silly('\n' + JSON.stringify(result, null, 2));
+				logger.error('\n' + z.prettifyError(error));
+			} else {
+				logger.error(error);
+			}
+			throw new RsError('DATABASE_ERROR', `Invalid data returned from database`);
+		}
+	}
+
 	private logQueryDuration(startTime: [number, number]): void {
 		if (logger.level === 'silly') {
 			const [seconds, nanoseconds] = process.hrtime(startTime);
@@ -80,13 +119,7 @@ export abstract class PsqlConnection {
 		}
 	}
 
-	private logSqlStatement(
-		query: string,
-		// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-		options: any[],
-		queryMetadata: QueryMetadata,
-		prefix: string = ''
-	) {
+	private logSqlStatement(query: string, options: unknown[], queryMetadata: QueryMetadata, prefix: string = '') {
 		if (logger.level !== 'silly') return;
 
 		let sqlStatement = '';
@@ -97,7 +130,7 @@ export abstract class PsqlConnection {
 			sqlStatement = query.replace(/\$\d+/g, () => {
 				const value = options[stringIndex++];
 				if (typeof value === 'number') return value.toString();
-				return format.literal(value);
+				return format.literal(value as string | number | boolean | object | Date | null | undefined);
 			});
 		}
 
