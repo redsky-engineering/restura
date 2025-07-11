@@ -134,11 +134,7 @@ const DbTableCell: React.FC<DbTableCellProps> = (props) => {
 		if (Array.isArray(props.value)) {
 			if (props.value.length === 0) return props.emptyValue || '-';
 			const mutatableValue = [...props.value];
-			return mutatableValue
-				.sort((a, b) => {
-					return a.localeCompare(b);
-				})
-				.join(', ');
+			return mutatableValue.join(', ');
 		}
 		if (!props.value) return props.emptyValue || '-';
 		return props.value;

@@ -30,7 +30,14 @@ export default function requestValidator(
 
 		const currentInterface = validationSchema[routeData.requestType];
 		const validator = new jsonschema.Validator();
-		const executeValidation = validator.validate(req.data, currentInterface as Schema);
+
+		// Create strict schema that doesn't allow extra properties
+		const strictSchema = {
+			...currentInterface,
+			additionalProperties: false
+		};
+
+		const executeValidation = validator.validate(req.data, strictSchema as Schema);
 		if (!executeValidation.valid) {
 			throw new RsError(
 				'BAD_REQUEST',

@@ -43,7 +43,7 @@ const IndexSection: React.FC<IndexSectionProps> = (props) => {
 	}
 
 	function hasDuplicateColumns(columns: string[], tableData: Restura.TableData): boolean {
-		let columnsSorted = columns.sort();
+		let columnsSorted = [...columns].sort();
 		for (let index of tableData.indexes) {
 			if (index.columns.length === columns.length) {
 				let indexColumnsSorted = [...index.columns].sort();
