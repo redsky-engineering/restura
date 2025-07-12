@@ -527,6 +527,30 @@ EXECUTE FUNCTION notify_user_delete();
 			)) as DynamicObject;
 			expect(response?.isUserIdEqual).to.equal(true);
 		});
+
+		it('should handle custom selector with param keywords that are null', async () => {
+			const responseData: ResponseData = {
+				name: 'isUserIdEqual',
+				selector: '(CASE WHEN $id::integer IS NULL THEN TRUE ELSE FALSE END)',
+				type: 'boolean'
+			};
+			const request = [
+				{
+					name: 'id',
+					required: false,
+					isNullable: true,
+					validator: [{ type: 'TYPE_CHECK', value: 'number' }]
+				}
+			] as unknown as RequestData[];
+			const routeData = { ...patchUserRouteData, response: [responseData], request };
+			const nullRequest = { ...basicAdminRequest, data: { id: null } } as unknown as RsRequest;
+			const response = (await psqlEngine['executeGetRequest'](
+				nullRequest,
+				routeData,
+				sampleSchema
+			)) as DynamicObject;
+			expect(response?.isUserIdEqual).to.equal(true);
+		});
 	});
 	describe('PsqlEngine events', () => {
 		it('should receive notification of user row being inserted', function (done) {
