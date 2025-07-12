@@ -144,9 +144,6 @@ const customRouteSchema = routeDataBaseSchema
 		responseType: z.union([z.string(), z.enum(['string', 'number', 'boolean'])]),
 		requestType: z.string().optional(),
 		request: z.array(requestDataSchema).optional(),
-		table: z.undefined(),
-		joins: z.undefined(),
-		assignments: z.undefined(),
 		fileUploadType: z.enum(['SINGLE', 'MULTIPLE']).optional()
 	})
 	.strict();

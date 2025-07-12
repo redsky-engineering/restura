@@ -10,7 +10,8 @@ import {
 	ResponseData,
 	ResturaSchema,
 	StandardRouteData,
-	WhereData
+	WhereData,
+	type RequestData
 } from '../schemas/resturaSchema.js';
 import { PsqlEngine } from '../sql/PsqlEngine.js';
 import { PsqlPool } from '../sql/PsqlPool.js';
@@ -503,6 +504,28 @@ EXECUTE FUNCTION notify_user_delete();
 				sampleSchema
 			)) as DynamicObject;
 			expect(response?.formattedDate).to.match(/^\d{4}-\d{2}-\d{2}$/);
+		});
+
+		it('should handle custom selector with param keywords', async () => {
+			const responseData: ResponseData = {
+				name: 'isUserIdEqual',
+				selector: '(CASE WHEN "user"."id" = $id THEN TRUE ELSE FALSE END)',
+				type: 'boolean'
+			};
+			const request = [
+				{
+					name: 'id',
+					required: true,
+					validator: [{ type: 'TYPE_CHECK', value: 'number' }]
+				}
+			] as unknown as RequestData[];
+			const routeData = { ...patchUserRouteData, response: [responseData], request };
+			const response = (await psqlEngine['executeGetRequest'](
+				basicAdminRequest,
+				routeData,
+				sampleSchema
+			)) as DynamicObject;
+			expect(response?.isUserIdEqual).to.equal(true);
 		});
 	});
 	describe('PsqlEngine events', () => {

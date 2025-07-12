@@ -466,7 +466,17 @@ export class PsqlEngine extends SqlEngine {
 						item.name
 					)}`;
 				}
-				return `${item.type ? item.selector : escapeColumnName(item.selector)} AS ${escapeColumnName(item.name)}`;
+				if (item.type) {
+					const selectorWithReplacedKeywords = this.replaceParamKeywords(
+						item.selector!,
+						routeData,
+						req,
+						sqlParams
+					);
+					return `${selectorWithReplacedKeywords} AS ${escapeColumnName(item.name)}`;
+				} else {
+					return `${escapeColumnName(item.selector)} AS ${escapeColumnName(item.name)}`;
+				}
 			})
 			.join(',\n\t')}\n`;
 		sqlStatement += `FROM "${routeData.table}"\n`;
