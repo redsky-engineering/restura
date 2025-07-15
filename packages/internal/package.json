@@ -1,6 +1,6 @@
 {
 	"name": "@restura/internal",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Internal utilities for Restura",
 	"type": "module",
 	"types": "./dist/index.d.ts",
@@ -35,6 +35,6 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"zod": "^3.25.23"
+		"zod": "^4.0.5"
 	}
 }

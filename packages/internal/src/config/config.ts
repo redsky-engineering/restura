@@ -1,5 +1,5 @@
 import * as path from 'path';
-import type { z } from 'zod/v4';
+import type { z } from 'zod';
 
 export class Config {
 	private configData: { [key: string]: unknown } | null = null;
