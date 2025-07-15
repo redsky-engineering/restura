@@ -2,7 +2,7 @@ import crypto, { UUID } from 'crypto';
 import { QueryConfigValues, QueryResult, QueryResultRow } from 'pg';
 import format from 'pg-format';
 import { format as sqlFormat } from 'sql-formatter';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import { logger } from '../../logger/logger.js';
 import { RsError } from '../RsError.js';
 import { QueryMetadata } from '../eventManager.js';

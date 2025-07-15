@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from 'zod';
 // created this to break up the restura.schema.ts file (running into dependency issues.)
 export const validatorDataSchemeValue = z.union([z.string(), z.array(z.string()), z.number(), z.array(z.number())]);
 export type ValidatorDataSchemeValue = z.infer<typeof validatorDataSchemeValue>;
