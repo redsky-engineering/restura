@@ -1443,9 +1443,55 @@ EXECUTE FUNCTION notify_user_delete();
 					conjunction: 'OR'
 				}
 			];
-			// use array notation ['generateWhereClause'] to access private methods for unit testing
 			const response = psqlEngine['generateWhereClause'](basicAdminRequest, whereData, patchUserRouteData, []);
 			expect(trimRedundantWhitespace(response)).to.equal(`WHERE "user"."id" != 0 OR "user"."id" = 0`);
+		});
+
+		it('should test custom selector', () => {
+			const whereData: WhereData[] = [
+				{
+					custom: '(CASE WHEN "user"."id" = 0 THEN TRUE ELSE FALSE END)'
+				}
+			];
+			const response = psqlEngine['generateWhereClause'](basicAdminRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(
+				`WHERE (CASE WHEN "user"."id" = 0 THEN TRUE ELSE FALSE END)`
+			);
+		});
+
+		it('should test custom selector with replaced param keywords', () => {
+			const whereData: WhereData[] = [
+				{
+					custom: '(CASE WHEN "user"."email" = $email AND "user"."id" = #userId THEN TRUE ELSE FALSE END)'
+				}
+			];
+			const sqlParams: string[] = [];
+			const request = { ...basicAdminRequest, data: { email: 'test@test.com' } } as unknown as RsRequest;
+			const response = psqlEngine['generateWhereClause'](request, whereData, patchUserRouteData, sqlParams);
+			expect(trimRedundantWhitespace(response)).to.equal(
+				`WHERE (CASE WHEN "user"."email" = ? AND "user"."id" = ? THEN TRUE ELSE FALSE END)`
+			);
+			expect(sqlParams).to.deep.equal(['test@test.com', 1]);
+		});
+
+		it('should test conjunction with custom selector', () => {
+			const whereData: WhereData[] = [
+				{
+					tableName: 'user',
+					columnName: 'id',
+					operator: '=',
+					value: 0
+				},
+				{
+					conjunction: 'AND',
+					custom: '(CASE WHEN "user"."id" = 0 THEN TRUE ELSE FALSE END)'
+				}
+			];
+			// use array notation ['generateWhereClause'] to access private methods for unit testing
+			const response = psqlEngine['generateWhereClause'](basicAdminRequest, whereData, patchUserRouteData, []);
+			expect(trimRedundantWhitespace(response)).to.equal(
+				`WHERE "user"."id" = 0 AND (CASE WHEN "user"."id" = 0 THEN TRUE ELSE FALSE END)`
+			);
 		});
 	});
 	describe('PsqlEngine should check permissions on table and column', () => {

@@ -683,7 +683,8 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		where.forEach((item, index) => {
 			if (index === 0) whereClause = 'WHERE ';
 			if (item.custom) {
-				whereClause += this.replaceParamKeywords(item.custom, routeData, req, sqlParams);
+				const customReplaced = this.replaceParamKeywords(item.custom, routeData, req, sqlParams);
+				whereClause += `\t${item.conjunction || ''} ${customReplaced}\n`;
 				return;
 			}
 
