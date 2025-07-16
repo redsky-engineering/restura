@@ -21,6 +21,7 @@ export enum HtmlStatusCodes {
 	METHOD_NOT_ALLOWED = 405,
 	CONFLICT = 409,
 	VERSION_OUT_OF_DATE = 418, // Technically this is the I'm a teapot code that was a joke.
+	UNPROCESSABLE_ENTITY = 422,
 	SERVER_ERROR = 500,
 	SERVICE_UNAVAILABLE = 503,
 	NETWORK_CONNECT_TIMEOUT = 599
@@ -60,7 +61,8 @@ export type ErrorCode =
 	| 'THIRD_PARTY_ERROR'
 	| 'ACCESS_DENIED'
 	| 'DATABASE_ERROR'
-	| 'SCHEMA_ERROR';
+	| 'SCHEMA_ERROR'
+	| 'DATA_INCOMPLETE';
 
 export class RsError {
 	err: ErrorCode;
@@ -121,5 +123,6 @@ const htmlStatusMap: Record<ErrorCode, number> = {
 	THIRD_PARTY_ERROR: HtmlStatusCodes.BAD_REQUEST,
 	ACCESS_DENIED: HtmlStatusCodes.FORBIDDEN,
 	DATABASE_ERROR: HtmlStatusCodes.SERVER_ERROR,
-	SCHEMA_ERROR: HtmlStatusCodes.SERVER_ERROR
+	SCHEMA_ERROR: HtmlStatusCodes.SERVER_ERROR,
+	DATA_INCOMPLETE: HtmlStatusCodes.UNPROCESSABLE_ENTITY
 };
