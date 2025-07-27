@@ -440,16 +440,17 @@ export default class SchemaService extends Service {
 
 	static convertSqlTypeToTypescriptType(sqlType: string, value?: string): string {
 		switch (sqlType.toLowerCase()) {
+			case 'decimal':
+			case 'numeric':
+				return 'string';
 			case 'smallint':
 			case 'mediumint':
 			case 'int':
 			case 'bigint':
-			case 'decimal':
 			case 'serial':
 			case 'bigserial':
 			case 'real':
 			case 'double precision':
-			case 'numeric':
 
 			case 'integer':
 			case 'float':

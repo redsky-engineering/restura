@@ -6,16 +6,14 @@ class SqlUtils {
 	static convertDatabaseTypeToTypescript(type: string, value?: string): ValidatorString | string {
 		type = type.toLocaleLowerCase();
 		if (type.startsWith('tinyint') || type.startsWith('boolean')) return 'boolean';
+		if (type.startsWith('decimal') || type.startsWith('numeric')) return 'string';
 		if (
 			type.indexOf('int') > -1 ||
-			type.startsWith('decimal') ||
 			type.startsWith('double') ||
 			type.startsWith('float') ||
 			type.indexOf('serial') > -1 ||
-			type.startsWith('decimal') ||
 			type.startsWith('real') ||
-			type.startsWith('double precision') ||
-			type.startsWith('numeric')
+			type.startsWith('double precision')
 		)
 			return 'number';
 		if (type === 'json') {

@@ -156,7 +156,7 @@ export const postgresColumnNumericTypesSchema = z.enum([
 	'SMALLINT', // 2 bytes, -32,768 to 32,767
 	'INTEGER', // 4 bytes, -2,147,483,648 to 2,147,483,647
 	'BIGINT', // 8 bytes, -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807
-	'DECIMAL', // user-specified precision, exact numeric
+	'DECIMAL', // user-specified precision, exact numeric, this is returned as a string type because numbers are not accurate enough
 	'NUMERIC', // same as DECIMAL
 	'REAL', // 4 bytes, 6 decimal digits precision (single precision)
 	'DOUBLE PRECISION', // 8 bytes, 15 decimal digits precision (double precision)

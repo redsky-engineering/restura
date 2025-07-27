@@ -260,7 +260,7 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 		let isPrimary =
 			tableData.indexes.find((item) => item.columns.includes(columnName) && item.isPrimaryKey) !== undefined;
 		const column = tableData.columns.find((item) => item.name === columnName);
-		isPrimary ||= column.isPrimary;
+		isPrimary ||= column?.isPrimary || false;
 		return isPrimary;
 	}
 
@@ -327,7 +327,14 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 							}}
 						/>
 						<DbTableCell
-							disableEdit={!getAllowValueEdit(column.type)}
+							disableEdit={
+								!getAllowValueEdit(
+									column.type as
+										| Restura.MariaDbColumnNumericTypes
+										| Restura.MariaDbColumnStringTypes
+										| Restura.MariaDbColumnDateTypes
+								)
+							}
 							cellType={'multiSelect'}
 							selectOptions={
 								column.value ? (column.value.replaceAll("'", '').split(',') as string[]) : []
@@ -350,7 +357,14 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 							isMultiSelectCreatable
 						/>
 						<DbTableCell
-							disableEdit={!getAllowLengthEdit(column.type)}
+							disableEdit={
+								!getAllowLengthEdit(
+									column.type as
+										| Restura.MariaDbColumnNumericTypes
+										| Restura.MariaDbColumnStringTypes
+										| Restura.MariaDbColumnDateTypes
+								)
+							}
 							cellType={'text'}
 							value={column.length ? column.length.toString() : ''}
 							onChange={(value) => {
@@ -365,7 +379,14 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 							}}
 						/>
 						<DbTableCell
-							disableEdit={!getAllowAutoIncrement(column.type)}
+							disableEdit={
+								!getAllowAutoIncrement(
+									column.type as
+										| Restura.MariaDbColumnNumericTypes
+										| Restura.MariaDbColumnStringTypes
+										| Restura.MariaDbColumnDateTypes
+								)
+							}
 							cellType={'selectBoolean'}
 							value={column.hasAutoIncrement || false}
 							onChange={(value) => {
