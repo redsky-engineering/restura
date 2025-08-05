@@ -126,9 +126,12 @@ export abstract class PsqlConnection {
 		if (options.length === 0) {
 			sqlStatement = query;
 		} else {
-			let stringIndex = 0;
-			sqlStatement = query.replace(/\$\d+/g, () => {
-				const value = options[stringIndex++];
+			sqlStatement = query.replace(/\$\d+/g, (match) => {
+				const paramIndex = parseInt(match.substring(1)) - 1; // Extract number from $1, $2, etc.
+				if (paramIndex < 0 || paramIndex >= options.length) {
+					return 'INVALID_PARAM_INDEX';
+				}
+				const value = options[paramIndex];
 				if (typeof value === 'number') return value.toString();
 				return format.literal(value as string | number | boolean | object | Date | null | undefined);
 			});
