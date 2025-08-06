@@ -133,7 +133,8 @@ export abstract class PsqlConnection {
 				}
 				const value = options[paramIndex];
 				if (typeof value === 'number') return value.toString();
-				return format.literal(value as string | number | boolean | object | Date | null | undefined);
+				if (typeof value === 'boolean') return value.toString();
+				return format.literal(value as string | object | Date | null | undefined);
 			});
 		}
 
