@@ -599,7 +599,7 @@ export class PsqlEngine extends SqlEngine {
 		);
 		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
 		if (whereClause.replace(/\s/g, '') === '') {
-			throw new RsError('DELETE_FORBIDDEN', 'Deletes need a where clause');
+			throw new RsError('FORBIDDEN', 'Deletes need a where clause');
 		}
 
 		const deleteStatement = `
