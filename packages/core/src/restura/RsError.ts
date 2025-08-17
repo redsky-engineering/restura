@@ -16,14 +16,18 @@ export interface RsErrorInternalData {
 export enum HtmlStatusCodes {
 	BAD_REQUEST = 400,
 	UNAUTHORIZED = 401,
+	PAYMENT_REQUIRED = 402,
 	FORBIDDEN = 403,
 	NOT_FOUND = 404,
 	METHOD_NOT_ALLOWED = 405,
 	CONFLICT = 409,
 	VERSION_OUT_OF_DATE = 418, // Technically this is the I'm a teapot code that was a joke.
 	UNPROCESSABLE_ENTITY = 422,
+	TOO_MANY_REQUESTS = 429,
 	SERVER_ERROR = 500,
+	BAD_GATEWAY = 502,
 	SERVICE_UNAVAILABLE = 503,
+	GATEWAY_TIMEOUT = 504,
 	NETWORK_CONNECT_TIMEOUT = 599
 }
 
@@ -32,6 +36,8 @@ export type ErrorCode =
 	| 'NOT_FOUND'
 	| 'EMAIL_TAKEN'
 	| 'UNAUTHORIZED'
+	| 'PAYMENT_FAILURE'
+	| 'RATE_LIMIT_EXCEEDED'
 	| 'FORBIDDEN'
 	| 'CONFLICT'
 	| 'UPDATE_FORBIDDEN'
@@ -93,6 +99,8 @@ const htmlStatusMap: Record<ErrorCode, number> = {
 	UNKNOWN_ERROR: HtmlStatusCodes.SERVER_ERROR,
 	NOT_FOUND: HtmlStatusCodes.NOT_FOUND,
 	EMAIL_TAKEN: HtmlStatusCodes.CONFLICT,
+	PAYMENT_FAILURE: HtmlStatusCodes.PAYMENT_REQUIRED,
+	RATE_LIMIT_EXCEEDED: HtmlStatusCodes.TOO_MANY_REQUESTS,
 	FORBIDDEN: HtmlStatusCodes.FORBIDDEN,
 	CONFLICT: HtmlStatusCodes.CONFLICT,
 	UNAUTHORIZED: HtmlStatusCodes.UNAUTHORIZED,
