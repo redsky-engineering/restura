@@ -456,6 +456,8 @@ export default class SchemaService extends Service {
 			case 'float':
 			case 'double':
 				return 'number';
+			case 'char':
+				return 'string';
 			case 'varchar':
 				return 'string';
 			case 'date':
