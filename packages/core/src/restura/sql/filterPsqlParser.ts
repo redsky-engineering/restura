@@ -103,9 +103,9 @@ text = text:[a-z0-9 \\t\\r\\n\\-_:@']i+ { return text.join(""); }
 
 
 type = "type" _ ":" _ type:typeString { return type; }
-typeString = text:"startsWith" { return function(column, value) { return \`\${column} ILIKE '\${format.literal(value).slice(1,-1)}%'\`; } } /
-    text:"endsWith"  { return function(column, value) { return \`\${column} ILIKE '%\${format.literal(value).slice(1,-1)}'\`; } } /
-    text:"contains" { return function(column, value) { return \`\${column} ILIKE '%\${format.literal(value).slice(1,-1)}%'\`; } } /
+typeString = text:"startsWith" { return function(column, value) { return \`\${column}::text ILIKE '\${format.literal(value).slice(1,-1)}%'\`; } } /
+    text:"endsWith"  { return function(column, value) { return \`\${column}::text ILIKE '%\${format.literal(value).slice(1,-1)}'\`; } } /
+    text:"contains" { return function(column, value) { return \`\${column}::text ILIKE '%\${format.literal(value).slice(1,-1)}%'\`; } } /
     text:"exact" { return function(column, value)    { return \`\${column} = '\${format.literal(value).slice(1,-1)}'\`; } } /
     text:"greaterThanEqual" { return function(column, value) { return \`\${column} >= '\${format.literal(value).slice(1,-1)}'\`; } } /
     text:"greaterThan" { return function(column, value) { return \`\${column} > '\${format.literal(value).slice(1,-1)}'\`; } } /

@@ -25,64 +25,64 @@ function testBadInput(inputString: string, testName?: string) {
 
 describe('Filter Psql Parsing test', function () {
 	it('Should parse valid strings', function (done: Done) {
-		test('!(column:id,value:4504055,type:contains)', ` NOT ("id" ILIKE '%4504055%')`);
-		test('!(column:id,value:4504055,type:startsWith)', ` NOT ("id" ILIKE '4504055%')`);
-		test('(column:id,value:Tanner B,type:startsWith)', `("id" ILIKE 'Tanner B%')`, 'allow space');
-		test('(column: id ,value: Tanner B ,type:startsWith)', `(" id " ILIKE ' Tanner B %')`, 'allow space');
-		test('(column:id,value:Tanner  B,type:startsWith)', `("id" ILIKE 'Tanner  B%')`, 'allow spaces');
-		test(`(column:id,value:Tanner	B,type:startsWith)`, `("id" ILIKE 'Tanner	B%')`, 'allow tab');
+		test('!(column:id,value:4504055,type:contains)', ` NOT ("id"::text ILIKE '%4504055%')`);
+		test('!(column:id,value:4504055,type:startsWith)', ` NOT ("id"::text ILIKE '4504055%')`);
+		test('(column:id,value:Tanner B,type:startsWith)', `("id"::text ILIKE 'Tanner B%')`, 'allow space');
+		test('(column: id ,value: Tanner B ,type:startsWith)', `(" id "::text ILIKE ' Tanner B %')`, 'allow space');
+		test('(column:id,value:Tanner  B,type:startsWith)', `("id"::text ILIKE 'Tanner  B%')`, 'allow spaces');
+		test(`(column:id,value:Tanner	B,type:startsWith)`, `("id"::text ILIKE 'Tanner	B%')`, 'allow tab');
 		test(
 			`(column:id,value:Tanner
 B,type:startsWith)`,
-			`("id" ILIKE 'Tanner
+			`("id"::text ILIKE 'Tanner
 B%')`,
 			'allow newline'
 		);
 		test(
 			'!(column:id,value:4504055,type:contains)and!(column:name,value:jim,type:endsWith)',
-			` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`
+			` NOT ("id"::text ILIKE '%4504055%') and  NOT ("name"::text ILIKE '%jim')`
 		);
 		test(
 			'!(column:id,value:4504055,type:contains)   and!(column:name,value:jim,type:endsWith)',
-			` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`,
+			` NOT ("id"::text ILIKE '%4504055%') and  NOT ("name"::text ILIKE '%jim')`,
 			'allow but trim whitespace'
 		);
 		test(
 			'! ( column :id, value :4504055,  type: contains )   and ! ( column :name, value :jim, type : endsWith ) ',
-			` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`,
+			` NOT ("id"::text ILIKE '%4504055%') and  NOT ("name"::text ILIKE '%jim')`,
 			'allow but trim whitespace'
 		);
 		test(
 			'!(column:id,value:4504055,type :contains)   and!(column:name,value:jim,type:endsWith)',
-			` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`,
+			` NOT ("id"::text ILIKE '%4504055%') and  NOT ("name"::text ILIKE '%jim')`,
 			'allow but trim whitespace'
 		);
 		test(
 			'!(column:id,value:4504055 ,  type:contains)   and!(column:name,value:jim,type:endsWith)',
-			` NOT ("id" ILIKE '%4504055 %') and  NOT ("name" ILIKE '%jim')`,
+			` NOT ("id"::text ILIKE '%4504055 %') and  NOT ("name"::text ILIKE '%jim')`,
 			'allow but trim whitespace'
 		);
 
-		test('(((column:id,value:4504055,type:contains)))', `((("id" ILIKE '%4504055%')))`);
+		test('(((column:id,value:4504055,type:contains)))', `((("id"::text ILIKE '%4504055%')))`);
 
-		test("(column:name,value:i'm,type:startsWith)", `("name" ILIKE 'i''m%')`);
+		test("(column:name,value:i'm,type:startsWith)", `("name"::text ILIKE 'i''m%')`);
 
 		test('(column:id,value:15234,type:exact)', `("id" = '15234')`);
 		test('(column:userId,value:15234,type:exact)', `("userId" = '15234')`);
 		test('!(column:userId,value:15234,type:exact)', ` NOT ("userId" = '15234')`);
 		test(
 			'!(!(column:userId,value:15234,type:exact)and!(column:name,value:jim,type:startsWith))or(column:name,value:bob)',
-			` NOT ( NOT ("userId" = '15234') and  NOT ("name" ILIKE 'jim%')) or ("name" = 'bob')`
+			` NOT ( NOT ("userId" = '15234') and  NOT ("name"::text ILIKE 'jim%')) or ("name" = 'bob')`
 		);
 
-		test('(column:id,value:251,type:contains)', `("id" ILIKE '%251%')`);
+		test('(column:id,value:251,type:contains)', `("id"::text ILIKE '%251%')`);
 		test('(column:id,value:25,type:exact)', `("id" = '25')`);
-		test('(column:id,value:251,type:startsWith)', `("id" ILIKE '251%')`);
-		test('(column:id,value:251,type:endsWith)', `("id" ILIKE '%251')`);
+		test('(column:id,value:251,type:startsWith)', `("id"::text ILIKE '251%')`);
+		test('(column:id,value:251,type:endsWith)', `("id"::text ILIKE '%251')`);
 
 		test(
 			'(column:id,value:251,type:endsWith)or(column:id,value:278,type:endsWith)',
-			`("id" ILIKE '%251') or ("id" ILIKE '%278')`
+			`("id"::text ILIKE '%251') or ("id"::text ILIKE '%278')`
 		);
 		test(
 			'((column:id,value:251)or(column:id,value:278)or(column:id,value:215))AND(column:status,value:PROCESSING,type:exact)',
@@ -132,7 +132,7 @@ B%')`,
 
 		test(
 			`(column:order.billingAddress.zip,value:47,type:contains)`,
-			`("order"."billingAddress"->>'zip' ILIKE '%47%')`
+			`("order"."billingAddress"->>'zip'::text ILIKE '%47%')`
 		);
 
 		done();
