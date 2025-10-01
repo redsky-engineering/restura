@@ -176,7 +176,7 @@ export default abstract class SqlEngine {
 				param = param.replace('#', '');
 				// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 				const globalParamValue = (req.requesterDetails as any)[param];
-				if (!globalParamValue)
+				if (globalParamValue === undefined)
 					throw new RsError(
 						'SCHEMA_ERROR',
 						`Invalid global keyword clause in route (${routeData.path}) when looking for (#${param})`
