@@ -98,6 +98,16 @@ export default class ResponseValidator {
 						.join(' | ');
 				}
 
+				// If only null was in the union, treat as any
+				if (nonNullExpression === '') {
+					return { validator: 'any', isOptionalOrNullable: true };
+				}
+
+				// If remaining type is a primitive after stripping null, return as-is
+				if (ResponseValidator.validatorIsValidString(nonNullExpression)) {
+					return { validator: nonNullExpression as ValidatorString, isOptionalOrNullable: hasNull };
+				}
+
 				return { validator: this.parseValidationEnum(nonNullExpression), isOptionalOrNullable: hasNull };
 			}
 
