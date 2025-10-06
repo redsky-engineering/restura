@@ -85,9 +85,32 @@ export default class ResponseValidator {
 			if (ResponseValidator.validatorIsValidString(field.type)) {
 				return { validator: field.type };
 			}
+
 			if (field.type.includes('|')) {
-				return { validator: this.parseValidationEnum(field.type) };
+				const hasNull = field.type.includes('null');
+
+				let nonNullExpression = field.type;
+				if (hasNull) {
+					nonNullExpression = field.type
+						.split('|')
+						.map((type) => type.trim())
+						.filter((type) => type !== 'null' && type !== '')
+						.join(' | ');
+				}
+
+				// If only null was in the union, treat as any
+				if (nonNullExpression === '') {
+					return { validator: 'any', isOptionalOrNullable: true };
+				}
+
+				// If remaining type is a primitive after stripping null, return as-is
+				if (ResponseValidator.validatorIsValidString(nonNullExpression)) {
+					return { validator: nonNullExpression as ValidatorString, isOptionalOrNullable: hasNull };
+				}
+
+				return { validator: this.parseValidationEnum(nonNullExpression), isOptionalOrNullable: hasNull };
 			}
+
 			return { validator: 'object' };
 		} else if (field.selector) {
 			return this.getTypeFromTable(field.selector, tableName, routeData);
