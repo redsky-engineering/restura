@@ -82,12 +82,25 @@ export default class ResponseValidator {
 
 	private getFieldResponseType(field: ResponseData, tableName: string, routeData: StandardRouteData): ResponseType {
 		if (field.type) {
+			// Handle union types with null e.g. "string | null"
+			if (field.type.includes('null')) {
+				const nonNullExpression = field.type
+					.split('|')
+					.map((type) => type.trim())
+					.filter((type) => type !== 'null' && type !== '')
+					.join(' | ');
+
+				if (ResponseValidator.validatorIsValidString(nonNullExpression)) {
+					return { validator: nonNullExpression as ValidatorString, isOptionalOrNullable: true };
+				}
+
+				return { validator: this.parseValidationEnum(field.type), isOptionalOrNullable: true };
+			}
+
 			if (ResponseValidator.validatorIsValidString(field.type)) {
 				return { validator: field.type };
 			}
-			if (field.type.includes('|')) {
-				return { validator: this.parseValidationEnum(field.type) };
-			}
+
 			return { validator: 'object' };
 		} else if (field.selector) {
 			return this.getTypeFromTable(field.selector, tableName, routeData);
