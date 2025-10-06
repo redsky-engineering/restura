@@ -82,6 +82,10 @@ export default class ResponseValidator {
 
 	private getFieldResponseType(field: ResponseData, tableName: string, routeData: StandardRouteData): ResponseType {
 		if (field.type) {
+			if (ResponseValidator.validatorIsValidString(field.type)) {
+				return { validator: field.type };
+			}
+
 			if (field.type.includes('|')) {
 				const hasNull = field.type.includes('null');
 
@@ -95,10 +99,6 @@ export default class ResponseValidator {
 				}
 
 				return { validator: this.parseValidationEnum(nonNullExpression), isOptionalOrNullable: hasNull };
-			}
-
-			if (ResponseValidator.validatorIsValidString(field.type)) {
-				return { validator: field.type };
 			}
 
 			return { validator: 'object' };
