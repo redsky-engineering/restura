@@ -80,7 +80,7 @@ export class RsError {
 		this.msg = message || '';
 		this.status = RsError.htmlStatus(errCode);
 		this.stack = new Error().stack || '';
-		this.options = options || {};
+		this.options = options;
 	}
 
 	static htmlStatus(code: ErrorCode): number {
