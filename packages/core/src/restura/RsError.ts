@@ -11,7 +11,6 @@ export interface RsErrorInternalData {
 	stack: string;
 	status: number;
 	options?: Record<string, unknown>;
-	message?: string; // I don't think this is ever here
 }
 
 export enum HtmlStatusCodes {
