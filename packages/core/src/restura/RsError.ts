@@ -10,6 +10,7 @@ export interface RsErrorInternalData {
 	msg: string;
 	stack: string;
 	status: number;
+	options?: Record<string, unknown>;
 	message?: string; // I don't think this is ever here
 }
 
