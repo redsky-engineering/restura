@@ -71,14 +71,16 @@ export type ErrorCode =
 export class RsError {
 	err: ErrorCode;
 	msg: string;
+	options?: Record<string, unknown>;
 	status?: number;
 	stack: string;
 
-	constructor(errCode: ErrorCode, message?: string) {
+	constructor(errCode: ErrorCode, message?: string, options?: Record<string, unknown>) {
 		this.err = errCode;
 		this.msg = message || '';
 		this.status = RsError.htmlStatus(errCode);
 		this.stack = new Error().stack || '';
+		this.options = options;
 	}
 
 	static htmlStatus(code: ErrorCode): number {
