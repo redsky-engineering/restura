@@ -14,7 +14,17 @@ const consoleFormat = format.combine(
 	format.padLevels(),
 	format.colorize({ all: true }),
 	format.printf((info) => {
-		return `[${info.timestamp}] ${info.level} ${info.message}`;
+		const { timestamp, level, message, stack, ...rest } = info;
+		let output = `[${timestamp}] ${level} ${message}`;
+
+		if (stack) {
+			output += `\n${stack}`;
+		}
+
+		if (Object.keys(rest).length > 0) {
+			output += ` ${JSON.stringify(rest)}`;
+		}
+		return output;
 	})
 );
 
