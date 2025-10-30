@@ -1,6 +1,6 @@
 {
 	"name": "@restura/core",
-	"version": "1.0.17",
+	"version": "1.0.18",
 	"description": "Restura core utilities for No Code APIs",
 	"type": "module",
 	"types": "./dist/index.d.ts",
