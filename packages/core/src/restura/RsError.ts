@@ -5,12 +5,12 @@
  */
 
 // Internal data is used for passing around until we finally get to the sending externally
-export interface RsErrorInternalData {
+export interface RsErrorInternalData<T extends Record<string, unknown> = Record<string, unknown>> {
 	err: ErrorCode;
 	msg: string;
 	stack: string;
 	status: number;
-	message?: string; // I don't think this is ever here
+	options?: T;
 }
 
 export enum HtmlStatusCodes {
@@ -68,14 +68,14 @@ export type ErrorCode =
 	| 'SCHEMA_ERROR'
 	| 'DATABASE_ERROR';
 
-export class RsError {
+export class RsError<T extends Record<string, unknown> = Record<string, unknown>> {
 	err: ErrorCode;
 	msg: string;
-	options?: Record<string, unknown>;
+	options?: T;
 	status?: number;
 	stack: string;
 
-	constructor(errCode: ErrorCode, message?: string, options?: Record<string, unknown>) {
+	constructor(errCode: ErrorCode, message?: string, options?: T) {
 		this.err = errCode;
 		this.msg = message || '';
 		this.status = RsError.htmlStatus(errCode);
