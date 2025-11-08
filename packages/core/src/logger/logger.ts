@@ -22,7 +22,7 @@ const defaultTransports: TransportTargetOptions[] = [
 		options: {
 			colorize: true,
 			translateTime: 'yyyy-mm-dd HH:MM:ss.l',
-			ignore: 'pid,hostname',
+			ignore: 'pid,hostname,_meta', // _meta allows a user to pass in metadata for JSON but not print it to the console
 			messageFormat: '{msg}',
 			levelFirst: true,
 			customColors: 'error:red,warn:yellow,info:green,debug:blue,trace:magenta'
