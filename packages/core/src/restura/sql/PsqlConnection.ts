@@ -112,7 +112,7 @@ export abstract class PsqlConnection {
 	}
 
 	private logQueryDuration(startTime: [number, number]): void {
-		if (logger.level === 'trace') {
+		if (logger.level === 'trace' || logger.level === 'silly') {
 			const [seconds, nanoseconds] = process.hrtime(startTime);
 			const duration = seconds * 1000 + nanoseconds / 1000000;
 			logger.silly(`Query duration: ${duration.toFixed(2)}ms`);
@@ -120,7 +120,7 @@ export abstract class PsqlConnection {
 	}
 
 	private logSqlStatement(query: string, options: unknown[], queryMetadata: QueryMetadata, prefix: string = '') {
-		if (logger.level !== 'trace') return;
+		if (logger.level !== 'trace' && logger.level !== 'silly') return;
 
 		let sqlStatement = '';
 		if (options.length === 0) {
