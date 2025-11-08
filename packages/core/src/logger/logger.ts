@@ -5,9 +5,10 @@ import { loggerConfigSchema } from './loggerConfigSchema.js';
 const loggerConfig = await config.validate('logger', loggerConfigSchema);
 
 const logLevelMap = {
-	info: 'info',
-	warn: 'warn',
+	fatal: 'fatal',
 	error: 'error',
+	warn: 'warn',
+	info: 'info',
 	debug: 'debug',
 	silly: 'trace',
 	trace: 'trace'
@@ -72,6 +73,13 @@ type LogFunction = {
 
 const logger = {
 	level: loggerConfig.level,
+	fatal: ((msg: string | unknown, ...args: unknown[]) => {
+		if (typeof msg === 'string') {
+			log('fatal', msg, ...args);
+		} else {
+			pinoLogger.fatal(msg);
+		}
+	}) as LogFunction,
 	error: ((msg: string | unknown, ...args: unknown[]) => {
 		if (typeof msg === 'string') {
 			log('error', msg, ...args);

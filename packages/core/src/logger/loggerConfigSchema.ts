@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const loggerConfigSchema = z.object({
-	level: z.enum(['info', 'warn', 'error', 'debug', 'silly', 'trace']).default('info'),
+	level: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'silly', 'trace']).default('info'),
 	transports: z
 		.array(
 			z.object({
