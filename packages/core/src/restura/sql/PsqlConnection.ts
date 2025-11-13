@@ -155,7 +155,7 @@ export abstract class PsqlConnection {
 
 		logger.silly(`${prefix}query by ${initiator}, Query ->\n${formattedSql}`, {
 			duration: `${durationMs.toFixed(2)}ms`,
-			_meta: { duration: nanoseconds }
+			_meta: { durationNs: nanoseconds }
 		});
 	}
 }
