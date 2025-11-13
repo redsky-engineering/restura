@@ -6,6 +6,7 @@ export const loggerConfigSchema = z.object({
 		.array(
 			z.object({
 				target: z.string(),
+				level: z.string().optional(),
 				options: z.record(z.string(), z.unknown()).optional()
 			})
 		)
