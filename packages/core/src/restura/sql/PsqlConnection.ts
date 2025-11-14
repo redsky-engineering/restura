@@ -23,14 +23,13 @@ export abstract class PsqlConnection {
 	async queryOne<T>(query: string, options: unknown[], requesterDetails: RequesterDetails): Promise<T> {
 		const formattedQuery = questionMarksToOrderedParams(query);
 		const meta: QueryMetadata = { connectionInstanceId: this.instanceId, ...requesterDetails };
-		this.logSqlStatement(formattedQuery, options, meta);
 		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(meta)})\n`;
 
 		const startTime = process.hrtime();
 		try {
 			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<unknown>);
 
-			this.logQueryDuration(startTime);
+			this.logSqlStatement(formattedQuery, options, meta, startTime);
 
 			// There should be one and only one row returned
 			if (response.rows.length === 0) throw new RsError('NOT_FOUND', 'No results found');
@@ -39,6 +38,7 @@ export abstract class PsqlConnection {
 			return response.rows[0] as T;
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (error: any) {
+			this.logSqlStatement(formattedQuery, options, meta, startTime);
 			if (RsError.isRsError(error)) throw error;
 
 			if (error?.routine === '_bt_check_unique') {
@@ -72,17 +72,17 @@ export abstract class PsqlConnection {
 	async runQuery<T>(query: string, options: unknown[], requesterDetails: RequesterDetails): Promise<T[]> {
 		const formattedQuery = questionMarksToOrderedParams(query);
 		const meta: QueryMetadata = { connectionInstanceId: this.instanceId, ...requesterDetails };
-		this.logSqlStatement(formattedQuery, options, meta);
 		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(meta)})\n`;
 		const startTime = process.hrtime();
 		try {
 			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<unknown>);
-
-			this.logQueryDuration(startTime);
+			this.logSqlStatement(formattedQuery, options, meta, startTime);
 
 			return response.rows as T[];
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 		} catch (error: any) {
+			this.logSqlStatement(formattedQuery, options, meta, startTime);
+
 			if (error?.routine === '_bt_check_unique') {
 				throw new RsError('DUPLICATE', error.message);
 			}
@@ -111,16 +111,14 @@ export abstract class PsqlConnection {
 		}
 	}
 
-	private logQueryDuration(startTime: [number, number]): void {
-		if (logger.level === 'silly') {
-			const [seconds, nanoseconds] = process.hrtime(startTime);
-			const duration = seconds * 1000 + nanoseconds / 1000000;
-			logger.silly(`Query duration: ${duration.toFixed(2)}ms`);
-		}
-	}
-
-	private logSqlStatement(query: string, options: unknown[], queryMetadata: QueryMetadata, prefix: string = '') {
-		if (logger.level !== 'silly') return;
+	private logSqlStatement(
+		query: string,
+		options: unknown[],
+		queryMetadata: QueryMetadata,
+		startTime: [number, number],
+		prefix: string = ''
+	) {
+		if (logger.level !== 'trace' && logger.level !== 'silly') return;
 
 		let sqlStatement = '';
 		if (options.length === 0) {
@@ -147,11 +145,17 @@ export abstract class PsqlConnection {
 			tabWidth: 4
 		});
 
+		const [seconds, nanoseconds] = process.hrtime(startTime);
+		const durationMs = seconds * 1000 + nanoseconds / 1000000;
+
 		let initiator = 'Anonymous';
 		if ('userId' in queryMetadata && queryMetadata.userId)
 			initiator = `User Id (${queryMetadata.userId.toString()})`;
 		if ('isSystemUser' in queryMetadata && queryMetadata.isSystemUser) initiator = 'SYSTEM';
 
-		logger.silly(`${prefix}query by ${initiator}, Query ->\n${formattedSql}`);
+		logger.silly(`${prefix}query by ${initiator}, Query ->\n${formattedSql}`, {
+			duration: `${durationMs.toFixed(2)}ms`,
+			_meta: { durationNs: nanoseconds }
+		});
 	}
 }
