@@ -30,13 +30,19 @@ const defaultTransports: TransportTargetOptions[] = [
 	}
 ];
 
+const baseErrSerializer = pino.stdSerializers.err;
+
+const errorSerializer = loggerConfig.serializers?.err
+	? loggerConfig.serializers.err(baseErrSerializer)
+	: baseErrSerializer;
+
 const pinoLogger = pino({
 	level: currentLogLevel,
 	transport: {
 		targets: (loggerConfig.transports as TransportTargetOptions[]) ?? defaultTransports
 	},
 	serializers: {
-		err: pino.stdSerializers.err
+		err: errorSerializer
 	}
 });
 
