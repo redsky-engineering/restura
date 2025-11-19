@@ -9,7 +9,7 @@ import {
 import type { NextFunction } from 'express';
 
 export default function errorHandler(
-	err: RsErrorInternalData | Error,
+	err: RsErrorInternalData | unknown,
 	_req: RsRequest<unknown>,
 	res: RsResponse<unknown>,
 	next: NextFunction
@@ -23,10 +23,7 @@ export default function errorHandler(
 
 	if (err instanceof RsError) {
 		// Handle err's thar are of type RsError.
-
 		if (err.err === 'CONNECTION_ERROR') {
-			// Let the server die, so it will try to reconnect to database
-			// THIS SHOULD NOT BE AN RsError.
 			throw new RsError('CONNECTION_ERROR');
 		}
 	}
@@ -39,7 +36,11 @@ export default function errorHandler(
 		} else if (err instanceof Error) {
 			res.sendError('UNKNOWN_ERROR', err.message || 'A server error occurred', 500, err.stack);
 		} else {
-			res.sendError('SERVER_ERROR', 'A server error occurred', 500, err.stack);
+			const stack =
+				err && typeof err === 'object' && 'stack' in err
+					? (err as Record<string, string | undefined>).stack
+					: undefined;
+			res.sendError('UNKNOWN_ERROR', 'A server error occurred', 500, stack);
 		}
 	} else res.status(HtmlStatusCodes.SERVER_ERROR).send({ err: 'SERVER_ERROR', msg: 'A server error occurred' });
 }
