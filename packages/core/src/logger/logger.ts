@@ -16,17 +16,6 @@ const logLevelMap = {
 
 const currentLogLevel = logLevelMap[loggerConfig.level];
 
-const baseErrSerializer = pino.stdSerializers.err;
-
-const errorSerializer = (() => {
-	try {
-		return loggerConfig.serializers?.err ? loggerConfig.serializers.err(baseErrSerializer) : baseErrSerializer;
-	} catch (error) {
-		console.error('Failed to initialize custom error serializer, falling back to default', error);
-		return baseErrSerializer;
-	}
-})();
-
 const defaultTransports: TransportTargetOptions[] = [
 	{
 		target: 'pino-pretty',
@@ -40,6 +29,17 @@ const defaultTransports: TransportTargetOptions[] = [
 		}
 	}
 ];
+
+const baseErrSerializer = pino.stdSerializers.err;
+
+const errorSerializer = (() => {
+	try {
+		return loggerConfig.serializers?.err ? loggerConfig.serializers.err(baseErrSerializer) : baseErrSerializer;
+	} catch (error) {
+		console.error('Failed to initialize custom error serializer, falling back to default', error);
+		return baseErrSerializer;
+	}
+})();
 
 const getTransportConfig = () => {
 	if (loggerConfig.transports) {
