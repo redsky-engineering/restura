@@ -58,7 +58,7 @@ function buildContext(args: unknown[]) {
 type Level = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
 
 function log(level: Level, message: string, ...args: unknown[]) {
-	pinoLogger![level](buildContext(args), message);
+	pinoLogger[level](buildContext(args), message);
 }
 
 type LogFunction = {
