@@ -1,5 +1,5 @@
 import { config } from '@restura/internal';
-import pino from 'pino';
+import pino, { type TransportTargetOptions } from 'pino';
 import { loggerConfigSchema } from './loggerConfigSchema.js';
 
 const loggerConfig = await config.validate('logger', loggerConfigSchema);
@@ -27,13 +27,42 @@ const errorSerializer = (() => {
 	}
 })();
 
-const pinoLogger = pino({
-	level: currentLogLevel,
-	...(loggerConfig.transports ? { transport: { targets: loggerConfig.transports } } : {}),
-	serializers: {
-		err: errorSerializer
+const defaultTransports: TransportTargetOptions[] = [
+	{
+		target: 'pino-pretty',
+		options: {
+			colorize: true,
+			translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+			ignore: 'pid,hostname,_meta', // _meta allows a user to pass in metadata for JSON but not print it to the console
+			messageFormat: '{msg}',
+			levelFirst: true,
+			customColors: 'error:red,warn:yellow,info:green,debug:blue,trace:magenta'
+		}
 	}
-});
+];
+
+const getTransportConfig = () => {
+	if (loggerConfig.transports) {
+		return { transport: { targets: loggerConfig.transports } };
+	}
+
+	if (!loggerConfig.stream) {
+		return { transport: { targets: defaultTransports } };
+	}
+
+	return {};
+};
+
+const pinoLogger = pino(
+	{
+		level: currentLogLevel,
+		...getTransportConfig(),
+		serializers: {
+			err: errorSerializer
+		}
+	},
+	loggerConfig.stream
+);
 
 type Primitive = string | number | boolean | null | undefined;
 
