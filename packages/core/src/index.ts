@@ -8,6 +8,7 @@ export { default as resturaGlobalTypesGenerator } from './restura/generators/res
 export * from './restura/restura.js';
 export * from './restura/RsError.js';
 export { type ResturaConfigSchema } from './restura/schemas/resturaConfigSchema.js';
+export { isSchemaValid, resturaSchema, type ResturaSchema } from './restura/schemas/resturaSchema.js';
 export { default as filterPsqlParser } from './restura/sql/filterPsqlParser.js';
 export * from './restura/sql/PsqlConnection.js';
 export * from './restura/sql/PsqlEngine.js';
@@ -16,4 +17,3 @@ export * from './restura/sql/PsqlTransaction.js';
 export * from './restura/sql/PsqlUtils.js';
 export * from './restura/types/customExpressTypes.js';
 export * from './restura/types/resturaTypes.js';
-export { isSchemaValid, resturaSchema, type ResturaSchema } from './restura/schemas/resturaSchema.js';

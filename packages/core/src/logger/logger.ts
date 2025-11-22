@@ -1,5 +1,6 @@
 import { config } from '@restura/internal';
-import pino, { TransportTargetOptions } from 'pino';
+import pino from 'pino';
+import pinoPretty from 'pino-pretty';
 import { loggerConfigSchema } from './loggerConfigSchema.js';
 
 const loggerConfig = await config.validate('logger', loggerConfigSchema);
@@ -16,40 +17,64 @@ const logLevelMap = {
 
 const currentLogLevel = logLevelMap[loggerConfig.level];
 
-const defaultTransports: TransportTargetOptions[] = [
-	{
-		target: 'pino-pretty',
-		options: {
-			colorize: true,
-			translateTime: 'yyyy-mm-dd HH:MM:ss.l',
-			ignore: 'pid,hostname,_meta', // _meta allows a user to pass in metadata for JSON but not print it to the console
-			messageFormat: '{msg}',
-			levelFirst: true,
-			customColors: 'error:red,warn:yellow,info:green,debug:blue,trace:magenta'
-		}
-	}
-];
+const defaultStream = pinoPretty({
+	colorize: true,
+	translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+	ignore: 'pid,hostname,_meta', // _meta allows a user to pass in metadata for JSON but not print it to the console
+	messageFormat: '{msg}',
+	levelFirst: true,
+	customColors: 'error:red,warn:yellow,info:green,debug:blue,trace:magenta',
+	destination: process.stdout
+});
 
-const baseErrSerializer = pino.stdSerializers.err;
+function isAxiosError(error: unknown): boolean {
+	const isObject = (error: unknown) => error !== null && typeof error === 'object';
+	return isObject(error) && 'isAxiosError' in error && error.isAxiosError === true;
+}
+
+const baseSerializer = pino.stdSerializers.err;
+
+const defaultSerializer = (error: unknown) => {
+	if (isAxiosError(error)) {
+		const err = error as Record<string, unknown> as {
+			message: string;
+			stack: string;
+			config: { url: string; method: string };
+			response: { status: number; data: unknown };
+		};
+		return {
+			type: 'AxiosError',
+			message: err.message,
+			stack: err.stack,
+			url: err.config?.url,
+			method: err.config?.method?.toUpperCase(),
+			status: err.response?.status,
+			responseData: err.response?.data
+		};
+	}
+
+	return baseSerializer(error as Error);
+};
 
 const errorSerializer = (() => {
 	try {
-		return loggerConfig.serializers?.err ? loggerConfig.serializers.err(baseErrSerializer) : baseErrSerializer;
+		return loggerConfig.serializers?.err ? loggerConfig.serializers.err(baseSerializer) : defaultSerializer;
 	} catch (error) {
 		console.error('Failed to initialize custom error serializer, falling back to default', error);
-		return baseErrSerializer;
+		return defaultSerializer;
 	}
 })();
 
-const pinoLogger = pino({
-	level: currentLogLevel,
-	transport: {
-		targets: (loggerConfig.transports as TransportTargetOptions[]) ?? defaultTransports
+const pinoLogger = pino(
+	{
+		level: currentLogLevel,
+		...(loggerConfig.transports ? { transport: { targets: loggerConfig.transports } } : {}),
+		serializers: {
+			err: errorSerializer
+		}
 	},
-	serializers: {
-		err: errorSerializer
-	}
-});
+	loggerConfig.stream ? loggerConfig.stream : defaultStream
+);
 
 type Primitive = string | number | boolean | null | undefined;
 
