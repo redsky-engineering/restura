@@ -69,18 +69,28 @@ INSERT INTO "${table}" (${columns})
  * @param table Table name to update the object in
  * @param obj Data to update in the table
  * @param whereStatement Where clause to determine which rows to update
+ * @param incrementSyncVersion Whether to increment the syncVersion column
  * @returns the query to update the object in the table
  */
-export function updateObjectQuery(table: string, obj: DynamicObject, whereStatement: string): string {
+export function updateObjectQuery(
+	table: string,
+	obj: DynamicObject,
+	whereStatement: string,
+	incrementSyncVersion: boolean = false
+): string {
 	const setArray = [];
 	for (const i in obj) {
 		setArray.push(`${escapeColumnName(i)} = ` + SQL`${obj[i]}`);
 	}
 
+	if (incrementSyncVersion) {
+		setArray.push(`"syncVersion" = "syncVersion" + 1`);
+	}
+
 	return `
-UPDATE ${escapeColumnName(table)}
-                 SET ${setArray.join(', ')} ${whereStatement}
-                 RETURNING *`;
+	UPDATE ${escapeColumnName(table)}
+		SET ${setArray.join(', ')} ${whereStatement}
+	RETURNING *`;
 }
 
 // Todo: Move this method into @redsky/core-utils package under NumberUtils

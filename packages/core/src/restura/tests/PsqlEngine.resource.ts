@@ -119,6 +119,7 @@ export const sampleSchema: ResturaSchema = {
 					type: 'DATETIME'
 				},
 				{ name: 'modifiedOn', isNullable: false, default: 'now()', roles: [], scopes: [], type: 'DATETIME' },
+				{ name: 'syncVersion', isNullable: false, default: '1', roles: [], scopes: [], type: 'BIGINT' },
 				{
 					roles: [],
 					name: 'firstName',
@@ -716,6 +717,7 @@ export const patchUserClearGuidRouteData: StandardRouteData = {
 	response: [
 		{ name: 'id', selector: 'user.id' },
 		{ name: 'modifiedOn', selector: 'user.modifiedOn' },
+		{ name: 'syncVersion', selector: 'user.syncVersion' },
 		{ name: 'firstName', selector: 'user.firstName' },
 		{ name: 'lastName', selector: 'user.lastName' },
 		{ name: 'passwordResetGuid', selector: 'user.passwordResetGuid' }
@@ -727,17 +729,17 @@ export const patchUserClearGuidRouteData: StandardRouteData = {
 export const patchUserWithBaseModifiedOnRouteData: StandardRouteData = {
 	type: 'ONE',
 	method: 'PATCH',
-	name: 'Updates a users password reset guid with a baseModifiedOn param',
-	description: 'Updates a users password reset guid with a baseModifiedOn param',
-	path: '/user/update-password-reset-guid-with-base-modified-on-param',
+	name: 'Updates a users password with a baseSyncVersion param',
+	description: 'Updates a users password with a baseSyncVersion param',
+	path: '/user/update-password-with-base-sync-version-param',
 	table: 'user',
 	roles: ['user', 'admin'],
 	scopes: [],
 	request: [
 		{
-			name: 'baseModifiedOn',
+			name: 'baseSyncVersion',
 			required: true,
-			validator: [{ type: 'TYPE_CHECK', value: 'string' }]
+			validator: [{ type: 'TYPE_CHECK', value: 'number' }]
 		},
 		{
 			name: 'password',
@@ -753,7 +755,7 @@ export const patchUserWithBaseModifiedOnRouteData: StandardRouteData = {
 		{ name: 'password', selector: 'user.password' },
 		{ name: 'passwordResetGuid', selector: 'user.passwordResetGuid' }
 	],
-	assignments: [{ name: 'passwordResetGuid', value: '' }],
+	assignments: [],
 	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
 };
 

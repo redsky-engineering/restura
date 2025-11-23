@@ -29,6 +29,7 @@ CREATE TABLE "user"
 (    "id" BIGSERIAL PRIMARY KEY  NOT NULL,
      "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
      "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+     "syncVersion" BIGINT NOT NULL DEFAULT 1,
      "firstName" VARCHAR(30) NOT NULL,
      "lastName" VARCHAR(30) NOT NULL,
      "companyId" BIGINT NOT NULL,

@@ -29,11 +29,11 @@ export abstract class PsqlConnection {
 		try {
 			const response = await this.query(queryMetadata + formattedQuery, options as QueryConfigValues<unknown>);
 
-			this.logSqlStatement(formattedQuery, options, meta, startTime);
-
 			// There should be one and only one row returned
 			if (response.rows.length === 0) throw new RsError('NOT_FOUND', 'No results found');
 			else if (response.rows.length > 1) throw new RsError('DUPLICATE', 'More than one result found');
+
+			this.logSqlStatement(formattedQuery, options, meta, startTime);
 
 			return response.rows[0] as T;
 			// eslint-disable-next-line  @typescript-eslint/no-explicit-any
