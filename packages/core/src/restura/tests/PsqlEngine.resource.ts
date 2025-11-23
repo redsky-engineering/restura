@@ -715,8 +715,42 @@ export const patchUserClearGuidRouteData: StandardRouteData = {
 	joins: [],
 	response: [
 		{ name: 'id', selector: 'user.id' },
+		{ name: 'modifiedOn', selector: 'user.modifiedOn' },
 		{ name: 'firstName', selector: 'user.firstName' },
 		{ name: 'lastName', selector: 'user.lastName' },
+		{ name: 'passwordResetGuid', selector: 'user.passwordResetGuid' }
+	],
+	assignments: [{ name: 'passwordResetGuid', value: '' }],
+	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
+};
+
+export const patchUserWithBaseModifiedOnRouteData: StandardRouteData = {
+	type: 'ONE',
+	method: 'PATCH',
+	name: 'Updates a users password reset guid with a baseModifiedOn param',
+	description: 'Updates a users password reset guid with a baseModifiedOn param',
+	path: '/user/update-password-reset-guid-with-base-modified-on-param',
+	table: 'user',
+	roles: ['user', 'admin'],
+	scopes: [],
+	request: [
+		{
+			name: 'baseModifiedOn',
+			required: true,
+			validator: [{ type: 'TYPE_CHECK', value: 'string' }]
+		},
+		{
+			name: 'password',
+			required: true,
+			validator: [{ type: 'TYPE_CHECK', value: 'string' }]
+		}
+	],
+	joins: [],
+	response: [
+		{ name: 'id', selector: 'user.id' },
+		{ name: 'firstName', selector: 'user.firstName' },
+		{ name: 'lastName', selector: 'user.lastName' },
+		{ name: 'password', selector: 'user.password' },
 		{ name: 'passwordResetGuid', selector: 'user.passwordResetGuid' }
 	],
 	assignments: [{ name: 'passwordResetGuid', value: '' }],

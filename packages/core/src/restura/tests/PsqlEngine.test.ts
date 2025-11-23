@@ -29,6 +29,7 @@ import {
 	getUserLikeFirstNameRouteData,
 	patchUserClearGuidRouteData,
 	patchUserRouteData,
+	patchUserWithBaseModifiedOnRouteData,
 	permissionCheckScopeOnlyRequest,
 	sampleSchema
 } from './PsqlEngine.resource.js';
@@ -721,6 +722,7 @@ EXECUTE FUNCTION notify_user_delete();
 
 	describe('PsqlEngine executeUpdateRequest', () => {
 		const psqlEngine = new PsqlEngine(psqlPool);
+		let lastModifiedOn: string;
 		it('should executeUpdateRequest', async () => {
 			const updateRequest: RsRequest = {
 				requesterDetails: {
@@ -762,6 +764,50 @@ EXECUTE FUNCTION notify_user_delete();
 			);
 			expect(response?.id).to.equal(1);
 			expect(response?.passwordResetGuid).to.equal('');
+			lastModifiedOn = response?.modifiedOn as string;
+		});
+		it('should executeUpdateRequest with a baseModifiedOn and have be successful', async () => {
+			const newPasswordRandom = Math.random().toString(36).substring(2, 15);
+			const updateRequest: RsRequest = {
+				requesterDetails: {
+					role: 'admin',
+					scopes: [],
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				},
+				body: { baseModifiedOn: lastModifiedOn, password: newPasswordRandom }
+			} as unknown as RsRequest;
+			const response = await psqlEngine['executeUpdateRequest'](
+				updateRequest,
+				patchUserWithBaseModifiedOnRouteData,
+				sampleSchema
+			);
+			expect(response?.id).to.equal(1);
+			expect(response?.password).to.equal(newPasswordRandom);
+		});
+		it('should executeUpdateRequest with a baseModifiedOn and have a conflict error', async () => {
+			const updateRequest: RsRequest = {
+				requesterDetails: {
+					role: 'admin',
+					scopes: [],
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				},
+				body: { baseModifiedOn: new Date().toISOString() }
+			} as unknown as RsRequest;
+			try {
+				await psqlEngine['executeUpdateRequest'](
+					updateRequest,
+					patchUserWithBaseModifiedOnRouteData,
+					sampleSchema
+				);
+				expect(false).to.be.eq(true);
+			} catch (error) {
+				expect(error).to.be.instanceOf(RsError);
+				expect((error as RsError).err).to.be.eq('CONFLICT');
+			}
 		});
 	});
 	describe('PsqlEngine executeCreateRequest', () => {

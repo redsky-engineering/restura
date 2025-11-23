@@ -544,7 +544,7 @@ export class PsqlEngine extends SqlEngine {
 	): Promise<DynamicObject> {
 		const sqlParams: string[] = [];
 		// eslint-disable-next-line
-		const { id, ...bodyNoId } = req.body;
+		const { id, baseModifiedOn, ...bodyNoId } = req.body;
 
 		// Find the database table
 		const table = schema.database.find((item) => {
@@ -566,7 +566,7 @@ export class PsqlEngine extends SqlEngine {
 			else bodyNoId[assignmentEscaped] = assignment.value;
 		}
 
-		// Todo: Add joins back in on the update. They are useful for the where clause.
+		// Todo: Add joins back in on the update. They are useful for the where clause but in very rare cases.
 		// let joinStatement = this.generateJoinStatements(
 		// 	req,
 		// 	routeData.joins!,
@@ -576,9 +576,40 @@ export class PsqlEngine extends SqlEngine {
 		// 	req.requesterDetails.role,
 		// 	sqlParams
 		// );
-		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
+		let whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
+		const originalWhereClause = whereClause;
+		const originalSqlParams = [...sqlParams];
+		if (baseModifiedOn) {
+			const replacedBaseModifiedOn = this.replaceParamKeywords(baseModifiedOn, routeData, req, sqlParams);
+			const modifiedOnCheck = whereClause ? `${whereClause} AND "modifiedOn" = ?` : `"modifiedOn" = ?`;
+			sqlParams.push(replacedBaseModifiedOn.toString());
+			whereClause = modifiedOnCheck;
+		}
+
 		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause);
-		await this.psqlConnectionPool.queryOne(query, [...sqlParams], req.requesterDetails);
+		try {
+			await this.psqlConnectionPool.queryOne(query, [...sqlParams], req.requesterDetails);
+		} catch (error) {
+			if (!baseModifiedOn || !(error instanceof RsError) || error.err !== 'NOT_FOUND') throw error;
+
+			// Check if record exists with just the original where clause.
+			// If it does, throw a conflict error since the modifiedOn value has changed.
+			let isConflict = false;
+			try {
+				await this.psqlConnectionPool.queryOne(
+					`SELECT 1 FROM "${routeData.table}" ${originalWhereClause};`,
+					originalSqlParams,
+					req.requesterDetails
+				);
+				isConflict = true;
+			} catch {}
+			if (isConflict)
+				throw new RsError(
+					'CONFLICT',
+					'The record has been modified since the baseModifiedOn value was provided.'
+				);
+			throw error;
+		}
 		return this.executeGetRequest(req, routeData, schema) as unknown as DynamicObject;
 	}
 

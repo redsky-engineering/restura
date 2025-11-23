@@ -140,6 +140,20 @@ export default abstract class SqlEngine {
 		return returnValue;
 	}
 
+	/**
+	 * Replaces local parameter keywords (e.g., $paramName) in SQL query strings with '?' placeholders
+	 * and adds the corresponding parameter values to the sqlParams array for parameterized queries.
+	 *
+	 * Validates that each parameter keyword exists in the route's request schema before processing.
+	 * If the value is not a string or routeData has no request schema, returns the value unchanged.
+	 *
+	 * @param value - The string or number value that may contain parameter keywords (e.g., "$userId")
+	 * @param routeData - The route data containing the request schema for parameter validation
+	 * @param req - The request object containing the actual parameter values in req.data
+	 * @param sqlParams - Array to which parameter values are appended (modified by reference)
+	 * @returns The value with parameter keywords replaced by '?' placeholders, or the original value if unchanged
+	 * @throws {RsError} If a parameter keyword is found that doesn't exist in the route's request schema
+	 */
 	protected replaceLocalParamKeywords(
 		value: string | number,
 		routeData: RouteData,
