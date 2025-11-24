@@ -150,6 +150,7 @@ CREATE TABLE "user"
                                            (    "id" BIGSERIAL NOT NULL, 
         "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
         "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+		"syncVersion" BIGINT NOT NULL DEFAULT 1,
         "firstName" VARCHAR(30) NOT NULL, 
         "lastName" VARCHAR(30) NOT NULL, 
         "companyId" BIGINT NOT NULL, 
@@ -722,7 +723,7 @@ EXECUTE FUNCTION notify_user_delete();
 
 	describe('PsqlEngine executeUpdateRequest', () => {
 		const psqlEngine = new PsqlEngine(psqlPool);
-		let lastModifiedOn: string;
+		let lastSyncVersion: number;
 		it('should executeUpdateRequest', async () => {
 			const updateRequest: RsRequest = {
 				requesterDetails: {
@@ -764,9 +765,9 @@ EXECUTE FUNCTION notify_user_delete();
 			);
 			expect(response?.id).to.equal(1);
 			expect(response?.passwordResetGuid).to.equal('');
-			lastModifiedOn = response?.modifiedOn as string;
+			lastSyncVersion = response?.syncVersion as number;
 		});
-		it('should executeUpdateRequest with a baseModifiedOn and have be successful', async () => {
+		it('should executeUpdateRequest with a baseSyncVersion and have be successful', async () => {
 			const newPasswordRandom = Math.random().toString(36).substring(2, 15);
 			const updateRequest: RsRequest = {
 				requesterDetails: {
@@ -776,7 +777,7 @@ EXECUTE FUNCTION notify_user_delete();
 					ipAddress: '1.1.1.1',
 					userId: 1
 				},
-				body: { baseModifiedOn: lastModifiedOn, password: newPasswordRandom }
+				body: { baseSyncVersion: lastSyncVersion, password: newPasswordRandom }
 			} as unknown as RsRequest;
 			const response = await psqlEngine['executeUpdateRequest'](
 				updateRequest,
@@ -786,7 +787,7 @@ EXECUTE FUNCTION notify_user_delete();
 			expect(response?.id).to.equal(1);
 			expect(response?.password).to.equal(newPasswordRandom);
 		});
-		it('should executeUpdateRequest with a baseModifiedOn and have a conflict error', async () => {
+		it('should executeUpdateRequest with a baseSyncVersion and have a conflict error', async () => {
 			const updateRequest: RsRequest = {
 				requesterDetails: {
 					role: 'admin',
@@ -795,7 +796,7 @@ EXECUTE FUNCTION notify_user_delete();
 					ipAddress: '1.1.1.1',
 					userId: 1
 				},
-				body: { baseModifiedOn: new Date().toISOString() }
+				body: { baseSyncVersion: -1 }
 			} as unknown as RsRequest;
 			try {
 				await psqlEngine['executeUpdateRequest'](

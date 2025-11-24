@@ -537,6 +537,16 @@ export class PsqlEngine extends SqlEngine {
 		}
 	}
 
+	/**
+	 * Executes an update request. The request will pull out the id and baseSyncVersion from the request body.
+	 * (If Present) The baseSyncVersion is used to check if the record has been modified since the last sync.
+	 * If the update fails because the baseSyncVersion has changed, a conflict error will be thrown.
+	 * IDs can not be updated using this method.
+	 * @param req - The request object.
+	 * @param routeData - The route data object.
+	 * @param schema - The schema object.
+	 * @returns The response object.
+	 */
 	protected async executeUpdateRequest(
 		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
@@ -544,7 +554,7 @@ export class PsqlEngine extends SqlEngine {
 	): Promise<DynamicObject> {
 		const sqlParams: string[] = [];
 		// eslint-disable-next-line
-		const { id, baseModifiedOn, ...bodyNoId } = req.body;
+		const { id, baseSyncVersion, ...bodyNoId } = req.body;
 
 		// Find the database table
 		const table = schema.database.find((item) => {
@@ -554,6 +564,9 @@ export class PsqlEngine extends SqlEngine {
 		if (table.columns.find((column) => column.name === 'modifiedOn')) {
 			bodyNoId.modifiedOn = new Date().toISOString();
 		}
+		// Auto-increment syncVersion on update
+		let incrementSyncVersion = false;
+		if (table.columns.find((column) => column.name === 'syncVersion')) incrementSyncVersion = true;
 
 		for (const assignment of routeData.assignments) {
 			const column = table.columns.find((column) => column.name === assignment.name);
@@ -579,18 +592,17 @@ export class PsqlEngine extends SqlEngine {
 		let whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
 		const originalWhereClause = whereClause;
 		const originalSqlParams = [...sqlParams];
-		if (baseModifiedOn) {
-			const replacedBaseModifiedOn = this.replaceParamKeywords(baseModifiedOn, routeData, req, sqlParams);
-			const modifiedOnCheck = whereClause ? `${whereClause} AND "modifiedOn" = ?` : `"modifiedOn" = ?`;
-			sqlParams.push(replacedBaseModifiedOn.toString());
-			whereClause = modifiedOnCheck;
+		if (baseSyncVersion) {
+			const syncVersionCheck = whereClause ? `${whereClause} AND "syncVersion" = ?` : `"syncVersion" = ?`;
+			sqlParams.push(baseSyncVersion.toString());
+			whereClause = syncVersionCheck;
 		}
 
-		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause);
+		const query = updateObjectQuery(routeData.table, bodyNoId, whereClause, incrementSyncVersion);
 		try {
 			await this.psqlConnectionPool.queryOne(query, [...sqlParams], req.requesterDetails);
 		} catch (error) {
-			if (!baseModifiedOn || !(error instanceof RsError) || error.err !== 'NOT_FOUND') throw error;
+			if (!baseSyncVersion || !(error instanceof RsError) || error.err !== 'NOT_FOUND') throw error;
 
 			// Check if record exists with just the original where clause.
 			// If it does, throw a conflict error since the modifiedOn value has changed.
@@ -606,7 +618,7 @@ export class PsqlEngine extends SqlEngine {
 			if (isConflict)
 				throw new RsError(
 					'CONFLICT',
-					'The record has been modified since the baseModifiedOn value was provided.'
+					'The record has been modified since the baseSyncVersion value was provided.'
 				);
 			throw error;
 		}
