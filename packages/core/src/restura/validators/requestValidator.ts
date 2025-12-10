@@ -130,10 +130,6 @@ function coerceValue(value: unknown, propertySchema: Schema): unknown {
 		return targetType === 'string' ? '' : undefined;
 	}
 
-	// Handle boolean strings
-	if (value === 'true') return true;
-	if (value === 'false') return false;
-
 	// Coerce based on schema type
 	switch (targetType) {
 		case 'number':
@@ -142,6 +138,8 @@ function coerceValue(value: unknown, propertySchema: Schema): unknown {
 			return isNaN(num) ? value : num;
 
 		case 'boolean':
+			if (value === 'true') return true;
+			if (value === 'false') return false;
 			if (typeof value === 'string') {
 				return value === 'true' || value === '1';
 			}

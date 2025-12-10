@@ -160,8 +160,35 @@ describe('getRequestData', () => {
 
 			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
-				mixed: ['1', true, 'John', '42']
+				mixed: ['1', 'true', 'John', '42']
 			});
+		});
+
+		it('should coerce string array to number array', () => {
+			const request = {
+				method: 'GET',
+				query: {
+					'ids[]': ['1', '2', '3']
+				}
+			} as unknown as RsRequest<unknown>;
+
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					ids: {
+						type: 'array',
+						items: {
+							type: 'number'
+						}
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
+			expect(result).to.deep.equal({
+				ids: [1, 2, 3]
+			});
+			expect(typeof (result as { ids: number[] }).ids[0]).to.equal('number');
 		});
 
 		it('should handle array parameters with only one value', () => {

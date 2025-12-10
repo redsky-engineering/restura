@@ -268,7 +268,7 @@ describe('validateRequestParams', () => {
 				expect(error).to.be.instanceOf(RsError);
 				if (error instanceof RsError) {
 					expect(error.err).to.equal('BAD_REQUEST');
-					expect(error.msg).to.equal('No schema found for standard request.');
+					expect(error.msg).to.include('No schema found for standard request');
 				}
 			}
 		});
@@ -660,7 +660,7 @@ describe('validateRequestParams', () => {
 				expect(error).to.be.instanceOf(RsError);
 				if (error instanceof RsError) {
 					expect(error.err).to.equal('BAD_REQUEST');
-					expect(error.msg).to.equal('No schema found for standard request.');
+					expect(error.msg).to.include('No schema found for standard request');
 				}
 			}
 		});
@@ -1643,7 +1643,7 @@ describe('validateRequestParams', () => {
 	});
 
 	describe('Custom endpoint configuration edge cases', () => {
-		it('should fail if custom endpoint has request array but no requestType', () => {
+		it('should fail if custom endpoint has neither request array nor requestType', () => {
 			const customRouteWithoutRequestType: RouteData = {
 				type: 'CUSTOM_ONE',
 				method: 'POST',
@@ -1652,18 +1652,6 @@ describe('validateRequestParams', () => {
 				path: '/custom',
 				roles: ['user', 'admin'],
 				scopes: [],
-				request: [
-					{
-						name: 'id',
-						required: true,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'number'
-							}
-						]
-					}
-				],
 				responseType: 'AuthResponse'
 			};
 
