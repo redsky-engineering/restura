@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { Schema } from 'jsonschema';
 import { RsRequest } from '../types/customExpressTypes.js';
 import { getRequestData } from '../validators/requestValidator.js';
 
@@ -10,7 +11,12 @@ describe('getRequestData', () => {
 				query: {}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({});
 		});
 
@@ -23,7 +29,19 @@ describe('getRequestData', () => {
 				}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					id: {
+						type: 'number'
+					},
+					count: {
+						type: 'number'
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
 				id: 123,
 				count: 42
@@ -39,7 +57,19 @@ describe('getRequestData', () => {
 				}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					isActive: {
+						type: 'boolean'
+					},
+					isDeleted: {
+						type: 'boolean'
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
 				isActive: true,
 				isDeleted: false
@@ -55,7 +85,19 @@ describe('getRequestData', () => {
 				}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					name: {
+						type: 'string'
+					},
+					email: {
+						type: 'string'
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
 				name: 'John',
 				email: 'john@example.com'
@@ -71,7 +113,25 @@ describe('getRequestData', () => {
 				}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					ids: {
+						type: 'array',
+						items: {
+							type: 'number'
+						}
+					},
+					names: {
+						type: 'array',
+						items: {
+							type: 'string'
+						}
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
 				ids: [1, 2, 3],
 				names: ['John', 'Jane']
@@ -86,9 +146,21 @@ describe('getRequestData', () => {
 				}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					mixed: {
+						type: 'array',
+						items: {
+							type: 'string'
+						}
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
-				mixed: [1, true, 'John', 42]
+				mixed: ['1', true, 'John', '42']
 			});
 		});
 
@@ -98,7 +170,19 @@ describe('getRequestData', () => {
 				query: { 'ids[]': ['1'] }
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					ids: {
+						type: 'array',
+						items: {
+							type: 'number'
+						}
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
 				ids: [1]
 			});
@@ -116,7 +200,12 @@ describe('getRequestData', () => {
 				}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
 				name: 'John',
 				age: 30,
@@ -130,7 +219,12 @@ describe('getRequestData', () => {
 				body: {}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({});
 		});
 
@@ -140,7 +234,12 @@ describe('getRequestData', () => {
 				body: null
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.equal(null);
 		});
 	});
@@ -155,7 +254,19 @@ describe('getRequestData', () => {
 				}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					name: {
+						type: 'string'
+					},
+					age: {
+						type: 'number'
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
 				name: undefined,
 				age: 30
@@ -171,7 +282,19 @@ describe('getRequestData', () => {
 				}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					name: {
+						type: 'string'
+					},
+					age: {
+						type: 'number'
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
 				name: '',
 				age: 30
@@ -187,10 +310,45 @@ describe('getRequestData', () => {
 				}
 			} as unknown as RsRequest<unknown>;
 
-			const result = getRequestData(request);
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					'user.name': {
+						type: 'string'
+					},
+					'user-age': {
+						type: 'number'
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
 			expect(result).to.deep.equal({
 				'user.name': 'John',
 				'user-age': 30
+			});
+		});
+
+		it('should not coerce values that are strings but look like numbers', () => {
+			const request = {
+				method: 'GET',
+				query: {
+					zipcode: '04684'
+				}
+			} as unknown as RsRequest<unknown>;
+
+			const schema: Schema = {
+				type: 'object',
+				properties: {
+					zipcode: {
+						type: 'string'
+					}
+				}
+			};
+
+			const result = getRequestData(request, schema);
+			expect(result).to.deep.equal({
+				zipcode: '04684'
 			});
 		});
 	});

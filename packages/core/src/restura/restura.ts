@@ -38,6 +38,7 @@ import TempCache from './utils/TempCache.js';
 import { sortObjectKeysAlphabetically } from './utils/utils.js';
 import ResponseValidator from './validators/ResponseValidator.js';
 import requestValidator, { ValidationDictionary } from './validators/requestValidator.js';
+import standardTypeValidationGenerator from './generators/standardTypeValidationGenerator.js';
 
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
@@ -57,6 +58,7 @@ class ResturaEngine {
 	private responseValidator!: ResponseValidator;
 	private authenticationHandler!: AuthenticateHandler;
 	private customTypeValidation!: ValidationDictionary;
+	private standardTypeValidation!: ValidationDictionary;
 	private psqlConnectionPool!: PsqlPool;
 	private psqlEngine!: PsqlEngine;
 
@@ -203,6 +205,7 @@ class ResturaEngine {
 	private async reloadEndpoints() {
 		this.schema = await this.getLatestFileSystemSchema();
 		this.customTypeValidation = customTypeValidationGenerator(this.schema);
+		this.standardTypeValidation = standardTypeValidationGenerator(this.schema);
 		this.resturaRouter = express.Router();
 		this.resetPublicEndpoints();
 
@@ -336,7 +339,12 @@ class ResturaEngine {
 			await this.getMulterFilesIfAny(req, res, routeData);
 
 			// Validate the request and assign to req.data
-			requestValidator(req as RsRequest<unknown>, routeData, this.customTypeValidation);
+			requestValidator(
+				req as RsRequest<unknown>,
+				routeData,
+				this.customTypeValidation,
+				this.standardTypeValidation
+			);
 
 			// Check for custom logic
 			if (this.isCustomRoute(routeData)) {
