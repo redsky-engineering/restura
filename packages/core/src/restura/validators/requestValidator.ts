@@ -14,37 +14,40 @@ export default function requestValidator(
 	customValidationSchema: ValidationDictionary,
 	standardValidationSchema: ValidationDictionary
 ) {
-	// Determine the schema to use for coercion
 	let schemaForCoercion: Schema;
 
-	if (routeData.request !== undefined) {
+	if (routeData.type === 'ONE' || routeData.type === 'ARRAY' || routeData.type === 'PAGED') {
 		// Standard endpoint request
 		const routeKey = `${routeData.method}:${routeData.path}`;
 
 		schemaForCoercion = standardValidationSchema[routeKey] as Schema;
 		if (!schemaForCoercion) {
-			throw new RsError('BAD_REQUEST', `No schema found for standard request.`);
+			throw new RsError('BAD_REQUEST', `No schema found for standard request route: ${routeKey}.`);
 		}
-	} else {
+	} else if (
+		routeData.type === 'CUSTOM_ONE' ||
+		routeData.type === 'CUSTOM_ARRAY' ||
+		routeData.type === 'CUSTOM_PAGED'
+	) {
 		// Custom endpoint request
-		if (routeData.type !== 'CUSTOM_ONE' && routeData.type !== 'CUSTOM_ARRAY' && routeData.type !== 'CUSTOM_PAGED')
-			throw new RsError('BAD_REQUEST', `No request parameters provided for standard request.`);
-
 		if (!routeData.responseType) throw new RsError('BAD_REQUEST', `No response type defined for custom request.`);
-		if (!routeData.requestType) throw new RsError('BAD_REQUEST', `No request type defined for custom request.`);
+		if (!routeData.requestType && !routeData.request)
+			throw new RsError('BAD_REQUEST', `No request type defined for custom request.`);
 
-		const currentInterface = customValidationSchema[routeData.requestType];
+		const routeKey = `${routeData.method}:${routeData.path}`;
+
+		const currentInterface = customValidationSchema[routeData.requestType || routeKey];
 		schemaForCoercion = {
 			...currentInterface,
 			additionalProperties: false
 		} as Schema;
+	} else {
+		throw new RsError('BAD_REQUEST', `Invalid route type: ${routeData.type}`);
 	}
 
-	// Coerce request data based on schema
 	const requestData = getRequestData(req as RsRequest<unknown>, schemaForCoercion);
 	req.data = requestData;
 
-	// Validate with JSON Schema
 	const validator = new jsonschema.Validator();
 	const executeValidation = validator.validate(req.data, schemaForCoercion);
 
@@ -118,8 +121,13 @@ function coerceValue(value: unknown, propertySchema: Schema): unknown {
 		return value;
 	}
 
+	// Determine the base type (handle both single type and nullable array)
+	const targetType = Array.isArray(propertySchema.type)
+		? propertySchema.type[0] // Handle nullable types like ['string', 'null']
+		: propertySchema.type;
+
 	if (value === '') {
-		return propertySchema.type === 'string' ? '' : undefined;
+		return targetType === 'string' ? '' : undefined;
 	}
 
 	// Handle boolean strings
@@ -127,10 +135,6 @@ function coerceValue(value: unknown, propertySchema: Schema): unknown {
 	if (value === 'false') return false;
 
 	// Coerce based on schema type
-	const targetType = Array.isArray(propertySchema.type)
-		? propertySchema.type[0] // Handle nullable types like ['string', 'null']
-		: propertySchema.type;
-
 	switch (targetType) {
 		case 'number':
 		case 'integer':

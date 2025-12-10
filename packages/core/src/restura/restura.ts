@@ -18,6 +18,7 @@ import apiGenerator from './generators/apiGenerator.js';
 import customTypeValidationGenerator from './generators/customTypeValidationGenerator.js';
 import modelGenerator from './generators/modelGenerator.js';
 import resturaGlobalTypesGenerator from './generators/resturaGlobalTypesGenerator.js';
+import standardTypeValidationGenerator from './generators/standardTypeValidationGenerator.js';
 import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
 import { authenticateRequester } from './middleware/authenticateRequester.js';
 import { getMulterUpload } from './middleware/getMulterUpload.js';
@@ -38,7 +39,6 @@ import TempCache from './utils/TempCache.js';
 import { sortObjectKeysAlphabetically } from './utils/utils.js';
 import ResponseValidator from './validators/ResponseValidator.js';
 import requestValidator, { ValidationDictionary } from './validators/requestValidator.js';
-import standardTypeValidationGenerator from './generators/standardTypeValidationGenerator.js';
 
 class ResturaEngine {
 	// Make public so other modules can access without re-parsing the config
@@ -69,7 +69,7 @@ class ResturaEngine {
 	 * @returns A promise that resolves when the initialization is complete.
 	 */
 	async init(
-		app: express.Application,
+		app: express.Express,
 		authenticationHandler: AuthenticateHandler,
 		psqlConnectionPool: PsqlPool
 	): Promise<void> {
