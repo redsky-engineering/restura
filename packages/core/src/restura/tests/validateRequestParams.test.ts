@@ -4,7 +4,7 @@ import { RouteData } from '../schemas/resturaSchema.js';
 import { RsRequest } from '../types/customExpressTypes.js';
 import requestValidator, { ValidationDictionary } from '../validators/requestValidator.js';
 
-describe.only('validateRequestParams', () => {
+describe('validateRequestParams', () => {
 	const sampleRouteDataWithRequest: RouteData = {
 		type: 'ONE',
 		method: 'GET',
@@ -316,7 +316,7 @@ describe.only('validateRequestParams', () => {
 				if (error instanceof RsError) {
 					expect(error.err).to.equal('BAD_REQUEST');
 					expect(error.msg).to.include('Request validation failed');
-					expect(error.msg).to.include('required');
+					expect(error.msg).to.include('companyId');
 				}
 			}
 		});
@@ -644,7 +644,7 @@ describe.only('validateRequestParams', () => {
 			expect((req.data as { description: string }).description).to.equal('');
 		});
 
-		it('should fail if standard route has no request but request is undefined', () => {
+		it('should fail if standard route schema is not in dictionary', () => {
 			try {
 				requestValidator(
 					{
@@ -660,9 +660,1401 @@ describe.only('validateRequestParams', () => {
 				expect(error).to.be.instanceOf(RsError);
 				if (error instanceof RsError) {
 					expect(error.err).to.equal('BAD_REQUEST');
-					expect(error.msg).to.equal('No request parameters provided for standard request.');
+					expect(error.msg).to.equal('No schema found for standard request.');
 				}
 			}
+		});
+	});
+
+	describe('Enum validation (ONE_OF)', () => {
+		it('should pass with valid enum value', () => {
+			const routeDataWithEnum: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'status',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string'
+							},
+							{
+								type: 'ONE_OF',
+								value: ['active', 'inactive', 'pending']
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithEnum: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						status: {
+							type: 'string',
+							enum: ['active', 'inactive', 'pending']
+						}
+					},
+					required: ['status'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { status: 'active' },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithEnum, customValidationSchema, standardSchemaWithEnum);
+
+			expect((req.data as { status: string }).status).to.equal('active');
+		});
+
+		it('should fail with invalid enum value', () => {
+			const routeDataWithEnum: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'status',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string'
+							},
+							{
+								type: 'ONE_OF',
+								value: ['active', 'inactive', 'pending']
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithEnum: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						status: {
+							type: 'string',
+							enum: ['active', 'inactive', 'pending']
+						}
+					},
+					required: ['status'],
+					additionalProperties: false
+				}
+			};
+
+			try {
+				requestValidator(
+					{
+						query: { status: 'invalid' },
+						method: 'GET'
+					} as unknown as RsRequest<unknown>,
+					routeDataWithEnum,
+					customValidationSchema,
+					standardSchemaWithEnum
+				);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+				}
+			}
+		});
+
+		it('should pass with valid numeric enum value', () => {
+			const routeDataWithNumericEnum: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'priority',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number'
+							},
+							{
+								type: 'ONE_OF',
+								value: [1, 2, 3]
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithNumericEnum: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						priority: {
+							type: 'number',
+							enum: [1, 2, 3]
+						}
+					},
+					required: ['priority'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { priority: '2' },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithNumericEnum, customValidationSchema, standardSchemaWithNumericEnum);
+
+			expect((req.data as { priority: number }).priority).to.equal(2);
+		});
+	});
+
+	describe('Min/Max validation', () => {
+		it('should pass with number within min/max range', () => {
+			const routeDataWithMinMax: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'age',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number'
+							},
+							{
+								type: 'MIN',
+								value: 18
+							},
+							{
+								type: 'MAX',
+								value: 100
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithMinMax: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						age: {
+							type: 'number',
+							minimum: 18,
+							maximum: 100
+						}
+					},
+					required: ['age'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { age: '25' },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithMinMax, customValidationSchema, standardSchemaWithMinMax);
+
+			expect((req.data as { age: number }).age).to.equal(25);
+		});
+
+		it('should fail with number below minimum', () => {
+			const routeDataWithMin: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'age',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number'
+							},
+							{
+								type: 'MIN',
+								value: 18
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithMin: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						age: {
+							type: 'number',
+							minimum: 18
+						}
+					},
+					required: ['age'],
+					additionalProperties: false
+				}
+			};
+
+			try {
+				requestValidator(
+					{
+						query: { age: '10' },
+						method: 'GET'
+					} as unknown as RsRequest<unknown>,
+					routeDataWithMin,
+					customValidationSchema,
+					standardSchemaWithMin
+				);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+				}
+			}
+		});
+
+		it('should fail with number above maximum', () => {
+			const routeDataWithMax: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'age',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number'
+							},
+							{
+								type: 'MAX',
+								value: 100
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithMax: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						age: {
+							type: 'number',
+							maximum: 100
+						}
+					},
+					required: ['age'],
+					additionalProperties: false
+				}
+			};
+
+			try {
+				requestValidator(
+					{
+						query: { age: '150' },
+						method: 'GET'
+					} as unknown as RsRequest<unknown>,
+					routeDataWithMax,
+					customValidationSchema,
+					standardSchemaWithMax
+				);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+				}
+			}
+		});
+
+		it('should pass with string within minLength/maxLength', () => {
+			const routeDataWithStringLength: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'username',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string'
+							},
+							{
+								type: 'MIN',
+								value: 3
+							},
+							{
+								type: 'MAX',
+								value: 20
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithStringLength: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						username: {
+							type: 'string',
+							minLength: 3,
+							maxLength: 20
+						}
+					},
+					required: ['username'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { username: 'johndoe' },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithStringLength, customValidationSchema, standardSchemaWithStringLength);
+
+			expect((req.data as { username: string }).username).to.equal('johndoe');
+		});
+
+		it('should fail with string shorter than minLength', () => {
+			const routeDataWithMinLength: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'username',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string'
+							},
+							{
+								type: 'MIN',
+								value: 3
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithMinLength: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						username: {
+							type: 'string',
+							minLength: 3
+						}
+					},
+					required: ['username'],
+					additionalProperties: false
+				}
+			};
+
+			try {
+				requestValidator(
+					{
+						query: { username: 'ab' },
+						method: 'GET'
+					} as unknown as RsRequest<unknown>,
+					routeDataWithMinLength,
+					customValidationSchema,
+					standardSchemaWithMinLength
+				);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+				}
+			}
+		});
+
+		it('should fail with string longer than maxLength', () => {
+			const routeDataWithMaxLength: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'username',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string'
+							},
+							{
+								type: 'MAX',
+								value: 10
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithMaxLength: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						username: {
+							type: 'string',
+							maxLength: 10
+						}
+					},
+					required: ['username'],
+					additionalProperties: false
+				}
+			};
+
+			try {
+				requestValidator(
+					{
+						query: { username: 'verylongusername' },
+						method: 'GET'
+					} as unknown as RsRequest<unknown>,
+					routeDataWithMaxLength,
+					customValidationSchema,
+					standardSchemaWithMaxLength
+				);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+				}
+			}
+		});
+
+		it('should pass with array within minItems/maxItems', () => {
+			const routeDataWithArrayLength: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'tags',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string[]'
+							},
+							{
+								type: 'MIN',
+								value: 2
+							},
+							{
+								type: 'MAX',
+								value: 5
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithArrayLength: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						tags: {
+							type: 'array',
+							items: {
+								type: 'string'
+							},
+							minItems: 2,
+							maxItems: 5
+						}
+					},
+					required: ['tags'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { 'tags[]': ['tag1', 'tag2', 'tag3'] },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithArrayLength, customValidationSchema, standardSchemaWithArrayLength);
+
+			expect((req.data as { tags: string[] }).tags).to.have.lengthOf(3);
+		});
+
+		it('should fail with array fewer than minItems', () => {
+			const routeDataWithMinItems: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'tags',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string[]'
+							},
+							{
+								type: 'MIN',
+								value: 2
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithMinItems: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						tags: {
+							type: 'array',
+							items: {
+								type: 'string'
+							},
+							minItems: 2
+						}
+					},
+					required: ['tags'],
+					additionalProperties: false
+				}
+			};
+
+			try {
+				requestValidator(
+					{
+						query: { 'tags[]': ['tag1'] },
+						method: 'GET'
+					} as unknown as RsRequest<unknown>,
+					routeDataWithMinItems,
+					customValidationSchema,
+					standardSchemaWithMinItems
+				);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+				}
+			}
+		});
+
+		it('should fail with array more than maxItems', () => {
+			const routeDataWithMaxItems: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'tags',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string[]'
+							},
+							{
+								type: 'MAX',
+								value: 3
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithMaxItems: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						tags: {
+							type: 'array',
+							items: {
+								type: 'string'
+							},
+							maxItems: 3
+						}
+					},
+					required: ['tags'],
+					additionalProperties: false
+				}
+			};
+
+			try {
+				requestValidator(
+					{
+						query: { 'tags[]': ['tag1', 'tag2', 'tag3', 'tag4'] },
+						method: 'GET'
+					} as unknown as RsRequest<unknown>,
+					routeDataWithMaxItems,
+					customValidationSchema,
+					standardSchemaWithMaxItems
+				);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+				}
+			}
+		});
+	});
+
+	describe('Array coercion edge cases', () => {
+		it('should convert single value with [] notation to array', () => {
+			const routeDataWithArray: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'ids',
+						required: false,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number[]'
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithArray: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						ids: {
+							type: 'array',
+							items: {
+								type: 'number'
+							}
+						}
+					},
+					required: [],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { 'ids[]': '123' },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithArray, customValidationSchema, standardSchemaWithArray);
+
+			const data = req.data as { ids: number[] };
+			expect(data.ids).to.be.an('array');
+			expect(data.ids).to.have.lengthOf(1);
+			expect(data.ids[0]).to.equal(123);
+		});
+
+		it('should handle empty array', () => {
+			const routeDataWithArray: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'ids',
+						required: false,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number[]'
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithArray: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						ids: {
+							type: 'array',
+							items: {
+								type: 'number'
+							}
+						}
+					},
+					required: [],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { 'ids[]': [] },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithArray, customValidationSchema, standardSchemaWithArray);
+
+			const data = req.data as { ids: number[] };
+			expect(data.ids).to.be.an('array');
+			expect(data.ids).to.have.lengthOf(0);
+		});
+
+		it('should keep array that is already an array', () => {
+			const routeDataWithArray: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'ids',
+						required: false,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number[]'
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithArray: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						ids: {
+							type: 'array',
+							items: {
+								type: 'number'
+							}
+						}
+					},
+					required: [],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { 'ids[]': ['1', '2', '3'] },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithArray, customValidationSchema, standardSchemaWithArray);
+
+			const data = req.data as { ids: number[] };
+			expect(data.ids).to.be.an('array');
+			expect(data.ids).to.have.lengthOf(3);
+			expect(data.ids[0]).to.equal(1);
+			expect(data.ids[1]).to.equal(2);
+			expect(data.ids[2]).to.equal(3);
+		});
+	});
+
+	describe('Invalid type coercion', () => {
+		it('should fail with non-numeric string for number field', () => {
+			const req = {
+				query: { id: 'abc' },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			try {
+				requestValidator(req, sampleRouteDataWithRequest, customValidationSchema, standardValidationSchema);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+				}
+			}
+		});
+
+		it('should fail with invalid JSON string for object field', () => {
+			const routeDataWithObject: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'metadata',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'object'
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithObject: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						metadata: {
+							type: 'object'
+						}
+					},
+					required: ['metadata'],
+					additionalProperties: false
+				}
+			};
+
+			try {
+				requestValidator(
+					{
+						query: { metadata: '{invalid json}' },
+						method: 'GET'
+					} as unknown as RsRequest<unknown>,
+					routeDataWithObject,
+					customValidationSchema,
+					standardSchemaWithObject
+				);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+				}
+			}
+		});
+	});
+
+	describe('Mixed nullable arrays', () => {
+		it('should pass with null value for nullable array', () => {
+			const routeDataWithNullableArray: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'tags',
+						required: false,
+						isNullable: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string[]'
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithNullableArray: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						tags: {
+							type: ['array', 'null'],
+							items: {
+								type: 'string'
+							}
+						}
+					},
+					required: [],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { tags: null },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithNullableArray, customValidationSchema, standardSchemaWithNullableArray);
+
+			expect((req.data as { tags: string[] | null }).tags).to.equal(null);
+		});
+
+		it('should pass with valid array for nullable array', () => {
+			const routeDataWithNullableArray: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'tags',
+						required: false,
+						isNullable: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string[]'
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithNullableArray: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						tags: {
+							type: ['array', 'null'],
+							items: {
+								type: 'string'
+							}
+						}
+					},
+					required: [],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { 'tags[]': ['tag1', 'tag2'] },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithNullableArray, customValidationSchema, standardSchemaWithNullableArray);
+
+			const data = req.data as { tags: string[] | null };
+			expect(data.tags).to.be.an('array');
+			expect(data.tags).to.have.lengthOf(2);
+		});
+	});
+
+	describe('Parameters without TYPE_CHECK validator', () => {
+		it('should pass through parameter without TYPE_CHECK validator', () => {
+			const routeDataWithoutTypeCheck: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'freeform',
+						required: false,
+						validator: []
+					}
+				]
+			};
+
+			const standardSchemaWithoutTypeCheck: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						freeform: {}
+					},
+					required: [],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { freeform: 'anything' },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithoutTypeCheck, customValidationSchema, standardSchemaWithoutTypeCheck);
+
+			expect((req.data as { freeform: string }).freeform).to.equal('anything');
+		});
+	});
+
+	describe('Custom endpoint configuration edge cases', () => {
+		it('should fail if custom endpoint has request array but no requestType', () => {
+			const customRouteWithoutRequestType: RouteData = {
+				type: 'CUSTOM_ONE',
+				method: 'POST',
+				name: 'custom endpoint',
+				description: 'Custom endpoint',
+				path: '/custom',
+				roles: ['user', 'admin'],
+				scopes: [],
+				request: [
+					{
+						name: 'id',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number'
+							}
+						]
+					}
+				],
+				responseType: 'AuthResponse'
+			};
+
+			try {
+				requestValidator(
+					{
+						body: { id: 1 },
+						method: 'POST'
+					} as unknown as RsRequest<unknown>,
+					customRouteWithoutRequestType,
+					customValidationSchema,
+					standardValidationSchema
+				);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.equal('No request type defined for custom request.');
+				}
+			}
+		});
+	});
+
+	describe('HTTP method edge cases', () => {
+		it('should validate PATCH request with query params', () => {
+			const patchRouteData: RouteData = {
+				type: 'ONE',
+				method: 'PATCH',
+				name: 'patch user',
+				description: 'Patch user',
+				path: '/users',
+				table: 'user',
+				roles: ['admin'],
+				scopes: [],
+				request: [
+					{
+						name: 'id',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number'
+							}
+						]
+					}
+				],
+				joins: [],
+				response: [],
+				assignments: [],
+				where: []
+			};
+
+			const patchSchema: ValidationDictionary = {
+				'PATCH:/users': {
+					type: 'object',
+					properties: {
+						id: {
+							type: 'number'
+						}
+					},
+					required: ['id'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				body: { id: 456 },
+				method: 'PATCH'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, patchRouteData, customValidationSchema, patchSchema);
+
+			expect((req.data as { id: number }).id).to.equal(456);
+		});
+
+		it('should validate PUT request', () => {
+			const putRouteData: RouteData = {
+				type: 'ONE',
+				method: 'PUT',
+				name: 'update user',
+				description: 'Update user',
+				path: '/users',
+				table: 'user',
+				roles: ['admin'],
+				scopes: [],
+				request: [
+					{
+						name: 'id',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number'
+							}
+						]
+					},
+					{
+						name: 'name',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'string'
+							}
+						]
+					}
+				],
+				joins: [],
+				response: [],
+				assignments: [],
+				where: []
+			};
+
+			const putSchema: ValidationDictionary = {
+				'PUT:/users': {
+					type: 'object',
+					properties: {
+						id: {
+							type: 'number'
+						},
+						name: {
+							type: 'string'
+						}
+					},
+					required: ['id', 'name'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				body: { id: 789, name: 'John' },
+				method: 'PUT'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, putRouteData, customValidationSchema, putSchema);
+
+			const data = req.data as { id: number; name: string };
+			expect(data.id).to.equal(789);
+			expect(data.name).to.equal('John');
+		});
+
+		it('should validate DELETE request with query params', () => {
+			const deleteRouteData: RouteData = {
+				type: 'ONE',
+				method: 'DELETE',
+				name: 'delete user',
+				description: 'Delete user',
+				path: '/users',
+				table: 'user',
+				roles: ['admin'],
+				scopes: [],
+				request: [
+					{
+						name: 'id',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number'
+							}
+						]
+					}
+				],
+				joins: [],
+				response: [],
+				assignments: [],
+				where: []
+			};
+
+			const deleteSchema: ValidationDictionary = {
+				'DELETE:/users': {
+					type: 'object',
+					properties: {
+						id: {
+							type: 'number'
+						}
+					},
+					required: ['id'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { id: '999' },
+				method: 'DELETE'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, deleteRouteData, customValidationSchema, deleteSchema);
+
+			expect((req.data as { id: number }).id).to.equal(999);
+			expect(typeof (req.data as { id: number }).id).to.equal('number');
+		});
+	});
+
+	describe('Schema with nested objects', () => {
+		it('should validate nested object structure', () => {
+			const routeDataWithNestedObject: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'address',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'object'
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithNestedObject: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						address: {
+							type: 'object',
+							properties: {
+								street: {
+									type: 'string'
+								},
+								city: {
+									type: 'string'
+								},
+								zipCode: {
+									type: 'string'
+								}
+							},
+							required: ['street', 'city']
+						}
+					},
+					required: ['address'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { address: JSON.stringify({ street: '123 Main St', city: 'Springfield', zipCode: '12345' }) },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithNestedObject, customValidationSchema, standardSchemaWithNestedObject);
+
+			const data = req.data as { address: { street: string; city: string; zipCode: string } };
+			expect(data.address).to.be.an('object');
+			expect(data.address.street).to.equal('123 Main St');
+			expect(data.address.city).to.equal('Springfield');
+			expect(data.address.zipCode).to.equal('12345');
+		});
+
+		it('should fail if nested object is missing required properties', () => {
+			const routeDataWithNestedObject: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'address',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'object'
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithNestedObject: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						address: {
+							type: 'object',
+							properties: {
+								street: {
+									type: 'string'
+								},
+								city: {
+									type: 'string'
+								}
+							},
+							required: ['street', 'city']
+						}
+					},
+					required: ['address'],
+					additionalProperties: false
+				}
+			};
+
+			try {
+				requestValidator(
+					{
+						query: { address: JSON.stringify({ street: '123 Main St' }) },
+						method: 'GET'
+					} as unknown as RsRequest<unknown>,
+					routeDataWithNestedObject,
+					customValidationSchema,
+					standardSchemaWithNestedObject
+				);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+				}
+			}
+		});
+	});
+
+	describe('Special characters in parameter names', () => {
+		it('should handle parameter names with underscores', () => {
+			const routeDataWithUnderscore: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'user_id',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number'
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithUnderscore: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						user_id: {
+							type: 'number'
+						}
+					},
+					required: ['user_id'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { user_id: '123' },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithUnderscore, customValidationSchema, standardSchemaWithUnderscore);
+
+			expect((req.data as { user_id: number }).user_id).to.equal(123);
+		});
+
+		it('should handle parameter names with dashes', () => {
+			const routeDataWithDash: RouteData = {
+				...sampleRouteDataWithRequest,
+				request: [
+					{
+						name: 'user-id',
+						required: true,
+						validator: [
+							{
+								type: 'TYPE_CHECK',
+								value: 'number'
+							}
+						]
+					}
+				]
+			};
+
+			const standardSchemaWithDash: ValidationDictionary = {
+				'GET:/users': {
+					type: 'object',
+					properties: {
+						'user-id': {
+							type: 'number'
+						}
+					},
+					required: ['user-id'],
+					additionalProperties: false
+				}
+			};
+
+			const req = {
+				query: { 'user-id': '456' },
+				method: 'GET'
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, routeDataWithDash, customValidationSchema, standardSchemaWithDash);
+
+			expect((req.data as { 'user-id': number })['user-id']).to.equal(456);
 		});
 	});
 });
