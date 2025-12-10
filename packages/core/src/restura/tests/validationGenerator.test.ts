@@ -330,7 +330,9 @@ describe('standardTypeValidationGenerator', () => {
 
 		const result = standardTypeValidationGenerator(testSchema);
 
-		expect(result).to.deep.equal({});
+		expect(result).to.deep.equal({
+			'GET:/no-params': { type: 'object', properties: {}, additionalProperties: false }
+		});
 	});
 
 	it('should generate schemas for multiple routes', () => {
@@ -412,7 +414,7 @@ describe('standardTypeValidationGenerator', () => {
 	});
 });
 
-describe.only('customTypeValidationGenerator', () => {
+describe('customTypeValidationGenerator', () => {
 	it('should generate JSON schemas from TypeScript interfaces with comprehensive types', () => {
 		const testSchema: ResturaSchema = {
 			database: [],
