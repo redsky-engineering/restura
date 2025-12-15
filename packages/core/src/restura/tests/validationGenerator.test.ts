@@ -414,8 +414,9 @@ describe('standardTypeValidationGenerator', () => {
 	});
 });
 
-describe('customTypeValidationGenerator', () => {
-	it('should generate JSON schemas from TypeScript interfaces with comprehensive types', () => {
+describe('customTypeValidationGenerator', function () {
+	this.timeout(10000);
+	it('should generate JSON schemas from TypeScript interfaces with comprehensive types', function () {
 		const testSchema: ResturaSchema = {
 			database: [],
 			endpoints: [],

@@ -60,7 +60,7 @@ INSERT INTO "${table}" (${columns})
                  VALUES (${values})
                  RETURNING *`;
 
-	query = query.replace(/'(\?)'/, '?');
+	query = query.replace(/'(\?)'/g, '?');
 	return query;
 }
 
@@ -80,7 +80,10 @@ export function updateObjectQuery(
 ): string {
 	const setArray = [];
 	for (const i in obj) {
-		setArray.push(`${escapeColumnName(i)} = ` + SQL`${obj[i]}`);
+		let value = SQL`${obj[i]}`;
+		// Remove quotes around ? to make it a proper parameter placeholder
+		value = value.replace(/'(\?)'/g, '?');
+		setArray.push(`${escapeColumnName(i)} = ` + value);
 	}
 
 	if (incrementSyncVersion) {
