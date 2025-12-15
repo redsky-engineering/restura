@@ -1,12 +1,8 @@
-import { ObjectUtils } from '@redskytech/core-utils';
 import jsonschema, { Schema } from 'jsonschema';
 import { Definition } from 'typescript-json-schema';
-import { z } from 'zod';
 import { RsError } from '../RsError.js';
-import { RequestData, RouteData } from '../schemas/resturaSchema.js';
-import { ValidatorData, ValidatorDataSchemeValue, validatorDataSchemeValue } from '../schemas/validatorDataSchema.js';
+import { RouteData } from '../schemas/resturaSchema.js';
 import type { DynamicObject, RsRequest } from '../types/customExpressTypes.js';
-import { addQuotesToStrings } from '../utils/utils.js';
 
 export interface ValidationDictionary {
 	[Key: string]: Definition;
@@ -15,175 +11,59 @@ export interface ValidationDictionary {
 export default function requestValidator(
 	req: RsRequest<unknown>,
 	routeData: RouteData,
-	validationSchema: ValidationDictionary
+	customValidationSchema: ValidationDictionary,
+	standardValidationSchema: ValidationDictionary
 ) {
-	const requestData = getRequestData(req as RsRequest<unknown>);
-	req.data = requestData;
+	let schemaForCoercion: Schema;
 
-	if (routeData.request === undefined) {
-		if (routeData.type !== 'CUSTOM_ONE' && routeData.type !== 'CUSTOM_ARRAY' && routeData.type !== 'CUSTOM_PAGED')
-			throw new RsError('BAD_REQUEST', `No request parameters provided for standard request.`);
+	if (routeData.type === 'ONE' || routeData.type === 'ARRAY' || routeData.type === 'PAGED') {
+		// Standard endpoint request
+		const routeKey = `${routeData.method}:${routeData.path}`;
 
+		schemaForCoercion = standardValidationSchema[routeKey] as Schema;
+		if (!schemaForCoercion) {
+			throw new RsError('BAD_REQUEST', `No schema found for standard request route: ${routeKey}.`);
+		}
+	} else if (
+		routeData.type === 'CUSTOM_ONE' ||
+		routeData.type === 'CUSTOM_ARRAY' ||
+		routeData.type === 'CUSTOM_PAGED'
+	) {
+		// Custom endpoint request
 		if (!routeData.responseType) throw new RsError('BAD_REQUEST', `No response type defined for custom request.`);
+		if (!routeData.requestType && !routeData.request)
+			throw new RsError('BAD_REQUEST', `No request type defined for custom request.`);
 
-		if (!routeData.requestType) throw new RsError('BAD_REQUEST', `No request type defined for custom request.`);
+		const routeKey = `${routeData.method}:${routeData.path}`;
 
-		const currentInterface = validationSchema[routeData.requestType];
-		const validator = new jsonschema.Validator();
-
-		// Create strict schema that doesn't allow extra properties
-		const strictSchema = {
+		const currentInterface = customValidationSchema[routeData.requestType || routeKey];
+		schemaForCoercion = {
 			...currentInterface,
 			additionalProperties: false
-		};
-
-		const executeValidation = validator.validate(req.data, strictSchema as Schema);
-		if (!executeValidation.valid) {
-			throw new RsError(
-				'BAD_REQUEST',
-				`Request custom setup has failed the following check: (${executeValidation.errors})`
-			);
-		}
-		return;
+		} as Schema;
+	} else {
+		throw new RsError('BAD_REQUEST', `Invalid route type: ${routeData.type}`);
 	}
 
-	// Make sure all passed in params are defined in the schema
-	Object.keys(req.data as object).forEach((requestParamName) => {
-		const requestParam = routeData.request!.find((param) => param.name === requestParamName);
-		if (!requestParam) {
-			throw new RsError('BAD_REQUEST', `Request param (${requestParamName}) is not allowed`);
-		}
-	});
+	const requestData = getRequestData(req as RsRequest<unknown>, schemaForCoercion);
+	req.data = requestData;
 
-	routeData.request.forEach((requestParam) => {
-		// Find the request param in the request data
-		const requestValue = requestData[requestParam.name];
-		// If the request param is required and not found in the request data, throw an error
-		if (requestParam.required && requestValue === undefined)
-			throw new RsError('BAD_REQUEST', `Request param (${requestParam.name}) is required but missing`);
-		else if (!requestParam.required && requestValue === undefined) return;
+	const validator = new jsonschema.Validator();
+	const executeValidation = validator.validate(req.data, schemaForCoercion);
 
-		validateRequestSingleParam(requestValue, requestParam);
-	});
-}
+	if (!executeValidation.valid) {
+		const errorMessages = executeValidation.errors
+			.map((err) => {
+				const property = err.property.replace('instance.', '');
+				return `${property}: ${err.message}`;
+			})
+			.join(', ');
 
-function validateRequestSingleParam(requestValue: unknown, requestParam: RequestData) {
-	if (requestParam.isNullable && requestValue === null) return;
-
-	requestParam.validator.forEach((validator) => {
-		switch (validator.type) {
-			case 'TYPE_CHECK':
-				performTypeCheck(requestValue, validator, requestParam.name);
-				break;
-			case 'MIN':
-				performMinCheck(requestValue, validator, requestParam.name);
-				break;
-			case 'MAX':
-				performMaxCheck(requestValue, validator, requestParam.name);
-				break;
-			case 'ONE_OF':
-				performOneOfCheck(requestValue, validator, requestParam.name);
-				break;
-		}
-	});
-}
-
-function isValidType(type: ValidatorDataSchemeValue, requestValue: unknown): boolean {
-	try {
-		expectValidType(type, requestValue);
-		return true;
-	} catch {
-		return false;
+		throw new RsError('BAD_REQUEST', `Request validation failed: ${errorMessages}`);
 	}
 }
 
-function expectValidType(type: ValidatorDataSchemeValue, requestValue: unknown) {
-	if (type === 'number') {
-		return z.number().parse(requestValue);
-	}
-	if (type === 'string') {
-		return z.string().parse(requestValue);
-	}
-	if (type === 'boolean') {
-		return z.boolean().parse(requestValue);
-	}
-	if (type === 'string[]') {
-		return z.array(z.string()).parse(requestValue);
-	}
-	if (type === 'number[]') {
-		return z.array(z.number()).parse(requestValue);
-	}
-	if (type === 'any[]') {
-		return z.array(z.any()).parse(requestValue);
-	}
-	if (type === 'object') {
-		return z.object({}).strict().parse(requestValue);
-	}
-}
-
-export function performTypeCheck(requestValue: unknown, validator: ValidatorData, requestParamName: string) {
-	if (!isValidType(validator.value, requestValue)) {
-		throw new RsError(
-			'BAD_REQUEST',
-			`Request param (${requestParamName}) with value (${addQuotesToStrings(requestValue)}) is not of type (${validator.value})`
-		);
-	}
-	try {
-		validatorDataSchemeValue.parse(validator.value);
-	} catch {
-		throw new RsError('SCHEMA_ERROR', `Schema validator value (${validator.value}) is not a valid type`);
-	}
-}
-
-function expectOnlyNumbers(requestValue: unknown, validator: ValidatorData, requestParamName: string) {
-	if (!isValueNumber(requestValue))
-		throw new RsError(
-			'BAD_REQUEST',
-			`Request param (${requestParamName}) with value (${requestValue}) is not of type number`
-		);
-
-	if (!isValueNumber(validator.value))
-		throw new RsError('SCHEMA_ERROR', `Schema validator value (${validator.value} is not of type number`);
-}
-
-function performMinCheck(requestValue: unknown, validator: ValidatorData, requestParamName: string) {
-	expectOnlyNumbers(requestValue, validator, requestParamName);
-	if ((requestValue as number) < (validator.value as number))
-		throw new RsError(
-			'BAD_REQUEST',
-			`Request param (${requestParamName}) with value (${requestValue}) is less than (${validator.value})`
-		);
-}
-
-function performMaxCheck(requestValue: unknown, validator: ValidatorData, requestParamName: string) {
-	expectOnlyNumbers(requestValue, validator, requestParamName);
-	if ((requestValue as number) > (validator.value as number))
-		throw new RsError(
-			'BAD_REQUEST',
-			`Request param (${requestParamName}) with value (${requestValue}) is more than (${validator.value})`
-		);
-}
-
-function performOneOfCheck(requestValue: unknown, validator: ValidatorData, requestParamName: string) {
-	if (!ObjectUtils.isArrayWithData(validator.value as unknown[]))
-		throw new RsError('SCHEMA_ERROR', `Schema validator value (${validator.value}) is not of type array`);
-	if (typeof requestValue === 'object')
-		throw new RsError('BAD_REQUEST', `Request param (${requestParamName}) is not of type string or number`);
-
-	if (!(validator.value as unknown[]).includes(requestValue as string | number))
-		throw new RsError(
-			'BAD_REQUEST',
-			`Request param (${requestParamName}) with value (${requestValue}) is not one of (${(
-				validator.value as unknown[]
-			).join(', ')})`
-		);
-}
-
-function isValueNumber(value: unknown): value is number {
-	return !isNaN(Number(value));
-}
-
-export function getRequestData(req: RsRequest<unknown>): DynamicObject {
+export function getRequestData(req: RsRequest<unknown>, schema: Schema): DynamicObject {
 	let body = '';
 	if (req.method === 'GET' || req.method === 'DELETE') {
 		body = 'query';
@@ -193,50 +73,92 @@ export function getRequestData(req: RsRequest<unknown>): DynamicObject {
 
 	const bodyData = req[body as keyof typeof req]; // Cast once and store in a variable
 
-	if (bodyData && body === 'query') {
-		const normalizedData: DynamicObject = {};
-
-		for (const attr in bodyData) {
-			if (attr.includes('[]') && !(bodyData[attr] instanceof Array)) {
-				bodyData[attr] = [bodyData[attr]];
-			}
-
-			// Remove [] from the key if it exists
-			const cleanAttr = attr.replace(/\[\]$/, '');
-
-			if (bodyData[attr] instanceof Array) {
-				const parsedList = bodyData[attr].map((value: unknown) => {
-					if (value === 'true') return true;
-					if (value === 'false') return false;
-					if (value === undefined) return undefined;
-					if (value === '') return '';
-					const parsed = ObjectUtils.safeParse(value);
-					return isNaN(Number(parsed)) ? parsed : Number(parsed);
-				});
-
-				normalizedData[cleanAttr] = parsedList;
-			} else {
-				let value = bodyData[attr];
-				if (value === 'true') {
-					value = true;
-				} else if (value === 'false') {
-					value = false;
-				} else if (value === undefined) {
-					value = undefined;
-				} else if (value === '') {
-					value = '';
-				} else {
-					value = ObjectUtils.safeParse(value);
-					if (!isNaN(Number(value))) {
-						value = Number(value);
-					}
-				}
-				normalizedData[cleanAttr] = value;
-			}
-		}
-
-		return normalizedData;
+	if (bodyData && body === 'query' && schema) {
+		return coerceBySchema(bodyData, schema);
 	}
 
 	return bodyData;
+}
+
+function coerceBySchema(data: DynamicObject, schema: Schema): DynamicObject {
+	const normalized: DynamicObject = {};
+	const properties = schema.properties || {};
+
+	for (const attr in data) {
+		const cleanAttr = attr.replace(/\[\]$/, '');
+		const isArrayNotation = attr.includes('[]');
+
+		let value = data[attr];
+		const propertySchema = properties[cleanAttr];
+
+		// Convert single value to array if [] notation but not already array
+		if (isArrayNotation && !Array.isArray(value)) {
+			value = [value];
+		}
+
+		// No schema definition for this property - pass through as string
+		if (!propertySchema) {
+			normalized[cleanAttr] = value;
+			continue;
+		}
+
+		// Handle arrays
+		if (Array.isArray(value)) {
+			const itemSchema = Array.isArray(propertySchema.items)
+				? propertySchema.items[0]
+				: propertySchema.items || { type: 'string' };
+			normalized[cleanAttr] = value.map((item) => coerceValue(item, itemSchema as Schema));
+		} else {
+			normalized[cleanAttr] = coerceValue(value, propertySchema);
+		}
+	}
+
+	return normalized;
+}
+
+function coerceValue(value: unknown, propertySchema: Schema): unknown {
+	if (value === undefined || value === null) {
+		return value;
+	}
+
+	// Determine the base type (handle both single type and nullable array)
+	const targetType = Array.isArray(propertySchema.type)
+		? propertySchema.type[0] // Handle nullable types like ['string', 'null']
+		: propertySchema.type;
+
+	if (value === '') {
+		return targetType === 'string' ? '' : undefined;
+	}
+
+	// Coerce based on schema type
+	switch (targetType) {
+		case 'number':
+		case 'integer':
+			const num = Number(value);
+			return isNaN(num) ? value : num;
+
+		case 'boolean':
+			if (value === 'true') return true;
+			if (value === 'false') return false;
+			if (typeof value === 'string') {
+				return value === 'true' || value === '1';
+			}
+			return Boolean(value);
+
+		case 'string':
+			return String(value);
+
+		case 'object':
+			if (typeof value === 'string') {
+				try {
+					return JSON.parse(value);
+				} catch {
+					return value;
+				}
+			}
+			return value;
+
+		default:
+			return value;
+	}
 }

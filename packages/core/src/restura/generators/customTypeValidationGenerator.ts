@@ -5,13 +5,17 @@ import * as TJS from 'typescript-json-schema';
 import { restura } from '../restura.js';
 import { ResturaSchema } from '../schemas/resturaSchema.js';
 import type { ValidationDictionary } from '../validators/requestValidator.js';
+import { buildRouteSchema } from './schemaGeneratorUtils.js';
 
 /**
  * This function generates a temporary file with the custom types and then uses typescript-json-schema to generate a JSON schema for each custom type.
  * @param currentSchema - The current schema to generate the validation dictionary for.
  * @returns A dictionary of custom type names and their corresponding JSON schemas.
  */
-export default function customTypeValidationGenerator(currentSchema: ResturaSchema): ValidationDictionary {
+export default function customTypeValidationGenerator(
+	currentSchema: ResturaSchema,
+	ignoreGeneratedTypes: boolean = false
+): ValidationDictionary {
 	const schemaObject: ValidationDictionary = {};
 	const customInterfaceNames = currentSchema.customTypes
 		.map((customType) => {
@@ -33,9 +37,13 @@ export default function customTypeValidationGenerator(currentSchema: ResturaSche
 	const program = TJS.getProgramFromFiles(
 		[
 			resolve(temporaryFile.name),
-			path.join(restura.resturaConfig.generatedTypesPath, 'restura.d.ts'),
-			path.join(restura.resturaConfig.generatedTypesPath, 'models.d.ts'),
-			path.join(restura.resturaConfig.generatedTypesPath, 'api.d.ts')
+			...(ignoreGeneratedTypes
+				? []
+				: [
+						path.join(restura.resturaConfig.generatedTypesPath, 'restura.d.ts'),
+						path.join(restura.resturaConfig.generatedTypesPath, 'models.d.ts'),
+						path.join(restura.resturaConfig.generatedTypesPath, 'api.d.ts')
+					])
 		],
 		compilerOptions
 	);
@@ -47,6 +55,18 @@ export default function customTypeValidationGenerator(currentSchema: ResturaSche
 	});
 
 	temporaryFile.removeCallback();
+
+	// Handle custom routes that use standard request array instead of requestType interface
+	for (const endpoint of currentSchema.endpoints) {
+		for (const route of endpoint.routes) {
+			if (route.type !== 'CUSTOM_ONE' && route.type !== 'CUSTOM_ARRAY' && route.type !== 'CUSTOM_PAGED') continue;
+
+			if (!route.request || !Array.isArray(route.request)) continue;
+
+			const routeKey = `${route.method}:${route.path}`;
+			schemaObject[routeKey] = buildRouteSchema(route.request);
+		}
+	}
 
 	return schemaObject;
 }

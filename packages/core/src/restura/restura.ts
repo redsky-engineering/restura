@@ -18,6 +18,7 @@ import apiGenerator from './generators/apiGenerator.js';
 import customTypeValidationGenerator from './generators/customTypeValidationGenerator.js';
 import modelGenerator from './generators/modelGenerator.js';
 import resturaGlobalTypesGenerator from './generators/resturaGlobalTypesGenerator.js';
+import standardTypeValidationGenerator from './generators/standardTypeValidationGenerator.js';
 import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
 import { authenticateRequester } from './middleware/authenticateRequester.js';
 import { getMulterUpload } from './middleware/getMulterUpload.js';
@@ -57,6 +58,7 @@ class ResturaEngine {
 	private responseValidator!: ResponseValidator;
 	private authenticationHandler!: AuthenticateHandler;
 	private customTypeValidation!: ValidationDictionary;
+	private standardTypeValidation!: ValidationDictionary;
 	private psqlConnectionPool!: PsqlPool;
 	private psqlEngine!: PsqlEngine;
 
@@ -67,7 +69,7 @@ class ResturaEngine {
 	 * @returns A promise that resolves when the initialization is complete.
 	 */
 	async init(
-		app: express.Application,
+		app: express.Express,
 		authenticationHandler: AuthenticateHandler,
 		psqlConnectionPool: PsqlPool
 	): Promise<void> {
@@ -203,6 +205,7 @@ class ResturaEngine {
 	private async reloadEndpoints() {
 		this.schema = await this.getLatestFileSystemSchema();
 		this.customTypeValidation = customTypeValidationGenerator(this.schema);
+		this.standardTypeValidation = standardTypeValidationGenerator(this.schema);
 		this.resturaRouter = express.Router();
 		this.resetPublicEndpoints();
 
@@ -336,7 +339,12 @@ class ResturaEngine {
 			await this.getMulterFilesIfAny(req, res, routeData);
 
 			// Validate the request and assign to req.data
-			requestValidator(req as RsRequest<unknown>, routeData, this.customTypeValidation);
+			requestValidator(
+				req as RsRequest<unknown>,
+				routeData,
+				this.customTypeValidation,
+				this.standardTypeValidation
+			);
 
 			// Check for custom logic
 			if (this.isCustomRoute(routeData)) {
