@@ -7,7 +7,8 @@ CREATE TABLE "item"
 (    "id" BIGSERIAL PRIMARY KEY  NOT NULL,
      "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
      "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
-     "orderId" BIGINT NOT NULL
+     "orderId" BIGINT NOT NULL,
+     "lastModifiedBy" BIGINT
 );
 
 CREATE TABLE "order"

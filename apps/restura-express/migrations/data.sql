@@ -27,3 +27,7 @@ VALUES('2024-10-08 20:53:30.663673 +00:00', '2024-10-29 22:38:16.029000 +00:00',
 
 INSERT INTO public. "user" ("createdOn", "modifiedOn", "syncVersion", "firstName", "lastName", "companyId", "password", "email", "role", "permissionLogin", "lastLoginOn", "phone", "loginDisabledOn", "passwordResetGuid", "verifyEmailPin", "verifyEmailPinExpiresOn", "accountStatus", "passwordResetExpiresOn", "onboardingStatus", "pendingEmail", "testAge", "metadata")
 VALUES('2024-10-08 20:55:45.580415 +00:00', '2024-10-08 20:55:45.580415 +00:00', 1, 'Billy', 'Bob', 1, 'asdfa', 'billy1@plvr.com', 'user', TRUE, NULL, NULL, NULL, NULL, NULL, NULL, 'view_only', NULL, 'verify_email', NULL, 0, '{}');
+
+INSERT INTO public."order" (id, "createdOn", "modifiedOn", "userId", "amountCents") VALUES (1, '2025-12-15 22:39:06.171363 +00:00', '2025-12-15 22:39:06.171363 +00:00', 1, 50);
+
+INSERT INTO public.item (id, "createdOn", "modifiedOn", "orderId", "lastModifiedBy") VALUES (1, '2025-12-15 22:39:29.451193 +00:00', '2025-12-15 22:39:29.451193 +00:00', 1, null);
