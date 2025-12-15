@@ -817,6 +817,38 @@ export const patchUserRouteData: StandardRouteData = {
 	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
 };
 
+export const patchUserWithGlobalParamAssignmentRouteData: StandardRouteData = {
+	type: 'ONE',
+	method: 'PATCH',
+	name: 'Update user with global param assignment',
+	description: 'Update user with lastUpdatedBy set to #userId',
+	path: '/user/update-with-assignment',
+	table: 'user',
+	roles: ['admin'],
+	scopes: [],
+	request: [
+		{
+			name: 'id',
+			required: true,
+			validator: [{ type: 'TYPE_CHECK', value: 'number' }]
+		},
+		{
+			name: 'firstName',
+			required: false,
+			validator: [{ type: 'TYPE_CHECK', value: 'string' }]
+		}
+	],
+	joins: [],
+	response: [
+		{ name: 'id', selector: 'user.id' },
+		{ name: 'firstName', selector: 'user.firstName' },
+		{ name: 'lastName', selector: 'user.lastName' },
+		{ name: 'lastUpdatedBy', selector: 'user.lastUpdatedBy' }
+	],
+	assignments: [{ name: 'lastUpdatedBy', value: '#userId' }],
+	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '$id' }]
+};
+
 export const deleteUserRouteData: StandardRouteData = {
 	type: 'ONE',
 	method: 'DELETE',

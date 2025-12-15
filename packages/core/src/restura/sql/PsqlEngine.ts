@@ -20,7 +20,6 @@ import { PageQuery } from '../types/resturaTypes.js';
 import { PsqlPool } from './PsqlPool.js';
 import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
 import SqlEngine from './SqlEngine.js';
-import { SqlUtils } from './SqlUtils.js';
 import filterPsqlParser from './filterPsqlParser.js';
 const { Client, types } = pg;
 
@@ -393,7 +392,7 @@ export class PsqlEngine extends SqlEngine {
 				})
 				.filter(Boolean)
 				.join(', ')}
-						)) 
+						))
 						FROM
 							"${item.subquery.table}"
 							${this.generateJoinStatements(req, item.subquery.joins, item.subquery.table, routeData, schema, sqlParams)}
@@ -568,16 +567,9 @@ export class PsqlEngine extends SqlEngine {
 		let incrementSyncVersion = false;
 		if (table.columns.find((column) => column.name === 'syncVersion')) incrementSyncVersion = true;
 
-		for (const assignment of routeData.assignments) {
-			const column = table.columns.find((column) => column.name === assignment.name);
-			if (!column) continue;
-
-			const assignmentEscaped = escapeColumnName(assignment.name);
-
-			if (SqlUtils.convertDatabaseTypeToTypescript(column.type!) === 'number')
-				bodyNoId[assignmentEscaped] = Number(assignment.value);
-			else bodyNoId[assignmentEscaped] = assignment.value;
-		}
+		(routeData.assignments || []).forEach((assignment) => {
+			bodyNoId[assignment.name] = this.replaceParamKeywords(assignment.value, routeData, req, sqlParams);
+		});
 
 		// Todo: Add joins back in on the update. They are useful for the where clause but in very rare cases.
 		// let joinStatement = this.generateJoinStatements(

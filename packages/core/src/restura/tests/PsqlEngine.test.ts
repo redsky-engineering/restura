@@ -30,6 +30,7 @@ import {
 	patchUserClearGuidRouteData,
 	patchUserRouteData,
 	patchUserWithBaseModifiedOnRouteData,
+	patchUserWithGlobalParamAssignmentRouteData,
 	permissionCheckScopeOnlyRequest,
 	sampleSchema
 } from './PsqlEngine.resource.js';
@@ -129,44 +130,44 @@ describe('PsqlEngine', function () {
 			const ddlNoSpace = trimRedundantWhitespace(ddl);
 			expect(ddlNoSpace).to.equal(
 				trimRedundantWhitespace(`CREATE TABLE "company"
-                                           (    "id" BIGSERIAL PRIMARY KEY  NOT NULL, 
-        "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
-        "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+                                           (    "id" BIGSERIAL PRIMARY KEY  NOT NULL,
+        "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+        "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
         "name" VARCHAR(255) NULL
 );
 
 CREATE TABLE "order"
-                                           (    "id" BIGSERIAL PRIMARY KEY  NOT NULL, 
-        "amountCents" BIGINT NOT NULL, 
+                                           (    "id" BIGSERIAL PRIMARY KEY  NOT NULL,
+        "amountCents" BIGINT NOT NULL,
         "userId" BIGINT NOT NULL
 );
 
 CREATE TABLE "item"
-                                           (    "id" BIGSERIAL PRIMARY KEY  NOT NULL, 
+                                           (    "id" BIGSERIAL PRIMARY KEY  NOT NULL,
         "orderId" BIGINT NOT NULL
 );
 
 CREATE TABLE "user"
-                                           (    "id" BIGSERIAL NOT NULL, 
-        "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
-        "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), 
+                                           (    "id" BIGSERIAL NOT NULL,
+        "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+        "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
 		"syncVersion" BIGINT NOT NULL DEFAULT 1,
-        "firstName" VARCHAR(30) NOT NULL, 
-        "lastName" VARCHAR(30) NOT NULL, 
-        "companyId" BIGINT NOT NULL, 
-        "password" VARCHAR(70) NOT NULL, 
-        "email" VARCHAR(100) NOT NULL, 
-        "role" TEXT NOT NULL DEFAULT 'user' CHECK ("role" IN ('admin','user')), 
-        "permissionLogin" BOOLEAN NOT NULL DEFAULT true, 
-        "lastLoginOn" TIMESTAMPTZ NULL, 
-        "phone" VARCHAR(30) NULL, 
-        "loginDisabledOn" TIMESTAMPTZ NULL, 
-        "passwordResetGuid" VARCHAR(100) NULL, 
-        "verifyEmailPin" INT NULL, 
-        "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, 
-        "accountStatus" TEXT NOT NULL DEFAULT 'view_only' CHECK ("accountStatus" IN ('banned','view_only','active')), 
-        "passwordResetExpiresOn" TIMESTAMPTZ NULL, 
-        "onboardingStatus" TEXT NOT NULL DEFAULT 'verify_email' CHECK ("onboardingStatus" IN ('verify_email','complete')), 
+        "firstName" VARCHAR(30) NOT NULL,
+        "lastName" VARCHAR(30) NOT NULL,
+        "companyId" BIGINT NOT NULL,
+        "password" VARCHAR(70) NOT NULL,
+        "email" VARCHAR(100) NOT NULL,
+        "role" TEXT NOT NULL DEFAULT 'user' CHECK ("role" IN ('admin','user')),
+        "permissionLogin" BOOLEAN NOT NULL DEFAULT true,
+        "lastLoginOn" TIMESTAMPTZ NULL,
+        "phone" VARCHAR(30) NULL,
+        "loginDisabledOn" TIMESTAMPTZ NULL,
+        "passwordResetGuid" VARCHAR(100) NULL,
+        "verifyEmailPin" INT NULL,
+        "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL,
+        "accountStatus" TEXT NOT NULL DEFAULT 'view_only' CHECK ("accountStatus" IN ('banned','view_only','active')),
+        "passwordResetExpiresOn" TIMESTAMPTZ NULL,
+        "onboardingStatus" TEXT NOT NULL DEFAULT 'verify_email' CHECK ("onboardingStatus" IN ('verify_email','complete')),
         "pendingEmail" VARCHAR(100) NULL
 );
 
@@ -226,7 +227,7 @@ BEGIN
                                                 'table', 'order',
                                                 'queryMetadata', query_metadata,
                                                 'changedId', NEW.id,
-                                                'record', NEW, 
+                                                'record', NEW,
                                                 'previousRecord', OLD
                 )::text
                 );
@@ -766,6 +767,27 @@ EXECUTE FUNCTION notify_user_delete();
 			expect(response?.id).to.equal(1);
 			expect(response?.passwordResetGuid).to.equal('');
 			lastSyncVersion = response?.syncVersion as number;
+		});
+		it('should executeUpdateRequest with a global param assignment', async () => {
+			const updateRequest: RsRequest = {
+				requesterDetails: {
+					role: 'admin',
+					scopes: [],
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 5
+				},
+				data: { id: 1, firstName: 'UpdatedName' },
+				body: { id: 1, firstName: 'UpdatedName' }
+			} as unknown as RsRequest;
+			const response = await psqlEngine['executeUpdateRequest'](
+				updateRequest,
+				patchUserWithGlobalParamAssignmentRouteData,
+				sampleSchema
+			);
+			expect(response?.id).to.equal(1);
+			expect(response?.firstName).to.equal('UpdatedName');
+			expect(response?.lastUpdatedBy).to.equal(5); // Should be set from #userId
 		});
 		it('should executeUpdateRequest with a baseSyncVersion and have be successful', async () => {
 			const newPasswordRandom = Math.random().toString(36).substring(2, 15);
