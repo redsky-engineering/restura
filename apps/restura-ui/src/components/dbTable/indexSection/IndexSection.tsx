@@ -1,11 +1,11 @@
-import * as React from 'react';
-import './IndexSection.scss';
 import { Box, Button, Icon, Label, rsToastify } from '@redskytech/framework/ui';
-import { useRecoilState } from 'recoil';
-import globalState from '../../../state/globalState';
-import SchemaService from '../../../services/schema/SchemaService.js';
 import cloneDeep from 'lodash.clonedeep';
+import * as React from 'react';
+import { useRecoilState } from 'recoil';
+import SchemaService from '../../../services/schema/SchemaService.js';
+import globalState from '../../../state/globalState';
 import DbTableCell from '../../dbTableCell/DbTableCell';
+import './IndexSection.scss';
 
 interface IndexSectionProps {
 	tableName: string;
@@ -28,6 +28,9 @@ const IndexSection: React.FC<IndexSectionProps> = (props) => {
 				</Label>
 				<Label mb={8} variant={'caption1'} weight={'semiBold'} minWidth={200}>
 					Columns
+				</Label>
+				<Label mb={8} variant={'caption1'} weight={'semiBold'} minWidth={200}>
+					Where Clause
 				</Label>
 				<Box /> {/* Empty box for the delete button */}
 			</>
@@ -148,6 +151,21 @@ const IndexSection: React.FC<IndexSectionProps> = (props) => {
 							}}
 						/>
 					)}
+					<DbTableCell
+						cellType={'text'}
+						value={indexData.where ?? ''}
+						onChange={(value) => {
+							let updatedSchema = cloneDeep(schema);
+							let updatedTableData = SchemaService.getTableData(updatedSchema, props.tableName);
+							let updatedIndexData = updatedTableData.indexes.find(
+								(item) => item.name === indexData.name
+							);
+							if (updatedIndexData) {
+								updatedIndexData.where = value;
+							}
+							setSchema(updatedSchema);
+						}}
+					/>
 					<Box display={'flex'} alignItems={'center'}>
 						{indexData.isPrimaryKey ? (
 							<Box />

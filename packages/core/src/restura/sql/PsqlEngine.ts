@@ -217,13 +217,11 @@ export class PsqlEngine extends SqlEngine {
 					let unique = ' ';
 					if (index.isUnique) unique = 'UNIQUE ';
 
-					indexes.push(
-						`\tCREATE ${unique}INDEX "${index.name}" ON "${table.name}" (${index.columns
-							.map((item) => {
-								return `"${item}" ${index.order}`;
-							})
-							.join(', ')});`
-					);
+					let indexSQL = `\tCREATE ${unique}INDEX "${index.name}" ON "${table.name}"`;
+					indexSQL += ` (${index.columns.map((item) => `"${item}" ${index.order}`).join(', ')})`;
+					indexSQL += index.where ? ` WHERE ${index.where}` : '';
+					indexSQL += ';';
+					indexes.push(indexSQL);
 				}
 			}
 			sql += '\n);';

@@ -260,7 +260,8 @@ const indexDataSchema = z
 		columns: z.array(z.string()),
 		isUnique: z.boolean(),
 		isPrimaryKey: z.boolean(),
-		order: z.enum(['ASC', 'DESC'])
+		order: z.enum(['ASC', 'DESC']),
+		where: z.string().optional()
 	})
 	.strict();
 
