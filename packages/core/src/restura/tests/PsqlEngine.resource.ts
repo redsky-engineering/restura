@@ -91,6 +91,13 @@ export const sampleSchema: ResturaSchema = {
 					roles: ['admin', 'user'],
 					scopes: [],
 					type: 'BIGINT'
+				},
+				{
+					name: 'lastModifiedBy',
+					isNullable: true,
+					roles: ['admin', 'user'],
+					scopes: [],
+					type: 'BIGINT'
 				}
 			],
 			checkConstraints: [],
@@ -817,13 +824,13 @@ export const patchUserRouteData: StandardRouteData = {
 	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
 };
 
-export const patchUserWithGlobalParamAssignmentRouteData: StandardRouteData = {
+export const patchItemWithGlobalParamAssignmentRouteData: StandardRouteData = {
 	type: 'ONE',
 	method: 'PATCH',
-	name: 'Update user with global param assignment',
-	description: 'Update user with lastUpdatedBy set to #userId',
-	path: '/user/update-with-assignment',
-	table: 'user',
+	name: 'Update item with global param assignment',
+	description: 'Update item with lastModifiedBy set to #userId',
+	path: '/item/update-with-assignment',
+	table: 'item',
 	roles: ['admin'],
 	scopes: [],
 	request: [
@@ -831,22 +838,15 @@ export const patchUserWithGlobalParamAssignmentRouteData: StandardRouteData = {
 			name: 'id',
 			required: true,
 			validator: [{ type: 'TYPE_CHECK', value: 'number' }]
-		},
-		{
-			name: 'firstName',
-			required: false,
-			validator: [{ type: 'TYPE_CHECK', value: 'string' }]
 		}
 	],
 	joins: [],
 	response: [
-		{ name: 'id', selector: 'user.id' },
-		{ name: 'firstName', selector: 'user.firstName' },
-		{ name: 'lastName', selector: 'user.lastName' },
-		{ name: 'lastUpdatedBy', selector: 'user.lastUpdatedBy' }
+		{ name: 'id', selector: 'item.id' },
+		{ name: 'lastModifiedBy', selector: 'item.lastModifiedBy' }
 	],
-	assignments: [{ name: 'lastUpdatedBy', value: '#userId' }],
-	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '$id' }]
+	assignments: [{ name: 'lastModifiedBy', value: '#userId' }],
+	where: [{ tableName: 'item', columnName: 'id', operator: '=', value: '$id' }]
 };
 
 export const deleteUserRouteData: StandardRouteData = {
