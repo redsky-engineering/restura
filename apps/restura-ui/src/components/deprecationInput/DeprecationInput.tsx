@@ -5,7 +5,6 @@ import SchemaService from '../../services/schema/SchemaService';
 import serviceFactory from '../../services/serviceFactory';
 import globalState from '../../state/globalState';
 import themes from '../../themes/themes.scss?export';
-import './DeprecationInput.scss';
 
 interface PermissionInputProps {
 	routeData: Restura.RouteData | undefined;
