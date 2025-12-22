@@ -184,6 +184,10 @@ declare namespace Restura {
 		name: string;
 		description: string;
 		path: string;
+		deprecation?: {
+			date: string;
+			message?: string;
+		};
 		roles: string[];
 		scopes: string[];
 	}

@@ -20,12 +20,13 @@ import modelGenerator from './generators/modelGenerator.js';
 import resturaGlobalTypesGenerator from './generators/resturaGlobalTypesGenerator.js';
 import standardTypeValidationGenerator from './generators/standardTypeValidationGenerator.js';
 import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
+import addDeprecationResponse from './middleware/addDeprecationResponse.js';
 import { authenticateRequester } from './middleware/authenticateRequester.js';
 import { getMulterUpload } from './middleware/getMulterUpload.js';
 import { schemaValidation } from './middleware/schemaValidation.js';
 import { resturaConfigSchema, type ResturaConfigSchema } from './schemas/resturaConfigSchema.js';
 import {
-	isSchemaValid,
+	resturaSchema,
 	StandardRouteData,
 	type CustomRouteData,
 	type ResturaSchema,
@@ -193,13 +194,16 @@ class ResturaEngine {
 		}
 
 		const schemaFileData = fs.readFileSync(this.resturaConfig.schemaFilePath, { encoding: 'utf8' });
-		const schema: ResturaSchema = ObjectUtils.safeParse(schemaFileData) as ResturaSchema;
-		const isValid = await isSchemaValid(schema);
-		if (!isValid) {
-			logger.error('Schema is not valid');
+		const rawSchema = ObjectUtils.safeParse(schemaFileData) as ResturaSchema;
+		// Parse with Zod to apply transforms (e.g., converting ISO datetime strings to Date objects)
+		// Using safeParse to get better error handling, but transforms are applied the same as parse()
+		const result = resturaSchema.safeParse(rawSchema);
+		if (!result.success) {
+			logger.error('Schema failed to validate:');
+			console.error(result.error);
 			throw new Error('Schema is not valid');
 		}
-		return schema;
+		return result.data;
 	}
 
 	private async reloadEndpoints() {
@@ -226,6 +230,8 @@ class ResturaEngine {
 
 				this.resturaRouter[route.method.toLowerCase() as Lowercase<typeof route.method>](
 					route.path, // <-- Notice we only use path here since the baseUrl is already added to the router.
+					this.attachRouteData as unknown as express.RequestHandler,
+					addDeprecationResponse as unknown as express.RequestHandler,
 					this.executeRouteLogic as unknown as express.RequestHandler
 				);
 				routeCount++;
@@ -327,10 +333,20 @@ class ResturaEngine {
 	}
 
 	@boundMethod
+	private attachRouteData(req: RsRequest<unknown>, _res: RsResponse<unknown>, next: express.NextFunction) {
+		try {
+			req.routeData = this.getRouteData(req.method, req.baseUrl, req.path);
+			next();
+		} catch (e) {
+			next(e);
+		}
+	}
+
+	@boundMethod
 	private async executeRouteLogic<T>(req: RsRequest<T>, res: RsResponse<T>, next: express.NextFunction) {
 		try {
 			// Locate the route in the schema
-			const routeData = this.getRouteData(req.method, req.baseUrl, req.path);
+			const routeData = req.routeData ?? this.getRouteData(req.method, req.baseUrl, req.path);
 
 			// Validate the requester has access to the endpoint
 			this.validateAuthorization(req, routeData);
