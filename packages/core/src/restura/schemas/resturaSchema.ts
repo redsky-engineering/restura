@@ -115,6 +115,12 @@ const routeDataBaseSchema = z
 		name: z.string(),
 		description: z.string(),
 		path: z.string(),
+		deprecation: z
+			.object({
+				date: z.iso.datetime().transform((s) => new Date(s)),
+				message: z.string().optional()
+			})
+			.optional(),
 		roles: z.array(z.string()),
 		scopes: z.array(z.string())
 	})

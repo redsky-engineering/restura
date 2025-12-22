@@ -8,6 +8,7 @@ import serviceFactory from '../../../services/serviceFactory.js';
 import globalState from '../../../state/globalState.js';
 import AssignmentInput from '../../assignmentInput/AssignmentInput.js';
 import BaseTableInput from '../../baseTableInput/BaseTableInput';
+import DeprecationInput from '../../deprecationInput/DeprecationInput';
 import FileUploadInput from '../../fileUploadInput/FileUploadInput.js';
 import GroupByInput from '../../groupByInput/GroupByInput';
 import JoinTableInput from '../../joinTableInput/JoinTableInput';
@@ -42,6 +43,7 @@ const ApiDetailsSection: React.FC<ApiDetailsSectionProps> = (props) => {
 				<RouteDescriptionInput routeData={routeData} />
 				<PermissionInput routeData={routeData} />
 				<MethodPathInput routeData={routeData} />
+				<DeprecationInput routeData={routeData} />
 				<BaseTableInput
 					tableName={routeData.table}
 					onChange={(newTableName) => {
@@ -124,6 +126,7 @@ const ApiDetailsSection: React.FC<ApiDetailsSectionProps> = (props) => {
 				<RouteDescriptionInput routeData={routeData} />
 				<PermissionInput routeData={routeData} />
 				<MethodPathInput routeData={routeData} />
+				<DeprecationInput routeData={routeData} />
 				<RequestParamInput routeData={routeData} />
 				<FileUploadInput routeData={routeData} />
 			</>
