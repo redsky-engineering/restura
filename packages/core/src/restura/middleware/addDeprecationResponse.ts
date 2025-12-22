@@ -6,7 +6,7 @@ export default function addDeprecationResponse(req: RsRequest<unknown>, res: RsR
 	if (deprecation) {
 		const { date, message } = deprecation;
 		const dateObject = new Date(date);
-		res.set('Deprecation', dateObject.toUTCString());
+		res.set('Deprecation', `@${dateObject.getTime().toString()}`);
 		res.set('Deprecation-Message', message ?? 'This endpoint is deprecated and will be removed in the future.');
 	}
 	next();

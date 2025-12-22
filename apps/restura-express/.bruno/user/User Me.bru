@@ -1,0 +1,16 @@
+meta {
+  name: User Me
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{host}}/api/v1/user/me
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: false
+  timeout: 0
+}

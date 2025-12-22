@@ -1,0 +1,27 @@
+meta {
+  name: User login
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/api/v1/user/login
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "username": "",
+    "password": ""
+  }
+}
+
+settings {
+  encodeUrl: false
+  timeout: 0
+}

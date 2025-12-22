@@ -26,7 +26,7 @@ import { getMulterUpload } from './middleware/getMulterUpload.js';
 import { schemaValidation } from './middleware/schemaValidation.js';
 import { resturaConfigSchema, type ResturaConfigSchema } from './schemas/resturaConfigSchema.js';
 import {
-	resturaSchema,
+	isSchemaValid,
 	StandardRouteData,
 	type CustomRouteData,
 	type ResturaSchema,
@@ -194,16 +194,13 @@ class ResturaEngine {
 		}
 
 		const schemaFileData = fs.readFileSync(this.resturaConfig.schemaFilePath, { encoding: 'utf8' });
-		const rawSchema = ObjectUtils.safeParse(schemaFileData) as ResturaSchema;
-		// Parse with Zod to apply transforms (e.g., converting ISO datetime strings to Date objects)
-		// Using safeParse to get better error handling, but transforms are applied the same as parse()
-		const result = resturaSchema.safeParse(rawSchema);
-		if (!result.success) {
-			logger.error('Schema failed to validate:');
-			console.error(result.error);
+		const schema: ResturaSchema = ObjectUtils.safeParse(schemaFileData) as ResturaSchema;
+		const isValid = await isSchemaValid(schema);
+		if (!isValid) {
+			logger.error('Schema is not valid');
 			throw new Error('Schema is not valid');
 		}
-		return result.data;
+		return schema;
 	}
 
 	private async reloadEndpoints() {
