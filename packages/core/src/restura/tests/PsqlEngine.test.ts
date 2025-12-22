@@ -395,7 +395,7 @@ CREATE OR REPLACE TRIGGER "user_delete"
         AFTER DELETE ON "user"
         FOR EACH ROW
 EXECUTE FUNCTION notify_user_delete();
-`)
+				`)
 			);
 		});
 	});
@@ -1703,9 +1703,9 @@ EXECUTE FUNCTION notify_user_delete();
 			expect(response?.email).to.equal('tanner@plvr.com');
 
 			// Verify deprecation data exists on route data
-			expect(getUserWithDeprecationNoMessageRouteData.deprecation).to.exist;
+			expect(getUserWithDeprecationNoMessageRouteData.deprecation).to.not.be.undefined;
 			expect(getUserWithDeprecationNoMessageRouteData.deprecation?.date).to.be.instanceOf(Date);
-			expect(getUserWithDeprecationNoMessageRouteData.deprecation?.message).to.be.undefined;
+			expect(getUserWithDeprecationNoMessageRouteData.deprecation?.message).to.equal(undefined);
 		});
 
 		it('should executeGetRequest with deprecation (with message)', async () => {
@@ -1722,7 +1722,7 @@ EXECUTE FUNCTION notify_user_delete();
 			expect(response?.email).to.equal('tanner@plvr.com');
 
 			// Verify deprecation data exists on route data with message
-			expect(getUserWithDeprecationWithMessageRouteData.deprecation).to.exist;
+			expect(getUserWithDeprecationWithMessageRouteData.deprecation).to.not.be.undefined;
 			expect(getUserWithDeprecationWithMessageRouteData.deprecation?.date).to.be.instanceOf(Date);
 			expect(getUserWithDeprecationWithMessageRouteData.deprecation?.message).to.equal(
 				'This endpoint is deprecated. Please use /api/v2/user instead.'
@@ -1739,14 +1739,14 @@ EXECUTE FUNCTION notify_user_delete();
 
 		it('should handle deprecation with default message when message is undefined', () => {
 			const routeData = getUserWithDeprecationNoMessageRouteData;
-			expect(routeData.deprecation).to.exist;
-			expect(routeData.deprecation?.message).to.be.undefined;
+			expect(routeData.deprecation).to.not.be.undefined;
+			expect(routeData.deprecation?.message).to.equal(undefined);
 			// The default message should be used by the middleware: 'This endpoint is deprecated and will be removed in the future.'
 		});
 
 		it('should handle deprecation with custom message', () => {
 			const routeData = getUserWithDeprecationWithMessageRouteData;
-			expect(routeData.deprecation).to.exist;
+			expect(routeData.deprecation).to.not.be.undefined;
 			expect(routeData.deprecation?.message).to.equal(
 				'This endpoint is deprecated. Please use /api/v2/user instead.'
 			);
