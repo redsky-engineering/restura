@@ -59,6 +59,7 @@ declare namespace Restura {
 		isUnique: boolean;
 		order: 'ASC' | 'DESC';
 		isPrimaryKey: boolean;
+		where?: string;
 	}
 
 	export interface ForeignKeyData {

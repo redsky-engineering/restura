@@ -22,6 +22,7 @@ import {
 	createOrderRouteData,
 	deleteOrderRouteData,
 	deleteUserRouteData,
+	fullIndexTestSchema,
 	getAllOrdersWithMultiJoinsRouteData,
 	getAllUsersBeforeDateRouteData,
 	getAllUsersRoleAdminRouteData,
@@ -29,6 +30,7 @@ import {
 	getUserLikeFirstNameRouteData,
 	getUserWithDeprecationNoMessageRouteData,
 	getUserWithDeprecationWithMessageRouteData,
+	partialIndexTestSchema,
 	patchItemWithGlobalParamAssignmentRouteData,
 	patchUserClearGuidRouteData,
 	patchUserRouteData,
@@ -134,6 +136,26 @@ describe('PsqlEngine', function () {
 				trimRedundantWhitespace(`
 				CREATE TABLE "company" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "name" VARCHAR(255) NULL ); CREATE TABLE "order" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "amountCents" BIGINT NOT NULL, "userId" BIGINT NOT NULL ); CREATE TABLE "item" ( "id" BIGSERIAL PRIMARY KEY NOT NULL, "orderId" BIGINT NOT NULL, "lastModifiedBy" BIGINT NULL ); CREATE TABLE "user" ( "id" BIGSERIAL NOT NULL, "createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "modifiedOn" TIMESTAMPTZ NOT NULL DEFAULT now(), "syncVersion" BIGINT NOT NULL DEFAULT 1, "firstName" VARCHAR(30) NOT NULL, "lastName" VARCHAR(30) NOT NULL, "companyId" BIGINT NOT NULL, "password" VARCHAR(70) NOT NULL, "email" VARCHAR(100) NOT NULL, "role" TEXT NOT NULL DEFAULT 'user' CHECK ("role" IN ('admin','user')), "permissionLogin" BOOLEAN NOT NULL DEFAULT true, "lastLoginOn" TIMESTAMPTZ NULL, "phone" VARCHAR(30) NULL, "loginDisabledOn" TIMESTAMPTZ NULL, "passwordResetGuid" VARCHAR(100) NULL, "verifyEmailPin" INT NULL, "verifyEmailPinExpiresOn" TIMESTAMPTZ NULL, "accountStatus" TEXT NOT NULL DEFAULT 'view_only' CHECK ("accountStatus" IN ('banned','view_only','active')), "passwordResetExpiresOn" TIMESTAMPTZ NULL, "onboardingStatus" TEXT NOT NULL DEFAULT 'verify_email' CHECK ("onboardingStatus" IN ('verify_email','complete')), "pendingEmail" VARCHAR(100) NULL ); ALTER TABLE "user" ADD CONSTRAINT "user_companyId_company_id_fk" FOREIGN KEY ("companyId") REFERENCES "company" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION; CREATE INDEX "user_companyId_index" ON "user" ("companyId" ASC); CREATE UNIQUE INDEX "user_email_unique_index" ON "user" ("email" ASC); CREATE INDEX "user_passwordResetGuid_index" ON "user" ("passwordResetGuid" ASC); CREATE OR REPLACE FUNCTION notify_order_insert() RETURNS TRIGGER AS $$ DECLARE query_metadata JSON; BEGIN SELECT INTO query_metadata (regexp_match( current_query(), '^--QUERY_METADATA\\(({.*})', 'n' ))[1]::json; PERFORM pg_notify( 'insert', json_build_object( 'table', 'order', 'queryMetadata', query_metadata, 'insertedId', NEW.id, 'record', NEW )::text ); RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE OR REPLACE TRIGGER "order_insert" AFTER INSERT ON "order" FOR EACH ROW EXECUTE FUNCTION notify_order_insert(); CREATE OR REPLACE FUNCTION notify_order_update() RETURNS TRIGGER AS $$ DECLARE query_metadata JSON; BEGIN SELECT INTO query_metadata (regexp_match( current_query(), '^--QUERY_METADATA\\(({.*})', 'n' ))[1]::json; PERFORM pg_notify( 'update', json_build_object( 'table', 'order', 'queryMetadata', query_metadata, 'changedId', NEW.id, 'record', NEW, 'previousRecord', OLD )::text ); RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE OR REPLACE TRIGGER order_update AFTER UPDATE ON "order" FOR EACH ROW EXECUTE FUNCTION notify_order_update(); CREATE OR REPLACE FUNCTION notify_order_delete() RETURNS TRIGGER AS $$ DECLARE query_metadata JSON; BEGIN SELECT INTO query_metadata (regexp_match( current_query(), '^--QUERY_METADATA\\(({.*})', 'n' ))[1]::json; PERFORM pg_notify( 'delete', json_build_object( 'table', 'order', 'queryMetadata', query_metadata, 'deletedId', OLD.id, 'previousRecord', OLD )::text ); RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE OR REPLACE TRIGGER "order_delete" AFTER DELETE ON "order" FOR EACH ROW EXECUTE FUNCTION notify_order_delete(); CREATE OR REPLACE FUNCTION notify_user_insert() RETURNS TRIGGER AS $$ DECLARE query_metadata JSON; BEGIN SELECT INTO query_metadata (regexp_match( current_query(), '^--QUERY_METADATA\\(({.*})', 'n' ))[1]::json; PERFORM pg_notify( 'insert', json_build_object( 'table', 'user', 'queryMetadata', query_metadata, 'insertedId', NEW.id, 'record', json_build_object( 'firstName', NEW."firstName", 'lastName', NEW."lastName", 'email', NEW."email", 'role', NEW."role", 'phone', NEW."phone", 'accountStatus', NEW."accountStatus", 'onboardingStatus', NEW."onboardingStatus" ) )::text ); RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE OR REPLACE TRIGGER "user_insert" AFTER INSERT ON "user" FOR EACH ROW EXECUTE FUNCTION notify_user_insert(); CREATE OR REPLACE FUNCTION notify_user_update() RETURNS TRIGGER AS $$ DECLARE query_metadata JSON; BEGIN SELECT INTO query_metadata (regexp_match( current_query(), '^--QUERY_METADATA\\(({.*})', 'n' ))[1]::json; PERFORM pg_notify( 'update', json_build_object( 'table', 'user', 'queryMetadata', query_metadata, 'changedId', NEW.id, 'record', json_build_object( 'firstName', NEW."firstName", 'lastName', NEW."lastName", 'email', NEW."email", 'role', NEW."role", 'phone', NEW."phone", 'accountStatus', NEW."accountStatus", 'onboardingStatus', NEW."onboardingStatus" ), 'previousRecord', json_build_object( 'firstName', OLD."firstName", 'lastName', OLD."lastName", 'email', OLD."email", 'role', OLD."role", 'phone', OLD."phone", 'accountStatus', OLD."accountStatus", 'onboardingStatus', OLD."onboardingStatus" ) )::text ); RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE OR REPLACE TRIGGER user_update AFTER UPDATE ON "user" FOR EACH ROW EXECUTE FUNCTION notify_user_update(); CREATE OR REPLACE FUNCTION notify_user_delete() RETURNS TRIGGER AS $$ DECLARE query_metadata JSON; BEGIN SELECT INTO query_metadata (regexp_match( current_query(), '^--QUERY_METADATA\\(({.*})', 'n' ))[1]::json; PERFORM pg_notify( 'delete', json_build_object( 'table', 'user', 'queryMetadata', query_metadata, 'deletedId', OLD.id, 'previousRecord', json_build_object( 'firstName', OLD."firstName", 'lastName', OLD."lastName", 'email', OLD."email", 'role', OLD."role", 'phone', OLD."phone", 'accountStatus', OLD."accountStatus", 'onboardingStatus', OLD."onboardingStatus" ) )::text ); RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE OR REPLACE TRIGGER "user_delete" AFTER DELETE ON "user" FOR EACH ROW EXECUTE FUNCTION notify_user_delete();
 				`)
+			);
+		});
+	});
+	describe('index generation', () => {
+		it('should generate a full index (no where clause)', async () => {
+			const psqlEngine = new PsqlEngine(psqlPool);
+			const ddl = psqlEngine.generateDatabaseSchemaFromSchema(fullIndexTestSchema);
+			const ddlNoSpace = trimRedundantWhitespace(ddl);
+			expect(ddlNoSpace).to.include(
+				trimRedundantWhitespace(`CREATE INDEX "test_table_status_index" ON "test_table" ("status" ASC);`)
+			);
+		});
+		it('should generate a partial index (with where clause)', async () => {
+			const psqlEngine = new PsqlEngine(psqlPool);
+			const ddl = psqlEngine.generateDatabaseSchemaFromSchema(partialIndexTestSchema);
+			const ddlNoSpace = trimRedundantWhitespace(ddl);
+			expect(ddlNoSpace).to.include(
+				trimRedundantWhitespace(
+					`CREATE INDEX "test_table_status_active_index" ON "test_table" ("status" ASC) WHERE "isActive" = true;`
+				)
 			);
 		});
 	});

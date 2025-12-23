@@ -1130,7 +1130,6 @@ export const permissionCheckScopeOnlyRequest: RsRequest = {
 	data: { id: 1 }
 } as unknown as RsRequest;
 
-// Route data objects for testing deprecation functionality
 export const getUserWithDeprecationNoMessageRouteData: StandardRouteData = {
 	type: 'ONE',
 	method: 'GET',
@@ -1139,7 +1138,6 @@ export const getUserWithDeprecationNoMessageRouteData: StandardRouteData = {
 	path: '/user/deprecated-no-message',
 	deprecation: {
 		date: '2025-12-31T00:00:00Z'
-		// No message - should use default message
 	},
 	table: 'user',
 	roles: ['admin'],
@@ -1179,4 +1177,125 @@ export const getUserWithDeprecationWithMessageRouteData: StandardRouteData = {
 	],
 	assignments: [],
 	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
+};
+
+export const fullIndexTestSchema: ResturaSchema = {
+	database: [
+		{
+			name: 'test_table',
+			columns: [
+				{
+					name: 'id',
+					hasAutoIncrement: true,
+					isNullable: false,
+					roles: [],
+					scopes: [],
+					isPrimary: true,
+					type: 'BIGINT'
+				},
+				{
+					name: 'status',
+					isNullable: false,
+					roles: [],
+					scopes: [],
+					type: 'VARCHAR',
+					length: 50
+				},
+				{
+					name: 'createdOn',
+					isNullable: false,
+					default: 'now()',
+					roles: [],
+					scopes: [],
+					type: 'DATETIME'
+				}
+			],
+			checkConstraints: [],
+			foreignKeys: [],
+			indexes: [
+				{
+					name: 'PRIMARY',
+					columns: ['id'],
+					isUnique: true,
+					isPrimaryKey: true,
+					order: 'ASC'
+				},
+				{
+					name: 'test_table_status_index',
+					columns: ['status'],
+					isUnique: false,
+					isPrimaryKey: false,
+					order: 'ASC'
+				}
+			],
+			roles: [],
+			scopes: []
+		}
+	],
+	endpoints: [],
+	globalParams: [],
+	roles: [],
+	scopes: [],
+	customTypes: []
+};
+
+export const partialIndexTestSchema: ResturaSchema = {
+	database: [
+		{
+			name: 'test_table',
+			columns: [
+				{
+					name: 'id',
+					hasAutoIncrement: true,
+					isNullable: false,
+					roles: [],
+					scopes: [],
+					isPrimary: true,
+					type: 'BIGINT'
+				},
+				{
+					name: 'status',
+					isNullable: false,
+					roles: [],
+					scopes: [],
+					type: 'VARCHAR',
+					length: 50
+				},
+				{
+					name: 'isActive',
+					isNullable: false,
+					roles: [],
+					scopes: [],
+					type: 'BOOLEAN',
+					default: 'true'
+				}
+			],
+			checkConstraints: [],
+			foreignKeys: [],
+			indexes: [
+				{
+					name: 'PRIMARY',
+					columns: ['id'],
+					isUnique: true,
+					isPrimaryKey: true,
+					order: 'ASC'
+				},
+				{
+					name: 'test_table_status_active_index',
+					columns: ['status'],
+					isUnique: false,
+					isPrimaryKey: false,
+					order: 'ASC',
+					where: '"isActive" = true'
+				}
+			],
+			roles: [],
+			scopes: []
+		}
+	],
+	endpoints: [],
+	globalParams: [],
+	roles: [],
+	scopes: [],
+	customTypes: []
 };
