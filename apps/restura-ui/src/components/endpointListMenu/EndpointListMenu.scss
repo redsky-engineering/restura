@@ -81,6 +81,10 @@
 					color: theme-var($neutralBeige500);
 				}
 
+				.deprecation {
+					color: theme-var($neutralBeige500);
+				}
+
 				.rsIcon {
 					display: block;
 
@@ -96,6 +100,13 @@
 			.public,
 			.method {
 				color: theme-var($neutralBeige600);
+			}
+
+			.deprecation {
+				background: theme-var($primaryRed700);
+				padding: 2px 4px;
+				border-radius: 4px;
+				color: theme-var($neutralBeige500);
 			}
 		}
 	}

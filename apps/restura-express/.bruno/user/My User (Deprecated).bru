@@ -1,0 +1,16 @@
+meta {
+  name: My User (Deprecated)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{host}}/api/v1/user/my-user
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

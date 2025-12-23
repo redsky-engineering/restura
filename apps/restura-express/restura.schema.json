@@ -375,10 +375,20 @@
 					"request": [],
 					"response": [
 						{ "name": "id", "selector": "user.id" },
+						{ "name": "createdOn", "selector": "user.createdOn" },
+						{ "name": "modifiedOn", "selector": "user.modifiedOn" },
 						{ "name": "firstName", "selector": "user.firstName" },
 						{ "name": "lastName", "selector": "user.lastName" },
+						{ "name": "companyId", "selector": "user.companyId" },
 						{ "name": "email", "selector": "user.email" },
-						{ "name": "phone", "selector": "user.phone" }
+						{ "name": "role", "selector": "user.role" },
+						{ "name": "permissionLogin", "selector": "user.permissionLogin" },
+						{ "name": "lastLoginOn", "selector": "user.lastLoginOn" },
+						{ "name": "phone", "selector": "user.phone" },
+						{ "name": "accountStatus", "selector": "user.accountStatus" },
+						{ "name": "onboardingStatus", "selector": "user.onboardingStatus" },
+						{ "name": "testAge", "selector": "user.testAge" },
+						{ "name": "metadata", "selector": "user.metadata" }
 					],
 					"roles": ["user", "admin"],
 					"scopes": [],
@@ -972,6 +982,41 @@
 					"roles": [],
 					"scopes": [],
 					"type": "CUSTOM_ARRAY"
+				},
+				{
+					"assignments": [],
+					"deprecation": {
+						"date": "2025-12-22T20:50:59.010Z",
+						"message": "This endpoint is deprecated. Please use /user/me instead."
+					},
+					"description": "Gets my user",
+					"joins": [],
+					"method": "GET",
+					"name": "Get My User (Deprecated)",
+					"path": "/user/my-user",
+					"request": [],
+					"response": [
+						{ "name": "id", "selector": "user.id" },
+						{ "name": "createdOn", "selector": "user.createdOn" },
+						{ "name": "modifiedOn", "selector": "user.modifiedOn" },
+						{ "name": "firstName", "selector": "user.firstName" },
+						{ "name": "lastName", "selector": "user.lastName" },
+						{ "name": "companyId", "selector": "user.companyId" },
+						{ "name": "email", "selector": "user.email" },
+						{ "name": "role", "selector": "user.role" },
+						{ "name": "permissionLogin", "selector": "user.permissionLogin" },
+						{ "name": "lastLoginOn", "selector": "user.lastLoginOn" },
+						{ "name": "phone", "selector": "user.phone" },
+						{ "name": "accountStatus", "selector": "user.accountStatus" },
+						{ "name": "onboardingStatus", "selector": "user.onboardingStatus" },
+						{ "name": "testAge", "selector": "user.testAge" },
+						{ "name": "metadata", "selector": "user.metadata" }
+					],
+					"roles": ["user", "admin"],
+					"scopes": [],
+					"table": "user",
+					"type": "ONE",
+					"where": [{ "columnName": "id", "operator": "=", "tableName": "user", "value": "#userId" }]
 				}
 			]
 		}

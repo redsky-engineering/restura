@@ -20,6 +20,7 @@ import modelGenerator from './generators/modelGenerator.js';
 import resturaGlobalTypesGenerator from './generators/resturaGlobalTypesGenerator.js';
 import standardTypeValidationGenerator from './generators/standardTypeValidationGenerator.js';
 import addApiResponseFunctions from './middleware/addApiResponseFunctions.js';
+import addDeprecationResponse from './middleware/addDeprecationResponse.js';
 import { authenticateRequester } from './middleware/authenticateRequester.js';
 import { getMulterUpload } from './middleware/getMulterUpload.js';
 import { schemaValidation } from './middleware/schemaValidation.js';
@@ -226,6 +227,8 @@ class ResturaEngine {
 
 				this.resturaRouter[route.method.toLowerCase() as Lowercase<typeof route.method>](
 					route.path, // <-- Notice we only use path here since the baseUrl is already added to the router.
+					this.attachRouteData as unknown as express.RequestHandler,
+					addDeprecationResponse as unknown as express.RequestHandler,
 					this.executeRouteLogic as unknown as express.RequestHandler
 				);
 				routeCount++;
@@ -327,10 +330,20 @@ class ResturaEngine {
 	}
 
 	@boundMethod
+	private attachRouteData(req: RsRequest<unknown>, _res: RsResponse<unknown>, next: express.NextFunction) {
+		try {
+			req.routeData = this.getRouteData(req.method, req.baseUrl, req.path);
+			next();
+		} catch (e) {
+			next(e);
+		}
+	}
+
+	@boundMethod
 	private async executeRouteLogic<T>(req: RsRequest<T>, res: RsResponse<T>, next: express.NextFunction) {
 		try {
 			// Locate the route in the schema
-			const routeData = this.getRouteData(req.method, req.baseUrl, req.path);
+			const routeData = req.routeData ?? this.getRouteData(req.method, req.baseUrl, req.path);
 
 			// Validate the requester has access to the endpoint
 			this.validateAuthorization(req, routeData);

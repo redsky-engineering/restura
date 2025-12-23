@@ -38,10 +38,20 @@ declare namespace Api {
 					export interface Req {}
 					export interface Res {
 						id: number;
+						createdOn: string;
+						modifiedOn: string;
 						firstName: string;
 						lastName: string;
+						companyId: number;
 						email: string;
+						role: 'admin' | 'user';
+						permissionLogin: boolean;
+						lastLoginOn: string | null;
 						phone: string | null;
+						accountStatus: 'banned' | 'view_only' | 'active';
+						onboardingStatus: 'verify_email' | 'complete';
+						testAge: number;
+						metadata: object;
 					}
 				}
 				// Update my user
@@ -273,6 +283,30 @@ declare namespace Api {
 							createdOn: string;
 							modifiedOn: string;
 						}[];
+					}
+				}
+			}
+			export namespace MyUser {
+				// Get My User (Deprecated)
+				// Gets my user
+				export namespace Get {
+					export interface Req {}
+					export interface Res {
+						id: number;
+						createdOn: string;
+						modifiedOn: string;
+						firstName: string;
+						lastName: string;
+						companyId: number;
+						email: string;
+						role: 'admin' | 'user';
+						permissionLogin: boolean;
+						lastLoginOn: string | null;
+						phone: string | null;
+						accountStatus: 'banned' | 'view_only' | 'active';
+						onboardingStatus: 'verify_email' | 'complete';
+						testAge: number;
+						metadata: object;
 					}
 				}
 			}

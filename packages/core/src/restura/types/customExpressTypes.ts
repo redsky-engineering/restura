@@ -1,6 +1,7 @@
 import * as express from 'express';
 import { IncomingHttpHeaders } from 'http2';
 import type { ErrorCode, HtmlStatusCodes } from '../RsError.js';
+import { RouteData } from '../schemas/resturaSchema.js';
 import type { RsPagedResponseData } from './resturaTypes.js';
 
 // Headers are always passed up as strings and are always lower cased by NodeJs Express
@@ -22,6 +23,7 @@ export type RequesterDetails<T extends object = {}> = {
 export interface RsRequest<T = unknown, U extends object = Record<string, unknown>> extends express.Request {
 	requesterDetails: RequesterDetails<U>;
 	data: T;
+	routeData?: RouteData;
 }
 
 export type DynamicObject<T = unknown> = { [key: string]: T };
