@@ -1129,3 +1129,54 @@ export const permissionCheckScopeOnlyRequest: RsRequest = {
 	},
 	data: { id: 1 }
 } as unknown as RsRequest;
+
+// Route data objects for testing deprecation functionality
+export const getUserWithDeprecationNoMessageRouteData: StandardRouteData = {
+	type: 'ONE',
+	method: 'GET',
+	name: 'Get user with deprecation (no message)',
+	description: 'Get user with deprecation but no custom message',
+	path: '/user/deprecated-no-message',
+	deprecation: {
+		date: '2025-12-31T00:00:00Z'
+		// No message - should use default message
+	},
+	table: 'user',
+	roles: ['admin'],
+	scopes: [],
+	request: [],
+	joins: [],
+	response: [
+		{ name: 'id', selector: 'user.id' },
+		{ name: 'firstName', selector: 'user.firstName' },
+		{ name: 'lastName', selector: 'user.lastName' },
+		{ name: 'email', selector: 'user.email' }
+	],
+	assignments: [],
+	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
+};
+
+export const getUserWithDeprecationWithMessageRouteData: StandardRouteData = {
+	type: 'ONE',
+	method: 'GET',
+	name: 'Get user with deprecation (with message)',
+	description: 'Get user with deprecation and custom message',
+	path: '/user/deprecated-with-message',
+	deprecation: {
+		date: '2025-12-31T00:00:00Z',
+		message: 'This endpoint is deprecated. Please use /api/v2/user instead.'
+	},
+	table: 'user',
+	roles: ['admin'],
+	scopes: [],
+	request: [],
+	joins: [],
+	response: [
+		{ name: 'id', selector: 'user.id' },
+		{ name: 'firstName', selector: 'user.firstName' },
+		{ name: 'lastName', selector: 'user.lastName' },
+		{ name: 'email', selector: 'user.email' }
+	],
+	assignments: [],
+	where: [{ tableName: 'user', columnName: 'id', operator: '=', value: '#userId' }]
+};

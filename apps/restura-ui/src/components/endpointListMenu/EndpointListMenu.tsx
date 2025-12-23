@@ -153,6 +153,7 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (_props) => {
 			.sort((a, b) => a.path.localeCompare(b.path))
 			.filter((route) => {
 				if (filterValue === '') return true;
+				if (route.deprecation !== undefined && 'deprecated'.includes(filterValue.toLowerCase())) return true;
 				return route.path.includes(filterValue);
 			})
 			.map((route) => {
@@ -182,6 +183,11 @@ const EndpointListMenu: React.FC<EndpointListMenuProps> = (_props) => {
 								<Label variant={'caption1'} weight={'regular'} className={'method'}>
 									{route.method}
 								</Label>
+								{route.deprecation !== undefined && (
+									<Label variant={'caption1'} weight={'regular'} className={'deprecation'}>
+										Deprecated
+									</Label>
+								)}
 								<Icon
 									iconImg={'icon-content-copy'}
 									fontSize={16}

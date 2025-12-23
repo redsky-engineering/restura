@@ -27,10 +27,12 @@ import {
 	getAllUsersRoleAdminRouteData,
 	getAllUsersScopeTestRouteData,
 	getUserLikeFirstNameRouteData,
+	getUserWithDeprecationNoMessageRouteData,
+	getUserWithDeprecationWithMessageRouteData,
+	patchItemWithGlobalParamAssignmentRouteData,
 	patchUserClearGuidRouteData,
 	patchUserRouteData,
 	patchUserWithBaseModifiedOnRouteData,
-	patchItemWithGlobalParamAssignmentRouteData,
 	permissionCheckScopeOnlyRequest,
 	sampleSchema
 } from './PsqlEngine.resource.js';
@@ -606,58 +608,66 @@ describe('PsqlEngine', function () {
 
 		it('should executeDelete and listen for events', function (done) {
 			(async () => {
-				let doneCalled = false;
-				eventManager.addRowDeleteHandler<{ amountCents: number; userId: number }>(
-					async function (data) {
-						if (doneCalled) return;
-						try {
-							expect(data.queryMetadata.role).to.equal('admin');
-							expect(data.queryMetadata.host).to.equal('google.com');
-							expect(data.queryMetadata.ipAddress).to.equal('1.1.1.1');
-							expect(data.queryMetadata.userId).to.equal(1);
-							expect(data.deletedRow.amountCents).to.equal(100);
-							expect(data.deletedRow.userId).to.equal(1);
-							expect(data.tableName).to.equal('order');
-						} catch (e) {
-							console.log(e);
+				try {
+					let doneCalled = false;
+					eventManager.addRowDeleteHandler<{ amountCents: number; userId: number }>(
+						async function (data) {
+							if (doneCalled) return;
+							try {
+								expect(data.queryMetadata.role).to.equal('admin');
+								expect(data.queryMetadata.host).to.equal('google.com');
+								expect(data.queryMetadata.ipAddress).to.equal('1.1.1.1');
+								expect(data.queryMetadata.userId).to.equal(1);
+								expect(data.deletedRow.amountCents).to.equal(100);
+								expect(data.deletedRow.userId).to.equal(1);
+								expect(data.tableName).to.equal('order');
+							} catch (e) {
+								console.log(e);
+								doneCalled = true;
+								return done(e);
+							}
 							doneCalled = true;
-							return done(e);
-						}
-						doneCalled = true;
-						done();
-					},
-					{ tableName: 'order' }
-				);
-				const createRequest: RsRequest = {
-					requesterDetails: {
-						role: 'admin',
-						scopes: [],
-						host: 'google.com',
-						ipAddress: '1.1.1.1',
-						userId: 1
-					},
-					data: { userId: 1, amountCents: 100 }
-				} as unknown as RsRequest;
-				await getEventPsqlEngine().setupTriggerListeners;
-				const response = await getEventPsqlEngine()['executeCreateRequest'](
-					createRequest,
-					createOrderRouteData,
-					sampleSchema
-				);
-				expect(response?.userId).to.equal(1);
-				expect(response?.amountCents).to.equal(100);
-				const deleteRequest: RsRequest = {
-					requesterDetails: {
-						role: 'admin',
-						scopes: [],
-						host: 'google.com',
-						ipAddress: '1.1.1.1',
-						userId: 1
-					},
-					query: {},
-					data: { filter: `(column:id,value:${response.id})` }
-				} as unknown as RsRequest;
-				await getEventPsqlEngine()['executeDeleteRequest'](deleteRequest, deleteOrderRouteData, sampleSchema);
+							done();
+						},
+						{ tableName: 'order' }
+					);
+					const createRequest: RsRequest = {
+						requesterDetails: {
+							role: 'admin',
+							scopes: [],
+							host: 'google.com',
+							ipAddress: '1.1.1.1',
+							userId: 1
+						},
+						data: { userId: 1, amountCents: 100 }
+					} as unknown as RsRequest;
+					await getEventPsqlEngine().setupTriggerListeners;
+					const response = await getEventPsqlEngine()['executeCreateRequest'](
+						createRequest,
+						createOrderRouteData,
+						sampleSchema
+					);
+					expect(response?.userId).to.equal(1);
+					expect(response?.amountCents).to.equal(100);
+					const deleteRequest: RsRequest = {
+						requesterDetails: {
+							role: 'admin',
+							scopes: [],
+							host: 'google.com',
+							ipAddress: '1.1.1.1',
+							userId: 1
+						},
+						query: {},
+						data: { filter: `(column:id,value:${response.id})` }
+					} as unknown as RsRequest;
+					await getEventPsqlEngine()['executeDeleteRequest'](
+						deleteRequest,
+						deleteOrderRouteData,
+						sampleSchema
+					);
+				} catch (e) {
+					done(e);
+				}
 			})();
 		});
 		it('should fail executeCreateRequest for duplicates', async () => {
@@ -1410,6 +1420,63 @@ describe('PsqlEngine', function () {
 			// We should have the firstName column
 			expect(response.data.length).to.be.greaterThan(0);
 			expect(response.data[0].firstName).to.be.not.eq(undefined);
+		});
+	});
+
+	describe('PsqlEngine deprecation handling', () => {
+		const psqlEngine = new PsqlEngine(psqlPool);
+
+		it('should executeGetRequest with deprecation (no message)', async () => {
+			const response = (await psqlEngine['executeGetRequest'](
+				basicAdminRequest,
+				getUserWithDeprecationNoMessageRouteData,
+				sampleSchema
+			)) as DynamicObject;
+
+			// Verify the endpoint still works correctly
+			expect(response?.id).to.equal(1);
+			expect(response?.firstName).to.equal('Tanner');
+			expect(response?.lastName).to.equal('Burton');
+			expect(response?.email).to.equal('tanner@plvr.com');
+
+			// Verify deprecation data exists on route data
+			expect(getUserWithDeprecationNoMessageRouteData.deprecation).to.not.equal(undefined);
+			expect(getUserWithDeprecationNoMessageRouteData.deprecation?.message).to.equal(undefined);
+		});
+
+		it('should executeGetRequest with deprecation (with message)', async () => {
+			const response = (await psqlEngine['executeGetRequest'](
+				basicAdminRequest,
+				getUserWithDeprecationWithMessageRouteData,
+				sampleSchema
+			)) as DynamicObject;
+
+			// Verify the endpoint still works correctly
+			expect(response?.id).to.equal(1);
+			expect(response?.firstName).to.equal('Tanner');
+			expect(response?.lastName).to.equal('Burton');
+			expect(response?.email).to.equal('tanner@plvr.com');
+
+			// Verify deprecation data exists on route data with message
+			expect(getUserWithDeprecationWithMessageRouteData.deprecation).to.not.equal(undefined);
+			expect(getUserWithDeprecationWithMessageRouteData.deprecation?.message).to.equal(
+				'This endpoint is deprecated. Please use /api/v2/user instead.'
+			);
+		});
+
+		it('should handle deprecation with default message when message is undefined', () => {
+			const routeData = getUserWithDeprecationNoMessageRouteData;
+			expect(routeData.deprecation).to.not.equal(undefined);
+			expect(routeData.deprecation?.message).to.equal(undefined);
+			// The default message should be used by the middleware: 'This endpoint is deprecated and will be removed in the future.'
+		});
+
+		it('should handle deprecation with custom message', () => {
+			const routeData = getUserWithDeprecationWithMessageRouteData;
+			expect(routeData.deprecation).to.not.equal(undefined);
+			expect(routeData.deprecation?.message).to.equal(
+				'This endpoint is deprecated. Please use /api/v2/user instead.'
+			);
 		});
 	});
 });
