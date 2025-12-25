@@ -71,6 +71,9 @@ export class PsqlEngine extends SqlEngine {
 		types.setTypeParser(BIGINT_OID, (val) => {
 			return val === null ? null : Number(val);
 		});
+		const DECIMAL_OID = 1700;
+		// Set a custom parser for DECIMAL to return a string (preserves precision)
+		types.setTypeParser(DECIMAL_OID, (val) => val);
 	}
 
 	private async reconnectTriggerClient() {
