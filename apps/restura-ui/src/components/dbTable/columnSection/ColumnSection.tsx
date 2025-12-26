@@ -326,36 +326,53 @@ const ColumnSection: React.FC<ColumnSectionProps> = (props) => {
 								setSchema(updatedSchema);
 							}}
 						/>
-						<DbTableCell
-							disableEdit={
-								!getAllowValueEdit(
-									column.type as
-										| Restura.MariaDbColumnNumericTypes
-										| Restura.MariaDbColumnStringTypes
-										| Restura.MariaDbColumnDateTypes
-								)
-							}
-							cellType={'multiSelect'}
-							selectOptions={
-								column.value ? (column.value.replaceAll("'", '').split(',') as string[]) : []
-							}
-							value={column.value ? column.value.replaceAll("'", '').split(',') : []}
-							onMultiSelectChange={(value) => {
-								const updatedSchema = cloneDeep(schema);
-								const columnData = SchemaService.getColumnData(
-									updatedSchema,
-									props.tableName,
-									column.name
-								);
-								columnData.value = '';
-								value.forEach((item, index) => {
-									if (index === 0) columnData.value += "'" + item.replaceAll("'", '') + "'";
-									else columnData.value += ",'" + item.replaceAll("'", '') + "'";
-								});
-								setSchema(updatedSchema);
-							}}
-							isMultiSelectCreatable
-						/>
+						{column.type !== 'DECIMAL' ? (
+							<DbTableCell
+								disableEdit={
+									!getAllowValueEdit(
+										column.type as
+											| Restura.MariaDbColumnNumericTypes
+											| Restura.MariaDbColumnStringTypes
+											| Restura.MariaDbColumnDateTypes
+									)
+								}
+								cellType={'multiSelect'}
+								selectOptions={
+									column.value ? (column.value.replaceAll("'", '').split(',') as string[]) : []
+								}
+								value={column.value ? column.value.replaceAll("'", '').split(',') : []}
+								onMultiSelectChange={(value) => {
+									const updatedSchema = cloneDeep(schema);
+									const columnData = SchemaService.getColumnData(
+										updatedSchema,
+										props.tableName,
+										column.name
+									);
+									columnData.value = '';
+									value.forEach((item, index) => {
+										if (index === 0) columnData.value += "'" + item.replaceAll("'", '') + "'";
+										else columnData.value += ",'" + item.replaceAll("'", '') + "'";
+									});
+									setSchema(updatedSchema);
+								}}
+								isMultiSelectCreatable
+							/>
+						) : (
+							<DbTableCell
+								cellType={'text'}
+								value={column.value ?? ''}
+								onChange={(value) => {
+									const updatedSchema = cloneDeep(schema);
+									const columnData = SchemaService.getColumnData(
+										updatedSchema,
+										props.tableName,
+										column.name
+									);
+									columnData.value = value;
+									setSchema(updatedSchema);
+								}}
+							/>
+						)}
 						<DbTableCell
 							disableEdit={
 								!getAllowLengthEdit(
