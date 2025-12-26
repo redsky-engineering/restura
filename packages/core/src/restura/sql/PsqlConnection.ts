@@ -154,8 +154,7 @@ export abstract class PsqlConnection {
 		if ('isSystemUser' in queryMetadata && queryMetadata.isSystemUser) initiator = 'SYSTEM';
 
 		logger.silly(`${prefix}query by ${initiator}, Query ->\n${formattedSql}`, {
-			duration: `${durationMs.toFixed(2)}ms`,
-			_meta: { durationNs: nanoseconds }
+			durationMs
 		});
 	}
 }
