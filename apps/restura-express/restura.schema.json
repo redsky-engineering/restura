@@ -41,7 +41,8 @@
 					"roles": [],
 					"scopes": [],
 					"type": "BIGINT"
-				}
+				},
+				{ "isNullable": false, "name": "price", "roles": [], "scopes": [], "type": "DECIMAL", "value": "10,2" }
 			],
 			"foreignKeys": [
 				{
