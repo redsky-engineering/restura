@@ -318,6 +318,197 @@ describe('PsqlEngine', function () {
 		});
 	});
 	describe('PsqlEngine events', () => {
+		it('should not crash when insert handler throws an error', function (done) {
+			(async () => {
+				let unhandledRejection = false;
+				const rejectionHandler = () => {
+					unhandledRejection = true;
+				};
+				process.on('unhandledRejection', rejectionHandler);
+
+				const email = `${Date.now()}-error-insert@plvr.com`;
+				let handlerCalled = false;
+
+				// Add a handler that throws an error
+				eventManager.addRowInsertHandler<{ email: string }>(
+					async function () {
+						handlerCalled = true;
+						throw new Error('Intentional error in insert handler');
+					},
+					{ tableName: 'user' }
+				);
+
+				const requesterDetails: RequesterDetails = {
+					role: 'admin',
+					scopes: [],
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				};
+				const createRequest: RsRequest = {
+					requesterDetails,
+					data: {
+						firstName: 'ErrorTest',
+						lastName: 'Insert',
+						companyId: 1,
+						password: 'test',
+						email,
+						role: 'user'
+					}
+				} as unknown as RsRequest;
+
+				try {
+					await getEventPsqlEngine().setupTriggerListeners;
+					const response = await getEventPsqlEngine()['executeCreateRequest'](
+						cloneDeep(createRequest),
+						patchUserRouteData,
+						sampleSchema
+					);
+
+					// Give time for the event to be processed
+					await MiscUtils.sleep(100);
+
+					// The request should still succeed even though the handler threw
+					expect(response?.firstName).to.equal('ErrorTest');
+					expect(response?.id).to.be.greaterThan(0);
+					expect(handlerCalled).to.equal(true);
+					process.off('unhandledRejection', rejectionHandler);
+					expect(unhandledRejection).to.equal(false);
+					done();
+				} catch (e) {
+					done(e);
+				}
+			})();
+		});
+
+		it('should not crash when update handler throws an error', function (done) {
+			(async () => {
+				let unhandledRejection = false;
+				const rejectionHandler = () => {
+					unhandledRejection = true;
+				};
+				process.on('unhandledRejection', rejectionHandler);
+
+				let handlerCalled = false;
+
+				// Add a handler that throws an error
+				eventManager.addColumnChangeHandler<{ firstName: string }>(
+					async function () {
+						handlerCalled = true;
+						throw new Error('Intentional error in update handler');
+					},
+					{ tableName: 'user', columns: ['firstName'] }
+				);
+
+				const updateRequest: RsRequest = {
+					requesterDetails: {
+						role: 'admin',
+						scopes: [],
+						host: 'google.com',
+						ipAddress: '1.1.1.1',
+						userId: 1
+					},
+					body: { id: 1, firstName: 'ErrorUpdateTest', permissionLogin: true }
+				} as unknown as RsRequest;
+
+				try {
+					await getEventPsqlEngine().setupTriggerListeners;
+					const response = await getEventPsqlEngine()['executeUpdateRequest'](
+						updateRequest,
+						patchUserRouteData,
+						sampleSchema
+					);
+
+					// Give time for the event to be processed
+					await MiscUtils.sleep(100);
+
+					// The request should still succeed even though the handler threw
+					expect(response?.id).to.equal(1);
+					expect(response?.firstName).to.equal('ErrorUpdateTest');
+					expect(handlerCalled).to.equal(true);
+					process.off('unhandledRejection', rejectionHandler);
+					expect(unhandledRejection).to.equal(false);
+					done();
+				} catch (e) {
+					done(e);
+				}
+			})();
+		});
+
+		it('should not crash when delete handler throws an error', function (done) {
+			(async () => {
+				let unhandledRejection = false;
+
+				const rejectionHandler = () => {
+					unhandledRejection = true;
+				};
+				process.on('unhandledRejection', rejectionHandler);
+
+				const email = `${Date.now()}-error-delete@plvr.com`;
+				let handlerCalled = false;
+
+				// Add a handler that throws an error
+				eventManager.addRowDeleteHandler<{ email: string }>(
+					async function () {
+						handlerCalled = true;
+						throw new Error('Intentional error in delete handler');
+					},
+					{ tableName: 'user' }
+				);
+
+				const requesterDetails: RequesterDetails = {
+					role: 'admin',
+					scopes: [],
+					host: 'google.com',
+					ipAddress: '1.1.1.1',
+					userId: 1
+				};
+
+				const createRequest: RsRequest = {
+					requesterDetails,
+					data: {
+						firstName: 'ErrorTest',
+						lastName: 'Delete',
+						companyId: 1,
+						password: 'test',
+						email,
+						role: 'user'
+					}
+				} as unknown as RsRequest;
+
+				try {
+					await getEventPsqlEngine().setupTriggerListeners;
+					const createResponse = await getEventPsqlEngine()['executeCreateRequest'](
+						cloneDeep(createRequest),
+						patchUserRouteData,
+						sampleSchema
+					);
+					expect(createResponse?.id).to.be.greaterThan(0);
+
+					const deleteRequest: RsRequest = {
+						requesterDetails,
+						data: { id: createResponse.id }
+					} as unknown as RsRequest;
+					await getEventPsqlEngine()['executeDeleteRequest'](
+						deleteRequest,
+						deleteUserRouteData,
+						sampleSchema
+					);
+
+					// Give time for the event to be processed
+					await MiscUtils.sleep(100);
+
+					// The handler should have been called despite throwing an error
+					expect(handlerCalled).to.equal(true);
+					process.off('unhandledRejection', rejectionHandler);
+					expect(unhandledRejection).to.equal(false);
+					done();
+				} catch (e) {
+					done(e);
+				}
+			})();
+		});
+
 		it('should receive notification of user row being inserted', function (done) {
 			const email = `${Date.now()}@plvr.com`;
 			let doneCalled = false;
@@ -424,7 +615,6 @@ describe('PsqlEngine', function () {
 				let doneCalled = false;
 				eventManager.addRowDeleteHandler<{ email: string; metadata: undefined }>(
 					async function (data) {
-						console.log(data);
 						if (doneCalled) return;
 						try {
 							expect(data.queryMetadata.role).to.equal('admin');
