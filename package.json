@@ -27,7 +27,7 @@
     "lint-staged": "^16.1.5",
     "mocha": "^11.7.1",
     "nx": "21.1.1",
-    "prettier": "^3.5.3",
+    "prettier": "3.6.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.41.0"

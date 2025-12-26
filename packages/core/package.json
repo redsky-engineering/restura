@@ -1,6 +1,6 @@
 {
 	"name": "@restura/core",
-	"version": "1.5.0",
+	"version": "1.6.0",
 	"description": "Restura core utilities for No Code APIs",
 	"type": "module",
 	"types": "./dist/index.d.ts",
@@ -50,7 +50,7 @@
 		"pino": "^10.1.0",
 		"pino-loki": "^2.6.0",
 		"pino-pretty": "^13.1.2",
-		"prettier": "^3.6.2",
+		"prettier": "3.6.2",
 		"sql-formatter": "^15.6.6",
 		"tmp": "^0.2.5",
 		"typescript-json-schema": "^0.65.1",
