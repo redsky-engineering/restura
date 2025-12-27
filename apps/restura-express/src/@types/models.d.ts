@@ -13,6 +13,7 @@ declare namespace Model {
 		modifiedOn: string;
 		userId: number;
 		amountCents: number;
+		amount: string | null;
 	}
 	export interface Company {
 		id: number;
