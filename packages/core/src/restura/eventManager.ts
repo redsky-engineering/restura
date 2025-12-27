@@ -1,5 +1,6 @@
 import Bluebird from 'bluebird';
 import { UUID } from 'crypto';
+import { logger } from '../logger/logger.js';
 import { DynamicObject, RequesterDetails } from './types/customExpressTypes.js';
 
 export type EventType = 'DATABASE_ROW_DELETE' | 'DATABASE_ROW_INSERT' | 'DATABASE_COLUMN_UPDATE' | 'WEBHOOK';
@@ -122,7 +123,7 @@ class EventManager {
 	private async fireInsertActions(data: SqlMutationData, triggerResult: TriggerResult) {
 		await Bluebird.map(
 			this.actionHandlers.DATABASE_ROW_INSERT,
-			({ callback, filter }) => {
+			async ({ callback, filter }) => {
 				if (!this.hasHandlersForEventType('DATABASE_ROW_INSERT', filter, triggerResult)) return;
 				const insertData: ActionRowInsertData = {
 					tableName: triggerResult.table,
@@ -130,7 +131,12 @@ class EventManager {
 					insertObject: triggerResult.record,
 					queryMetadata: data.queryMetadata
 				};
-				callback(insertData, data.queryMetadata);
+
+				try {
+					await callback(insertData, data.queryMetadata);
+				} catch (error) {
+					logger.error(`Error firing insert action for table ${triggerResult.table}`, error);
+				}
 			},
 			{ concurrency: 10 }
 		);
@@ -138,7 +144,7 @@ class EventManager {
 	private async fireDeleteActions(data: SqlMutationData, triggerResult: TriggerResult) {
 		await Bluebird.map(
 			this.actionHandlers.DATABASE_ROW_DELETE,
-			({ callback, filter }) => {
+			async ({ callback, filter }) => {
 				if (!this.hasHandlersForEventType('DATABASE_ROW_DELETE', filter, triggerResult)) return;
 				const deleteData: ActionRowDeleteData = {
 					tableName: triggerResult.table,
@@ -146,7 +152,12 @@ class EventManager {
 					deletedRow: triggerResult.previousRecord,
 					queryMetadata: data.queryMetadata
 				};
-				callback(deleteData, data.queryMetadata);
+
+				try {
+					await callback(deleteData, data.queryMetadata);
+				} catch (error) {
+					logger.error(`Error firing delete action for table ${triggerResult.table}`, error);
+				}
 			},
 			{ concurrency: 10 }
 		);
@@ -154,7 +165,7 @@ class EventManager {
 	private async fireUpdateActions(data: SqlMutationData, triggerResult: TriggerResult) {
 		await Bluebird.map(
 			this.actionHandlers.DATABASE_COLUMN_UPDATE,
-			({ callback, filter }) => {
+			async ({ callback, filter }) => {
 				if (!this.hasHandlersForEventType('DATABASE_COLUMN_UPDATE', filter, triggerResult)) return;
 				const columnChangeData: ActionColumnChangeData = {
 					tableName: triggerResult.table,
@@ -163,7 +174,12 @@ class EventManager {
 					oldData: triggerResult.previousRecord,
 					queryMetadata: data.queryMetadata
 				};
-				callback(columnChangeData, data.queryMetadata);
+
+				try {
+					await callback(columnChangeData, data.queryMetadata);
+				} catch (error) {
+					logger.error(`Error firing update action for table ${triggerResult.table}`, error);
+				}
 			},
 			{ concurrency: 10 }
 		);
