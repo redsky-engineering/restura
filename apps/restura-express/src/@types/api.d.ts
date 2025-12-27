@@ -400,7 +400,7 @@ declare namespace CustomTypes {
 }
 
 declare namespace NotificationTypes {
-	export type Order = Pick<Model.Order, 'id' | 'createdOn' | 'modifiedOn' | 'userId' | 'amountCents'>;
+	export type Order = Pick<Model.Order, 'id' | 'createdOn' | 'modifiedOn' | 'userId' | 'amountCents' | 'amount'>;
 	export type Company = Pick<Model.Company, 'id' | 'createdOn' | 'modifiedOn' | 'name'>;
 	export type User = Pick<Model.User, 'id' | 'firstName' | 'lastName' | 'email' | 'phone'>;
 }
