@@ -6,7 +6,6 @@ declare namespace Model {
 		createdOn: string;
 		modifiedOn: string;
 		orderId: number | null;
-		price: string;
 	}
 	export interface Order {
 		id: number;
@@ -14,6 +13,7 @@ declare namespace Model {
 		modifiedOn: string;
 		userId: number;
 		amountCents: number;
+		amount: string | null;
 	}
 	export interface Company {
 		id: number;
