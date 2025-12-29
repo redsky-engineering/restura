@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path, { resolve } from 'path';
 import tmp from 'tmp';
-import * as TJS from 'typescript-json-schema';
+import { createGenerator, type Config } from 'ts-json-schema-generator';
 import { restura } from '../restura.js';
 import { ResturaSchema } from '../schemas/resturaSchema.js';
 import type { ValidationDictionary } from '../validators/requestValidator.js';
@@ -27,30 +27,27 @@ export default function customTypeValidationGenerator(
 	if (!customInterfaceNames) return {};
 
 	const temporaryFile = tmp.fileSync({ mode: 0o644, prefix: 'prefix-', postfix: '.ts' });
-	fs.writeFileSync(temporaryFile.name, currentSchema.customTypes.join('\n'));
 
-	const compilerOptions: TJS.CompilerOptions = {
-		strictNullChecks: true,
-		skipLibCheck: true // Needed if we are processing ES modules
-	};
+	// Include the additional type files as imports if needed
+	const additionalImports = ignoreGeneratedTypes
+		? ''
+		: [
+				`/// <reference path="${path.join(restura.resturaConfig.generatedTypesPath, 'restura.d.ts')}" />`,
+				`/// <reference path="${path.join(restura.resturaConfig.generatedTypesPath, 'models.d.ts')}" />`,
+				`/// <reference path="${path.join(restura.resturaConfig.generatedTypesPath, 'api.d.ts')}" />`
+			].join('\n') + '\n';
 
-	const program = TJS.getProgramFromFiles(
-		[
-			resolve(temporaryFile.name),
-			...(ignoreGeneratedTypes
-				? []
-				: [
-						path.join(restura.resturaConfig.generatedTypesPath, 'restura.d.ts'),
-						path.join(restura.resturaConfig.generatedTypesPath, 'models.d.ts'),
-						path.join(restura.resturaConfig.generatedTypesPath, 'api.d.ts')
-					])
-		],
-		compilerOptions
-	);
+	fs.writeFileSync(temporaryFile.name, additionalImports + currentSchema.customTypes.join('\n'));
+
 	customInterfaceNames.forEach((item) => {
-		const ddlSchema = TJS.generateSchema(program, item, {
-			required: true
-		});
+		const config: Config = {
+			path: resolve(temporaryFile.name),
+			tsconfig: path.join(process.cwd(), 'tsconfig.json'),
+			type: item,
+			skipTypeCheck: true
+		};
+		const generator = createGenerator(config);
+		const ddlSchema = generator.createSchema(item);
 		schemaObject[item] = ddlSchema || {};
 	});
 

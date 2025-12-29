@@ -1,5 +1,5 @@
 import jsonschema, { Schema } from 'jsonschema';
-import { Definition } from 'typescript-json-schema';
+import { Definition } from 'ts-json-schema-generator';
 import { RsError } from '../RsError.js';
 import { RouteData } from '../schemas/resturaSchema.js';
 import type { DynamicObject, RsRequest } from '../types/customExpressTypes.js';

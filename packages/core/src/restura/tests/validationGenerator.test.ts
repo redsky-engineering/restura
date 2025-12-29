@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { Schema } from 'jsonschema';
 import customTypeValidationGenerator from '../generators/customTypeValidationGenerator.js';
 import standardTypeValidationGenerator from '../generators/standardTypeValidationGenerator.js';
 import { ResturaSchema } from '../schemas/resturaSchema.js';
@@ -467,10 +468,12 @@ describe('customTypeValidationGenerator', function () {
 
 		// Validate UserProfile schema
 		expect(result).to.have.property('UserProfile');
-		expect(result.UserProfile).to.have.property('type', 'object');
-		expect(result.UserProfile).to.have.property('properties');
 
-		const userProfileProps = result.UserProfile.properties!;
+		const userProfile = result.UserProfile.definitions!.UserProfile as Schema;
+		expect(userProfile).to.have.property('type', 'object');
+		expect(userProfile).to.have.property('properties');
+
+		const userProfileProps = userProfile.properties!;
 		expect(userProfileProps).to.have.property('id');
 		expect(userProfileProps.id).to.deep.equal({ type: 'number' });
 		expect(userProfileProps).to.have.property('email');
@@ -487,6 +490,7 @@ describe('customTypeValidationGenerator', function () {
 		expect(userProfileProps).to.have.property('metadata');
 		expect(userProfileProps.metadata).to.have.property('type', 'object');
 		expect(userProfileProps.metadata).to.have.property('properties');
+
 		const metadataProps = (userProfileProps.metadata as DynamicObject).properties;
 		expect(metadataProps).to.have.property('lastLogin');
 		expect(metadataProps).to.have.property('loginCount');
@@ -502,10 +506,10 @@ describe('customTypeValidationGenerator', function () {
 
 		// Check optional field
 		expect(userProfileProps).to.have.property('age');
-		expect(result.UserProfile.required).to.not.include('age');
+		expect(userProfile.required).to.not.include('age');
 
 		// Check required fields
-		expect(result.UserProfile.required).to.include.members([
+		expect(userProfile.required).to.include.members([
 			'id',
 			'email',
 			'firstName',
@@ -519,10 +523,12 @@ describe('customTypeValidationGenerator', function () {
 
 		// Validate AuthResponse schema with reference to UserProfile
 		expect(result).to.have.property('AuthResponse');
-		expect(result.AuthResponse).to.have.property('type', 'object');
-		expect(result.AuthResponse).to.have.property('properties');
 
-		const authResponseProps = result.AuthResponse.properties!;
+		const authResponse = result.AuthResponse.definitions!.AuthResponse as Schema;
+		expect(authResponse).to.have.property('type', 'object');
+		expect(authResponse).to.have.property('properties');
+
+		const authResponseProps = authResponse.properties!;
 		expect(authResponseProps).to.have.property('token');
 		expect(authResponseProps).to.have.property('user');
 		// The user property should reference UserProfile or be a nested object
@@ -532,21 +538,25 @@ describe('customTypeValidationGenerator', function () {
 
 		// Validate StatusType (type alias with union)
 		expect(result).to.have.property('StatusType');
-		expect(result.StatusType).to.have.property('enum');
-		expect((result.StatusType as DynamicObject).enum).to.include.members(['pending', 'approved', 'rejected']);
+
+		const statusType = result.StatusType.definitions!.StatusType as Schema;
+		expect(statusType).to.have.property('enum');
+		expect((statusType as DynamicObject).enum).to.include.members(['pending', 'approved', 'rejected']);
 
 		// Validate ComplexNested with deep nesting and nullable
 		expect(result).to.have.property('ComplexNested');
-		expect(result.ComplexNested).to.have.property('properties');
 
-		const complexNestedProps = result.ComplexNested.properties!;
+		const complexNested = result.ComplexNested.definitions!.ComplexNested as Schema;
+		expect(complexNested).to.have.property('properties');
+
+		const complexNestedProps = complexNested.properties!;
 		expect(complexNestedProps).to.have.property('data');
 		expect(complexNestedProps.data).to.have.property('type', 'object');
 		expect(complexNestedProps.data).to.have.property('properties');
 		expect((complexNestedProps.data as DynamicObject).properties).to.have.property('nested');
 
 		// Check optional vs nullable
-		expect(result.ComplexNested.required).to.not.include('optionalField');
+		expect(complexNested.required).to.not.include('optionalField');
 		expect(complexNestedProps).to.have.property('nullableField');
 	});
 
@@ -583,15 +593,16 @@ describe('customTypeValidationGenerator', function () {
 		const result = customTypeValidationGenerator(testSchema, true);
 
 		expect(result).to.have.property('SimpleUser');
-		expect(result.SimpleUser).to.have.property('type', 'object');
-		expect(result.SimpleUser).to.have.property('properties');
+		const simpleUser = result.SimpleUser.definitions!.SimpleUser as Schema;
+		expect(simpleUser).to.have.property('type', 'object');
+		expect(simpleUser).to.have.property('properties');
 
-		const simpleUserProps = result.SimpleUser.properties!;
+		const simpleUserProps = simpleUser.properties!;
 		expect(simpleUserProps).to.have.property('id');
 		expect(simpleUserProps.id).to.deep.equal({ type: 'number' });
 		expect(simpleUserProps).to.have.property('name');
 		expect(simpleUserProps.name).to.deep.equal({ type: 'string' });
-		expect(result.SimpleUser.required).to.include.members(['id', 'name']);
+		expect(simpleUser.required).to.include.members(['id', 'name']);
 	});
 
 	it('should extract interface names correctly', () => {
@@ -604,7 +615,7 @@ describe('customTypeValidationGenerator', function () {
 			customTypes: [
 				`export interface FirstInterface { id: number; }`,
 				`export type SecondType = string;`,
-				`interface ThirdInterface { name: string; }`
+				`export interface ThirdInterface { name: string; }`
 			]
 		};
 
@@ -638,9 +649,10 @@ describe('customTypeValidationGenerator', function () {
 		const result = customTypeValidationGenerator(testSchema, true);
 
 		expect(result).to.have.property('UserWithAddresses');
-		expect(result.UserWithAddresses).to.have.property('properties');
+		const userWithAddresses = result.UserWithAddresses.definitions!.UserWithAddresses as Schema;
+		expect(userWithAddresses).to.have.property('properties');
 
-		const userWithAddressesProps = result.UserWithAddresses.properties!;
+		const userWithAddressesProps = userWithAddresses.properties!;
 		expect(userWithAddressesProps).to.have.property('addresses');
 		expect(userWithAddressesProps.addresses).to.have.property('type', 'array');
 		expect(userWithAddressesProps.addresses).to.have.property('items');
@@ -664,9 +676,10 @@ describe('customTypeValidationGenerator', function () {
 		const result = customTypeValidationGenerator(testSchema, true);
 
 		expect(result).to.have.property('FlexibleValue');
-		expect(result.FlexibleValue).to.have.property('properties');
+		const flexibleValue = result.FlexibleValue.definitions!.FlexibleValue as Schema;
+		expect(flexibleValue).to.have.property('properties');
 
-		const flexibleValueProps = result.FlexibleValue.properties!;
+		const flexibleValueProps = flexibleValue.properties!;
 		expect(flexibleValueProps).to.have.property('value');
 		// Union types should be represented with anyOf or oneOf
 		expect(flexibleValueProps.value).to.satisfy((prop: DynamicObject) => {

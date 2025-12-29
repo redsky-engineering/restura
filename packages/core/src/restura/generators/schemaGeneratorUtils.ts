@@ -1,4 +1,4 @@
-import type { Definition } from 'typescript-json-schema';
+import type { Definition } from 'ts-json-schema-generator';
 import { RequestData } from '../schemas/resturaSchema.js';
 
 export function buildRouteSchema(requestParams: RequestData[]): Definition {
