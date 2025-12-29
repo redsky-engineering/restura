@@ -2,6 +2,7 @@ import fs from 'fs';
 import path, { resolve } from 'path';
 import tmp from 'tmp';
 import { createGenerator, type Config } from 'ts-json-schema-generator';
+import { logger } from '../../logger/logger.js';
 import { restura } from '../restura.js';
 import { ResturaSchema } from '../schemas/resturaSchema.js';
 import type { ValidationDictionary } from '../validators/requestValidator.js';
@@ -37,18 +38,29 @@ export default function customTypeValidationGenerator(
 				`/// <reference path="${path.join(restura.resturaConfig.generatedTypesPath, 'api.d.ts')}" />`
 			].join('\n') + '\n';
 
-	fs.writeFileSync(temporaryFile.name, additionalImports + currentSchema.customTypes.join('\n'));
+	const typesWithExport = currentSchema.customTypes.map((type) => {
+		// Add export if not already present
+		if (!type.trim().startsWith('export ')) {
+			return 'export ' + type;
+		}
+		return type;
+	});
+	fs.writeFileSync(temporaryFile.name, additionalImports + typesWithExport.join('\n'));
+
+	const config: Config = {
+		path: resolve(temporaryFile.name),
+		tsconfig: path.join(process.cwd(), 'tsconfig.json'),
+		skipTypeCheck: true
+	};
+	const generator = createGenerator(config);
 
 	customInterfaceNames.forEach((item) => {
-		const config: Config = {
-			path: resolve(temporaryFile.name),
-			tsconfig: path.join(process.cwd(), 'tsconfig.json'),
-			type: item,
-			skipTypeCheck: true
-		};
-		const generator = createGenerator(config);
-		const ddlSchema = generator.createSchema(item);
-		schemaObject[item] = ddlSchema || {};
+		try {
+			const ddlSchema = generator.createSchema(item);
+			schemaObject[item] = ddlSchema || {};
+		} catch (error) {
+			logger.error('Failed to generate schema for custom type: ' + item, error);
+		}
 	});
 
 	temporaryFile.removeCallback();

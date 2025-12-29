@@ -15,6 +15,7 @@ export default function requestValidator(
 	standardValidationSchema: ValidationDictionary
 ) {
 	let schemaForCoercion: Schema;
+	let skipAttributes: string[] = [];
 
 	if (routeData.type === 'ONE' || routeData.type === 'ARRAY' || routeData.type === 'PAGED') {
 		// Standard endpoint request
@@ -41,15 +42,19 @@ export default function requestValidator(
 			...currentInterface,
 			additionalProperties: false
 		} as Schema;
+		skipAttributes = ['type'];
 	} else {
 		throw new RsError('BAD_REQUEST', `Invalid route type: ${routeData.type}`);
 	}
 
 	const requestData = getRequestData(req as RsRequest<unknown>, schemaForCoercion);
+	console.log(requestData);
 	req.data = requestData;
 
 	const validator = new jsonschema.Validator();
-	const executeValidation = validator.validate(req.data, schemaForCoercion);
+	const executeValidation = validator.validate(req.data, schemaForCoercion, {
+		skipAttributes
+	});
 
 	if (!executeValidation.valid) {
 		const errorMessages = executeValidation.errors
