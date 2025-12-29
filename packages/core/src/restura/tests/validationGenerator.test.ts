@@ -686,4 +686,46 @@ describe('customTypeValidationGenerator', function () {
 			return prop.anyOf || prop.oneOf || prop.type;
 		});
 	});
+
+	it('should handle intersection types', () => {
+		const testSchema: ResturaSchema = {
+			database: [],
+			endpoints: [],
+			globalParams: [],
+			roles: [],
+			scopes: [],
+			customTypes: [
+				`export interface BaseEntity {
+					id: number;
+					createdAt: string;
+				}`,
+				`export interface UserInfo {
+					firstName: string;
+					lastName: string;
+					email: string;
+				}`,
+				`export type UserWithBase = BaseEntity & UserInfo;`
+			]
+		};
+
+		const result = customTypeValidationGenerator(testSchema, true);
+
+		expect(result).to.have.property('UserWithBase');
+		const userWithBase = result.UserWithBase.definitions!.UserWithBase as Schema;
+
+		// Intersection types should be represented with allOf
+		expect(userWithBase).to.satisfy((schema: DynamicObject) => {
+			return schema.allOf || (schema.properties && Object.keys(schema.properties).length > 0);
+		});
+
+		// If it's flattened, check that all properties from both types are present
+		if (userWithBase.properties) {
+			const props = userWithBase.properties;
+			expect(props).to.have.property('id');
+			expect(props).to.have.property('createdAt');
+			expect(props).to.have.property('firstName');
+			expect(props).to.have.property('lastName');
+			expect(props).to.have.property('email');
+		}
+	});
 });
