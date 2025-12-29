@@ -48,7 +48,6 @@ export default function requestValidator(
 	}
 
 	const requestData = getRequestData(req as RsRequest<unknown>, schemaForCoercion);
-	console.log(requestData);
 	req.data = requestData;
 
 	const validator = new jsonschema.Validator();
