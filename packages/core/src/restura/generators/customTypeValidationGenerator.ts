@@ -9,7 +9,7 @@ import type { ValidationDictionary } from '../validators/requestValidator.js';
 import { buildRouteSchema } from './schemaGeneratorUtils.js';
 
 /**
- * This function generates a temporary file with the custom types and then uses typescript-json-schema to generate a JSON schema for each custom type.
+ * This function generates a temporary file with the custom types and then uses ts-json-schema-generator to generate a JSON schema for each custom type.
  * @param currentSchema - The current schema to generate the validation dictionary for.
  * @returns A dictionary of custom type names and their corresponding JSON schemas.
  */
@@ -33,9 +33,9 @@ export default function customTypeValidationGenerator(
 	const additionalImports = ignoreGeneratedTypes
 		? ''
 		: [
-				`/// <reference path="${path.join(restura.resturaConfig.generatedTypesPath, 'restura.d.ts')}" />`,
-				`/// <reference path="${path.join(restura.resturaConfig.generatedTypesPath, 'models.d.ts')}" />`,
-				`/// <reference path="${path.join(restura.resturaConfig.generatedTypesPath, 'api.d.ts')}" />`
+				`/// <reference path="${toForwardSlashPath(path.join(restura.resturaConfig.generatedTypesPath, 'restura.d.ts'))}" />`,
+				`/// <reference path="${toForwardSlashPath(path.join(restura.resturaConfig.generatedTypesPath, 'models.d.ts'))}" />`,
+				`/// <reference path="${toForwardSlashPath(path.join(restura.resturaConfig.generatedTypesPath, 'api.d.ts'))}" />`
 			].join('\n') + '\n';
 
 	const typesWithExport = currentSchema.customTypes.map((type) => {
@@ -78,4 +78,8 @@ export default function customTypeValidationGenerator(
 	}
 
 	return schemaObject;
+}
+
+function toForwardSlashPath(path: string): string {
+	return path.replaceAll('\\', '/');
 }
