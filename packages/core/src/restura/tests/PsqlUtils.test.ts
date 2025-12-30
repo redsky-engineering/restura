@@ -4,6 +4,7 @@ import {
 	insertObjectQuery,
 	questionMarksToOrderedParams,
 	SQL,
+	toSqlLiteral,
 	updateObjectQuery
 } from '../sql/PsqlUtils.js';
 
@@ -127,6 +128,70 @@ describe('PsqlUtils', () => {
 						   WHERE "id" = $1
 						   RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
+	});
+
+	describe('toSqlLiteral', () => {
+		it('should format a string with quotes', () => {
+			expect(toSqlLiteral('test')).to.equal("'test'");
+		});
+
+		it('should escape special characters in strings', () => {
+			expect(toSqlLiteral("it's a test")).to.equal("'it''s a test'");
+		});
+
+		it('should return NULL for null', () => {
+			expect(toSqlLiteral(null)).to.equal('NULL');
+		});
+
+		it('should return NULL for undefined', () => {
+			expect(toSqlLiteral(undefined)).to.equal('NULL');
+		});
+
+		it('should format numbers as unquoted literals', () => {
+			expect(toSqlLiteral(42)).to.equal('42');
+			expect(toSqlLiteral(3.14)).to.equal('3.14');
+			expect(toSqlLiteral(-100)).to.equal('-100');
+			expect(toSqlLiteral(0)).to.equal('0');
+		});
+
+		it('should return NULL for non-finite numbers', () => {
+			expect(toSqlLiteral(Infinity)).to.equal('NULL');
+			expect(toSqlLiteral(-Infinity)).to.equal('NULL');
+			expect(toSqlLiteral(NaN)).to.equal('NULL');
+		});
+
+		it('should format booleans as TRUE/FALSE', () => {
+			expect(toSqlLiteral(true)).to.equal('TRUE');
+			expect(toSqlLiteral(false)).to.equal('FALSE');
+		});
+
+		it('should format simple arrays', () => {
+			expect(toSqlLiteral([1, 2, 3])).to.equal('ARRAY[1, 2, 3]');
+			expect(toSqlLiteral(['a', 'b'])).to.equal("ARRAY['a', 'b']");
+		});
+
+		it('should format arrays with mixed types', () => {
+			expect(toSqlLiteral([1, 'two', true, null])).to.equal("ARRAY[1, 'two', TRUE, NULL]");
+		});
+
+		it('should format nested arrays', () => {
+			expect(
+				toSqlLiteral([
+					[1, 2],
+					[3, 4]
+				])
+			).to.equal('ARRAY[ARRAY[1, 2], ARRAY[3, 4]]');
+		});
+
+		it('should format empty arrays', () => {
+			expect(toSqlLiteral([])).to.equal('ARRAY[]');
+		});
+
+		it('should format Date objects', () => {
+			const date = new Date('2024-01-15T12:00:00.000Z');
+			const formatted = toSqlLiteral(date);
+			expect(formatted).to.include('2024');
+		});
 	});
 });
 const trimRedundantWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
