@@ -128,3 +128,23 @@ export function SQL(strings: TemplateStringsArray, ...values: unknown[]) {
 
 	return query;
 }
+
+/**
+ * Converts a JavaScript value to its PostgreSQL literal representation.
+ * Used for debug logging of SQL queries — NOT for building actual queries
+ * (use parameterized queries for that).
+ *
+ * @example
+ * toSqlLiteral('hello')     // "'hello'"
+ * toSqlLiteral(42)          // "42"
+ * toSqlLiteral(true)        // "TRUE"
+ * toSqlLiteral(null)        // "NULL"
+ * toSqlLiteral([1, 2])      // "ARRAY[1, 2]"
+ */
+export function toSqlLiteral(value: unknown): string {
+	if (value === null || value === undefined) return 'NULL';
+	if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'NULL';
+	if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+	if (Array.isArray(value)) return `ARRAY[${value.map((v) => toSqlLiteral(v)).join(', ')}]`;
+	return format.literal(value as string | object | Date);
+}

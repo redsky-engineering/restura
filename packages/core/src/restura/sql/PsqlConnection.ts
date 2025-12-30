@@ -1,13 +1,12 @@
 import crypto, { UUID } from 'crypto';
 import { QueryConfigValues, QueryResult, QueryResultRow } from 'pg';
-import format from 'pg-format';
 import { format as sqlFormat } from 'sql-formatter';
 import { z } from 'zod';
 import { logger } from '../../logger/logger.js';
 import { RsError } from '../RsError.js';
 import { QueryMetadata } from '../eventManager.js';
 import { RequesterDetails } from '../types/customExpressTypes.js';
-import { questionMarksToOrderedParams } from './PsqlUtils.js';
+import { questionMarksToOrderedParams, toSqlLiteral } from './PsqlUtils.js';
 
 export abstract class PsqlConnection {
 	readonly instanceId: UUID;
@@ -120,24 +119,11 @@ export abstract class PsqlConnection {
 	) {
 		if (logger.level !== 'trace' && logger.level !== 'silly') return;
 
-		let sqlStatement = '';
-		if (options.length === 0) {
-			sqlStatement = query;
-		} else {
-			sqlStatement = query.replace(/\$\d+/g, (match) => {
-				const paramIndex = parseInt(match.substring(1)) - 1; // Extract number from $1, $2, etc.
-				if (paramIndex < 0 || paramIndex >= options.length) {
-					return 'INVALID_PARAM_INDEX';
-				}
-				const value = options[paramIndex];
-				if (typeof value === 'number') return value.toString();
-				if (typeof value === 'boolean') return value.toString();
-				if (Array.isArray(value)) {
-					return `ARRAY[${value.join(', ')}]`;
-				}
-				return format.literal(value as string | object | Date | null | undefined);
-			});
-		}
+		const sqlStatement = query.replace(/\$(\d+)/g, (_, num) => {
+			const paramIndex = parseInt(num) - 1;
+			if (paramIndex >= options.length) return 'INVALID_PARAM_INDEX';
+			return toSqlLiteral(options[paramIndex]);
+		});
 
 		const formattedSql = sqlFormat(sqlStatement, {
 			language: 'postgresql',
