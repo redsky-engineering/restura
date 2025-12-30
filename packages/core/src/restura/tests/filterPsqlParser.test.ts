@@ -636,17 +636,106 @@ B%')`,
 			done();
 		});
 
-		it('Should reject SQL injection attempts', function (done: Done) {
-			testBadInput(
-				"!(column:id,value:4504055,type:contains)and!(column:name,value:jim'; 'DROP TABLE userV2'; ,type:endsWith)"
-			);
-			done();
-		});
-
 		it('Should reject invalid logical operators', function (done: Done) {
 			testBadInput(
 				'(colum:orderV2.id,value:215)AND(column:orderV2.totalPriceCents,value:3070,type:greaterThanEqual)xor(value:3070,column:totalPriceCents,,type:lessThanEqual)'
 			);
+			done();
+		});
+	});
+});
+
+describe('SQL Injection Prevention', function () {
+	describe('Old Syntax - Rejected by Grammar', function () {
+		it('Should reject semicolon-based injection attempts', function (done: Done) {
+			testBadInput(
+				"!(column:id,value:4504055,type:contains)and!(column:name,value:jim'; 'DROP TABLE userV2'; ,type:endsWith)"
+			);
+			testBadInput('(column:id,value:1; DROP TABLE users; --,type:exact)');
+			done();
+		});
+
+		it('Should reject parentheses-based injection in values', function (done: Done) {
+			testBadInput('(column:id,value:1) OR (1=1,type:exact)');
+			testBadInput('(column:name,value:test) UNION SELECT * FROM users --,type:exact)');
+			done();
+		});
+	});
+
+	describe('New Syntax - Rejected by Grammar', function () {
+		it('Should reject parentheses-based injection in values', function (done: Done) {
+			// Parentheses are grammar delimiters and cannot appear unescaped in values
+			testBadInput('(id,1) OR (1=1)');
+			testBadInput('(name,test) UNION SELECT * FROM users --');
+			done();
+		});
+	});
+
+	describe('New Syntax - Safely Escaped by pg-format', function () {
+		it('Should escape semicolon-based injection attempts as literals', function (done: Done) {
+			// Semicolons are allowed in values and get escaped as harmless literals
+			test('(id,1; DROP TABLE users; --)', `("id" = '1; DROP TABLE users; --')`);
+			test("(name,has,test'; DELETE FROM users; --)", `("name"::text ILIKE '%test''; DELETE FROM users; --%')`);
+			done();
+		});
+
+		it('Should escape SQL comment syntax as literals', function (done: Done) {
+			// Comment syntax becomes literal strings, not actual SQL comments
+			test('(id,1 -- comment)', `("id" = '1 -- comment')`);
+			done();
+		});
+
+		it('Should safely escape single quotes in values', function (done: Done) {
+			// Single quotes are escaped by pg-format, making injection harmless
+			test("(name,O'Brien)", `("name" = 'O''Brien')`);
+			test("(name,has,O'Malley)", `("name"::text ILIKE '%O''Malley%')`);
+			test('(company,Test\'s "Company")', `("company" = 'Test''s "Company"')`);
+			done();
+		});
+
+		it('Should safely escape classic OR injection attempts', function (done: Done) {
+			// The ' OR '1'='1 pattern becomes a harmless literal string
+			test("(password,' OR '1'='1)", `("password" = ''' OR ''1''=''1')`);
+			test("(user,admin'--)", `("user" = 'admin''--')`);
+			done();
+		});
+
+		it('Should safely escape UNION injection attempts in values', function (done: Done) {
+			// UNION attempts become harmless literal strings when properly quoted
+			test("(search,test' UNION SELECT * FROM users--)", `("search" = 'test'' UNION SELECT * FROM users--')`);
+			done();
+		});
+
+		it('Should safely escape backslashes', function (done: Done) {
+			// Backslashes are handled by pg-format with E'' syntax
+			test('(path,C:\\\\Windows\\\\System32)', `("path" = E'C:\\\\Windows\\\\System32')`);
+			done();
+		});
+
+		it('Should safely handle double quotes in values', function (done: Done) {
+			// Double quotes in values are fine - they're inside single-quoted strings
+			test('(name,John "The Rock" Doe)', `("name" = 'John "The Rock" Doe')`);
+			done();
+		});
+
+		it('Should safely escape quotes in IN operator values', function (done: Done) {
+			test("(status,in,it's|they're|we're)", `("status" IN ('it''s', 'they''re', 'we''re'))`);
+			done();
+		});
+	});
+
+	describe('Column Name Injection Prevention', function () {
+		it('Should quote column names preventing injection', function (done: Done) {
+			// Column names are always double-quoted, preventing injection
+			// Even malicious column names become harmless identifiers
+			test('(id,123)', `("id" = 123)`);
+			test('(user_id,456)', `("user_id" = 456)`);
+			done();
+		});
+
+		it('Should handle column names with special chars via quoting', function (done: Done) {
+			// The grammar restricts column chars, but quoting adds defense in depth
+			test('(table.column,value)', `("table"."column" = 'value')`);
 			done();
 		});
 	});
