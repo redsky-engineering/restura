@@ -776,7 +776,7 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 			const parseResult = filterPsqlParser.parse(statement);
 			if (parseResult.usedOldSyntax) {
 				logger.warn(
-					`Deprecated filter syntax detected in route "${routeData.name}". Please migrate to the new filter syntax.`
+					`Deprecated filter syntax detected in route "${routeData.name}" (${routeData.path}). Please migrate to the new filter syntax.`
 				);
 			}
 			statement = parseResult.sql;
