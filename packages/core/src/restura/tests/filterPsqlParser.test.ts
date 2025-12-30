@@ -24,7 +24,7 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		it('Should parse equality - no operator (default)', function (done: Done) {
 			test('(status,ACTIVE)', `("status" = 'ACTIVE')`);
 			test('(name,John)', `("name" = 'John')`);
-			test('(count,42)', `("count" = '42')`);
+			test('(count,42)', `("count" = 42)`);
 			done();
 		});
 
@@ -41,26 +41,26 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		});
 
 		it('Should parse gt (greater than)', function (done: Done) {
-			test('(price,gt,100)', `("price" > '100')`);
-			test('(age,gt,21)', `("age" > '21')`);
+			test('(price,gt,100)', `("price" > 100)`);
+			test('(age,gt,21)', `("age" > 21)`);
 			done();
 		});
 
 		it('Should parse gte (greater than or equal)', function (done: Done) {
-			test('(price,gte,100)', `("price" >= '100')`);
-			test('(age,gte,18)', `("age" >= '18')`);
+			test('(price,gte,100)', `("price" >= 100)`);
+			test('(age,gte,18)', `("age" >= 18)`);
 			done();
 		});
 
 		it('Should parse lt (less than)', function (done: Done) {
-			test('(stock,lt,10)', `("stock" < '10')`);
-			test('(priority,lt,5)', `("priority" < '5')`);
+			test('(stock,lt,10)', `("stock" < 10)`);
+			test('(priority,lt,5)', `("priority" < 5)`);
 			done();
 		});
 
 		it('Should parse lte (less than or equal)', function (done: Done) {
-			test('(score,lte,100)', `("score" <= '100')`);
-			test('(quantity,lte,0)', `("quantity" <= '0')`);
+			test('(score,lte,100)', `("score" <= 100)`);
+			test('(quantity,lte,0)', `("quantity" <= 0)`);
 			done();
 		});
 
@@ -98,14 +98,14 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 	describe('Column Path Syntax', function () {
 		it('Should parse single-part column (column only)', function (done: Done) {
 			test('(status,ACTIVE)', `("status" = 'ACTIVE')`);
-			test('(userId,123)', `("userId" = '123')`);
+			test('(userId,123)', `("userId" = 123)`);
 			done();
 		});
 
 		it('Should parse two-part column (table.column)', function (done: Done) {
 			test('(order.status,ACTIVE)', `("order"."status" = 'ACTIVE')`);
 			test('(user.email,sw,admin)', `("user"."email"::text ILIKE 'admin%')`);
-			test('(product.price,gt,100)', `("product"."price" > '100')`);
+			test('(product.price,gt,100)', `("product"."price" > 100)`);
 			done();
 		});
 
@@ -188,26 +188,23 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 
 	describe('Nesting and Grouping', function () {
 		it('Should parse valid single-level grouping', function (done: Done) {
-			test('((a,1)or(b,2))', `(("a" = '1') OR ("b" = '2'))`);
-			test('((x,gt,0)and(y,lt,100))', `(("x" > '0') AND ("y" < '100'))`);
+			test('((a,1)or(b,2))', `(("a" = 1) OR ("b" = 2))`);
+			test('((x,gt,0)and(y,lt,100))', `(("x" > 0) AND ("y" < 100))`);
 			done();
 		});
 
 		it('Should parse maximum valid nesting - groups at top level', function (done: Done) {
-			test('((a,1)or(b,2))and((c,3)or(d,4))', `(("a" = '1') OR ("b" = '2')) AND (("c" = '3') OR ("d" = '4'))`);
+			test('((a,1)or(b,2))and((c,3)or(d,4))', `(("a" = 1) OR ("b" = 2)) AND (("c" = 3) OR ("d" = 4))`);
 			test(
 				'((x,gt,0)and(y,lt,10))or((z,gte,5)and(w,lte,20))',
-				`(("x" > '0') AND ("y" < '10')) OR (("z" >= '5') AND ("w" <= '20'))`
+				`(("x" > 0) AND ("y" < 10)) OR (("z" >= 5) AND ("w" <= 20))`
 			);
 			done();
 		});
 
 		it('Should parse negated groups', function (done: Done) {
-			test('!((a,1)or(b,2))', `NOT (("a" = '1') OR ("b" = '2'))`);
-			test(
-				'((a,1)or(b,2))and!((c,3)or(d,4))',
-				`(("a" = '1') OR ("b" = '2')) AND NOT (("c" = '3') OR ("d" = '4'))`
-			);
+			test('!((a,1)or(b,2))', `NOT (("a" = 1) OR ("b" = 2))`);
+			test('((a,1)or(b,2))and!((c,3)or(d,4))', `(("a" = 1) OR ("b" = 2)) AND NOT (("c" = 3) OR ("d" = 4))`);
 			done();
 		});
 
@@ -247,39 +244,39 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 
 	describe('Logical Operators', function () {
 		it('Should parse AND operator', function (done: Done) {
-			test('(a,1)and(b,2)', `("a" = '1') AND ("b" = '2')`);
-			test('(a,1)and(b,2)and(c,3)', `("a" = '1') AND ("b" = '2') AND ("c" = '3')`);
+			test('(a,1)and(b,2)', `("a" = 1) AND ("b" = 2)`);
+			test('(a,1)and(b,2)and(c,3)', `("a" = 1) AND ("b" = 2) AND ("c" = 3)`);
 			done();
 		});
 
 		it('Should parse OR operator', function (done: Done) {
-			test('(a,1)or(b,2)', `("a" = '1') OR ("b" = '2')`);
-			test('(a,1)or(b,2)or(c,3)', `("a" = '1') OR ("b" = '2') OR ("c" = '3')`);
+			test('(a,1)or(b,2)', `("a" = 1) OR ("b" = 2)`);
+			test('(a,1)or(b,2)or(c,3)', `("a" = 1) OR ("b" = 2) OR ("c" = 3)`);
 			done();
 		});
 
 		it('Should parse mixed AND/OR', function (done: Done) {
-			test('(a,1)and(b,2)or(c,3)', `("a" = '1') AND ("b" = '2') OR ("c" = '3')`);
-			test('(a,1)or(b,2)and(c,3)', `("a" = '1') OR ("b" = '2') AND ("c" = '3')`);
+			test('(a,1)and(b,2)or(c,3)', `("a" = 1) AND ("b" = 2) OR ("c" = 3)`);
+			test('(a,1)or(b,2)and(c,3)', `("a" = 1) OR ("b" = 2) AND ("c" = 3)`);
 			done();
 		});
 
 		it('Should parse negation with logical operators', function (done: Done) {
-			test('!(a,1)and(b,2)', `NOT ("a" = '1') AND ("b" = '2')`);
-			test('(a,1)and!(b,2)', `("a" = '1') AND NOT ("b" = '2')`);
-			test('!(a,1)and!(b,2)', `NOT ("a" = '1') AND NOT ("b" = '2')`);
+			test('!(a,1)and(b,2)', `NOT ("a" = 1) AND ("b" = 2)`);
+			test('(a,1)and!(b,2)', `("a" = 1) AND NOT ("b" = 2)`);
+			test('!(a,1)and!(b,2)', `NOT ("a" = 1) AND NOT ("b" = 2)`);
 			done();
 		});
 	});
 
 	describe('Case Sensitivity', function () {
 		it('Should be case-insensitive for comparison operators', function (done: Done) {
-			test('(price,GT,100)', `("price" > '100')`);
-			test('(price,Gt,100)', `("price" > '100')`);
-			test('(price,gT,100)', `("price" > '100')`);
-			test('(price,GTE,100)', `("price" >= '100')`);
-			test('(price,LT,100)', `("price" < '100')`);
-			test('(price,LTE,100)', `("price" <= '100')`);
+			test('(price,GT,100)', `("price" > 100)`);
+			test('(price,Gt,100)', `("price" > 100)`);
+			test('(price,gT,100)', `("price" > 100)`);
+			test('(price,GTE,100)', `("price" >= 100)`);
+			test('(price,LT,100)', `("price" < 100)`);
+			test('(price,LTE,100)', `("price" <= 100)`);
 			test('(status,NE,deleted)', `("status" <> 'deleted')`);
 			done();
 		});
@@ -307,10 +304,10 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		});
 
 		it('Should be case-insensitive for logical operators', function (done: Done) {
-			test('(a,1)AND(b,2)', `("a" = '1') AND ("b" = '2')`);
-			test('(a,1)And(b,2)', `("a" = '1') AND ("b" = '2')`);
-			test('(a,1)OR(b,2)', `("a" = '1') OR ("b" = '2')`);
-			test('(a,1)Or(b,2)', `("a" = '1') OR ("b" = '2')`);
+			test('(a,1)AND(b,2)', `("a" = 1) AND ("b" = 2)`);
+			test('(a,1)And(b,2)', `("a" = 1) AND ("b" = 2)`);
+			test('(a,1)OR(b,2)', `("a" = 1) OR ("b" = 2)`);
+			test('(a,1)Or(b,2)', `("a" = 1) OR ("b" = 2)`);
 			done();
 		});
 	});
@@ -319,16 +316,16 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		it('Should still parse old syntax', function (done: Done) {
 			// Verify old verbose syntax still works alongside new compact syntax
 			test('(column:status,value:ACTIVE,type:exact)', `("status" = 'ACTIVE')`, true);
-			test('(column:price,value:100,type:greaterThan)', `("price" > '100')`, true);
+			test('(column:price,value:100,type:greaterThan)', `("price" > 100)`, true);
 			test('(column:name,value:test,type:contains)', `("name"::text ILIKE '%test%')`, true);
 			done();
 		});
 
 		it('Old syntax with logical operators still works', function (done: Done) {
-			test('(column:id,value:251)or(column:id,value:278)', `("id" = '251') or ("id" = '278')`, true);
+			test('(column:id,value:251)or(column:id,value:278)', `("id" = 251) or ("id" = 278)`, true);
 			test(
 				'((column:id,value:251)or(column:id,value:278))AND(column:status,value:ACTIVE,type:exact)',
-				`(("id" = '251') or ("id" = '278')) AND ("status" = 'ACTIVE')`,
+				`(("id" = 251) or ("id" = 278)) AND ("status" = 'ACTIVE')`,
 				true
 			);
 			done();
@@ -337,22 +334,22 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 
 	describe('Whitespace Handling', function () {
 		it('Should allow whitespace around logical operators', function (done: Done) {
-			test('(a,1) and (b,2)', `("a" = '1') AND ("b" = '2')`);
-			test('(a,1)  or  (b,2)', `("a" = '1') OR ("b" = '2')`);
-			test('(a,1)   AND   (b,2)   OR   (c,3)', `("a" = '1') AND ("b" = '2') OR ("c" = '3')`);
+			test('(a,1) and (b,2)', `("a" = 1) AND ("b" = 2)`);
+			test('(a,1)  or  (b,2)', `("a" = 1) OR ("b" = 2)`);
+			test('(a,1)   AND   (b,2)   OR   (c,3)', `("a" = 1) AND ("b" = 2) OR ("c" = 3)`);
 			done();
 		});
 
 		it('Should allow whitespace between column and comma', function (done: Done) {
 			test('(status ,ACTIVE)', `("status" = 'ACTIVE')`);
-			test('(price ,gt,100)', `("price" > '100')`);
+			test('(price ,gt,100)', `("price" > 100)`);
 			done();
 		});
 
 		it('Should allow whitespace after comma before operator/value', function (done: Done) {
 			// Whitespace after comma is consumed by the grammar, not included in value
 			test('(status, ACTIVE)', `("status" = 'ACTIVE')`);
-			test('(price, gt, 100)', `("price" > '100')`);
+			test('(price, gt, 100)', `("price" > 100)`);
 			test('(id, in, 1|2|3)', `("id" IN ('1', '2', '3'))`);
 			done();
 		});
@@ -368,9 +365,9 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 describe('Filter Psql Parsing test - Old Syntax', function () {
 	describe('Type Operators', function () {
 		it('Should parse type:exact (equals)', function (done: Done) {
-			test('(column:id,value:15234,type:exact)', `("id" = '15234')`, true);
-			test('(column:userId,value:15234,type:exact)', `("userId" = '15234')`, true);
-			test('(column:id,value:25,type:exact)', `("id" = '25')`, true);
+			test('(column:id,value:15234,type:exact)', `("id" = 15234)`, true);
+			test('(column:userId,value:15234,type:exact)', `("userId" = 15234)`, true);
+			test('(column:id,value:25,type:exact)', `("id" = 25)`, true);
 			done();
 		});
 
@@ -394,12 +391,12 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse type:greaterThan', function (done: Done) {
 			test(
 				'(column:id,value:215)AND(column:totalPriceCents,value:3069,type:greaterThan)',
-				`("id" = '215') AND ("totalPriceCents" > '3069')`,
+				`("id" = 215) AND ("totalPriceCents" > 3069)`,
 				true
 			);
 			test(
 				'(column:id,value:215)AND(column:totalPriceCents,value:3070,type:greaterThan)',
-				`("id" = '215') AND ("totalPriceCents" > '3070')`,
+				`("id" = 215) AND ("totalPriceCents" > 3070)`,
 				true
 			);
 			done();
@@ -408,7 +405,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse type:greaterThanEqual', function (done: Done) {
 			test(
 				'(column:orderV2.id,value:215)AND(column:orderV2.totalPriceCents,value:3070,type:greaterThanEqual)and(column:totalPriceCents,value:3070,type:lessThanEqual)',
-				`("orderV2"."id" = '215') AND ("orderV2"."totalPriceCents" >= '3070') and ("totalPriceCents" <= '3070')`,
+				`("orderV2"."id" = 215) AND ("orderV2"."totalPriceCents" >= 3070) and ("totalPriceCents" <= 3070)`,
 				true
 			);
 			done();
@@ -417,7 +414,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse type:lessThan', function (done: Done) {
 			test(
 				'(column:id,value:215)AND!(column:totalPriceCents,value:3071,type:lessThan)',
-				`("id" = '215') AND  NOT ("totalPriceCents" < '3071')`,
+				`("id" = 215) AND  NOT ("totalPriceCents" < 3071)`,
 				true
 			);
 			done();
@@ -426,7 +423,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse type:lessThanEqual', function (done: Done) {
 			test(
 				'(column:id,value:215)AND!(column:totalPriceCents,value:3071,type:lessThanEqual)',
-				`("id" = '215') AND  NOT ("totalPriceCents" <= '3071')`,
+				`("id" = 215) AND  NOT ("totalPriceCents" <= 3071)`,
 				true
 			);
 			done();
@@ -435,17 +432,17 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse type:isNull', function (done: Done) {
 			test(
 				'(column:id,type:isNull)AND!(column:totalPriceCents,value:3071,type:lessThan)',
-				`("id" IS NULL) AND  NOT ("totalPriceCents" < '3071')`,
+				`("id" IS NULL) AND  NOT ("totalPriceCents" < 3071)`,
 				true
 			);
 			done();
 		});
 
 		it('Should default to equality when no type specified', function (done: Done) {
-			test('(column:orderV2.id,value:215)', `("orderV2"."id" = '215')`, true);
+			test('(column:orderV2.id,value:215)', `("orderV2"."id" = 215)`, true);
 			test(
 				'(column:id)AND!(column:totalPriceCents,value:3071,type:lessThan)',
-				`("id" IS NULL) AND  NOT ("totalPriceCents" < '3071')`,
+				`("id" IS NULL) AND  NOT ("totalPriceCents" < 3071)`,
 				true
 			);
 			done();
@@ -454,16 +451,16 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 
 	describe('Column Path Syntax', function () {
 		it('Should parse single-part column', function (done: Done) {
-			test('(column:id,value:15234,type:exact)', `("id" = '15234')`, true);
-			test('(column:userId,value:15234,type:exact)', `("userId" = '15234')`, true);
+			test('(column:id,value:15234,type:exact)', `("id" = 15234)`, true);
+			test('(column:userId,value:15234,type:exact)', `("userId" = 15234)`, true);
 			done();
 		});
 
 		it('Should parse two-part column (table.column)', function (done: Done) {
-			test('(column:orderV2.id,value:215)', `("orderV2"."id" = '215')`, true);
+			test('(column:orderV2.id,value:215)', `("orderV2"."id" = 215)`, true);
 			test(
 				'(column:orderV2.totalPriceCents,value:3070,type:greaterThanEqual)',
-				`("orderV2"."totalPriceCents" >= '3070')`,
+				`("orderV2"."totalPriceCents" >= 3070)`,
 				true
 			);
 			done();
@@ -488,7 +485,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse AND operator', function (done: Done) {
 			test(
 				'(column:id,value:215)AND(column:totalPriceCents,value:3069,type:greaterThan)',
-				`("id" = '215') AND ("totalPriceCents" > '3069')`,
+				`("id" = 215) AND ("totalPriceCents" > 3069)`,
 				true
 			);
 			done();
@@ -506,7 +503,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse mixed AND/OR with grouping', function (done: Done) {
 			test(
 				'((column:id,value:251)or(column:id,value:278)or(column:id,value:215))AND(column:status,value:PROCESSING,type:exact)',
-				`(("id" = '251') or ("id" = '278') or ("id" = '215')) AND ("status" = 'PROCESSING')`,
+				`(("id" = 251) or ("id" = 278) or ("id" = 215)) AND ("status" = 'PROCESSING')`,
 				true
 			);
 			done();
@@ -516,7 +513,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 			test('(((column:id,value:4504055,type:contains)))', `((("id"::text ILIKE '%4504055%')))`, true);
 			test(
 				'!(!(column:userId,value:15234,type:exact)and!(column:name,value:jim,type:startsWith))or(column:name,value:bob)',
-				` NOT ( NOT ("userId" = '15234') and  NOT ("name"::text ILIKE 'jim%')) or ("name" = 'bob')`,
+				` NOT ( NOT ("userId" = 15234) and  NOT ("name"::text ILIKE 'jim%')) or ("name" = 'bob')`,
 				true
 			);
 			done();
@@ -527,7 +524,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse negated expressions', function (done: Done) {
 			test('!(column:id,value:4504055,type:contains)', ` NOT ("id"::text ILIKE '%4504055%')`, true);
 			test('!(column:id,value:4504055,type:startsWith)', ` NOT ("id"::text ILIKE '4504055%')`, true);
-			test('!(column:userId,value:15234,type:exact)', ` NOT ("userId" = '15234')`, true);
+			test('!(column:userId,value:15234,type:exact)', ` NOT ("userId" = 15234)`, true);
 			done();
 		});
 
@@ -539,7 +536,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 			);
 			test(
 				'(column:id,value:215)AND!(column:totalPriceCents,value:3070,type:greaterThan)',
-				`("id" = '215') AND  NOT ("totalPriceCents" > '3070')`,
+				`("id" = 215) AND  NOT ("totalPriceCents" > 3070)`,
 				true
 			);
 			done();

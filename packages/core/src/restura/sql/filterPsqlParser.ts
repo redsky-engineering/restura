@@ -96,6 +96,15 @@ const initializers = `
         var literals = values.map(function(v) { return format.literal(v); });
         return column + ' IN (' + literals.join(', ') + ')';
     }
+
+    // Check if a value is numeric and format appropriately
+    function formatValue(value) {
+        // Check if the value is a valid number (integer or decimal)
+        if (/^-?\\d+(\\.\\d+)?$/.test(value)) {
+            return value; // Return as-is without quotes
+        }
+        return format.literal(value);
+    }
 `;
 
 const entryGrammar = `
@@ -121,7 +130,7 @@ OldExpressionList
 
 OldExpression
     = negate:OldNegate? _ "(" _ "column" _ ":"  column:OldColumn _ ","? _ value:OldValue? ","? _ type:OldType? _ ")"_
-        {return \`\${negate? " NOT " : ""}(\${type ? type(column, value) : (value == null ? \`\${column} IS NULL\` : \`\${column} = \${format.literal(value)}\`)})\`;}
+        {return \`\${negate? " NOT " : ""}(\${type ? type(column, value) : (value == null ? \`\${column} IS NULL\` : \`\${column} = \${formatValue(value)}\`)})\`;}
     /
     negate:OldNegate?"("expression:OldExpressionList")" { return \`\${negate? " NOT " : ""}(\${expression})\`; }
 
@@ -174,11 +183,11 @@ OldTypeString
     = text:"startsWith" { return function(column, value) { return \`\${column}::text ILIKE '\${format.literal(value).slice(1,-1)}%'\`; } }
     / text:"endsWith"  { return function(column, value) { return \`\${column}::text ILIKE '%\${format.literal(value).slice(1,-1)}'\`; } }
     / text:"contains" { return function(column, value) { return \`\${column}::text ILIKE '%\${format.literal(value).slice(1,-1)}%'\`; } }
-    / text:"exact" { return function(column, value)    { return \`\${column} = '\${format.literal(value).slice(1,-1)}'\`; } }
-    / text:"greaterThanEqual" { return function(column, value) { return \`\${column} >= '\${format.literal(value).slice(1,-1)}'\`; } }
-    / text:"greaterThan" { return function(column, value) { return \`\${column} > '\${format.literal(value).slice(1,-1)}'\`; } }
-    / text:"lessThanEqual" { return function(column, value) { return \`\${column} <= '\${format.literal(value).slice(1,-1)}'\`; } }
-    / text:"lessThan" { return function(column, value) { return \`\${column} < '\${format.literal(value).slice(1,-1)}'\`; } }
+    / text:"exact" { return function(column, value)    { return \`\${column} = \${formatValue(value)}\`; } }
+    / text:"greaterThanEqual" { return function(column, value) { return \`\${column} >= \${formatValue(value)}\`; } }
+    / text:"greaterThan" { return function(column, value) { return \`\${column} > \${formatValue(value)}\`; } }
+    / text:"lessThanEqual" { return function(column, value) { return \`\${column} <= \${formatValue(value)}\`; } }
+    / text:"lessThan" { return function(column, value) { return \`\${column} < \${formatValue(value)}\`; } }
     / text:"isNull"   { return function(column, value) { return \`\${column} IS NULL\`; } }
 
 OldValue
@@ -212,7 +221,7 @@ SimpleExpr
     / negate:"!"? _ "(" _ col:Column _ "," _ op:NullOperator _ ")" _
         { return (negate ? 'NOT ' : '') + '(' + op(col) + ')'; }
     / negate:"!"? _ "(" _ col:Column _ "," _ val:Value _ ")" _
-        { return (negate ? 'NOT ' : '') + '(' + col + ' = ' + format.literal(unescapeValue(val)) + ')'; }
+        { return (negate ? 'NOT ' : '') + '(' + col + ' = ' + formatValue(unescapeValue(val)) + ')'; }
 
 Column
     = first:ColPart rest:("." ColPart)* {
@@ -249,11 +258,11 @@ NullOperator
 
 OperatorWithValue
     = "in"i _ "," _ val:ValueWithPipes { return function(col) { return buildInClause(col, val); }; }
-    / "ne"i _ "," _ val:Value { return function(col) { return col + ' <> ' + format.literal(unescapeValue(val)); }; }
-    / "gte"i _ "," _ val:Value { return function(col) { return col + ' >= ' + format.literal(unescapeValue(val)); }; }
-    / "gt"i _ "," _ val:Value { return function(col) { return col + ' > ' + format.literal(unescapeValue(val)); }; }
-    / "lte"i _ "," _ val:Value { return function(col) { return col + ' <= ' + format.literal(unescapeValue(val)); }; }
-    / "lt"i _ "," _ val:Value { return function(col) { return col + ' < ' + format.literal(unescapeValue(val)); }; }
+    / "ne"i _ "," _ val:Value { return function(col) { return col + ' <> ' + formatValue(unescapeValue(val)); }; }
+    / "gte"i _ "," _ val:Value { return function(col) { return col + ' >= ' + formatValue(unescapeValue(val)); }; }
+    / "gt"i _ "," _ val:Value { return function(col) { return col + ' > ' + formatValue(unescapeValue(val)); }; }
+    / "lte"i _ "," _ val:Value { return function(col) { return col + ' <= ' + formatValue(unescapeValue(val)); }; }
+    / "lt"i _ "," _ val:Value { return function(col) { return col + ' < ' + formatValue(unescapeValue(val)); }; }
     / "has"i _ "," _ val:Value { return function(col) { return col + '::text ILIKE ' + format.literal('%' + unescapeValue(val) + '%'); }; }
     / "sw"i _ "," _ val:Value { return function(col) { return col + '::text ILIKE ' + format.literal(unescapeValue(val) + '%'); }; }
     / "ew"i _ "," _ val:Value { return function(col) { return col + '::text ILIKE ' + format.literal('%' + unescapeValue(val)); }; }
