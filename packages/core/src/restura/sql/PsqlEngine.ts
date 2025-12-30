@@ -773,7 +773,13 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 				return data[requestParam.name]?.toString() || '';
 			});
 
-			statement = filterPsqlParser.parse(statement);
+			const parseResult = filterPsqlParser.parse(statement);
+			if (parseResult.usedOldSyntax) {
+				logger.warn(
+					`Deprecated filter syntax detected in route "${routeData.name}". Please migrate to the new filter syntax.`
+				);
+			}
+			statement = parseResult.sql;
 			if (whereClause.startsWith('WHERE')) {
 				whereClause += ` AND (${statement})\n`;
 			} else {
