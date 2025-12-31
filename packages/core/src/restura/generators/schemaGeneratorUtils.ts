@@ -1,7 +1,7 @@
-import type { Definition } from 'typescript-json-schema';
+import type { Definition } from 'ts-json-schema-generator';
 import { RequestData } from '../schemas/resturaSchema.js';
 
-export function buildRouteSchema(requestParams: RequestData[]): Definition {
+export function buildRouteSchema(routeKey: string, requestParams: RequestData[]): Definition {
 	const properties: { [name: string]: Definition } = {};
 	const required: string[] = [];
 
@@ -14,11 +14,20 @@ export function buildRouteSchema(requestParams: RequestData[]): Definition {
 		properties[param.name] = propertySchema;
 	}
 
-	return {
+	const schemaDefinition: Definition = {
 		type: 'object',
 		properties,
-		...(required.length > 0 && { required }), // Only include if not empty
+		...(required.length > 0 && { required }),
 		additionalProperties: false
+	};
+
+	// Return in ts-json-schema-generator format
+	return {
+		$schema: 'http://json-schema.org/draft-07/schema#',
+		$ref: `#/definitions/${routeKey}`,
+		definitions: {
+			[routeKey]: schemaDefinition
+		}
 	};
 }
 
