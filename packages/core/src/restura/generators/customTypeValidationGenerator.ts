@@ -1,14 +1,15 @@
 import fs from 'fs';
 import path, { resolve } from 'path';
 import tmp from 'tmp';
-import * as TJS from 'typescript-json-schema';
+import { createGenerator, type Config } from 'ts-json-schema-generator';
+import { logger } from '../../logger/logger.js';
 import { restura } from '../restura.js';
 import { ResturaSchema } from '../schemas/resturaSchema.js';
 import type { ValidationDictionary } from '../validators/requestValidator.js';
 import { buildRouteSchema } from './schemaGeneratorUtils.js';
 
 /**
- * This function generates a temporary file with the custom types and then uses typescript-json-schema to generate a JSON schema for each custom type.
+ * This function generates a temporary file with the custom types and then uses ts-json-schema-generator to generate a JSON schema for each custom type.
  * @param currentSchema - The current schema to generate the validation dictionary for.
  * @returns A dictionary of custom type names and their corresponding JSON schemas.
  */
@@ -27,31 +28,39 @@ export default function customTypeValidationGenerator(
 	if (!customInterfaceNames) return {};
 
 	const temporaryFile = tmp.fileSync({ mode: 0o644, prefix: 'prefix-', postfix: '.ts' });
-	fs.writeFileSync(temporaryFile.name, currentSchema.customTypes.join('\n'));
 
-	const compilerOptions: TJS.CompilerOptions = {
-		strictNullChecks: true,
-		skipLibCheck: true // Needed if we are processing ES modules
+	// Include the additional type files as imports if needed
+	const additionalImports = ignoreGeneratedTypes
+		? ''
+		: [
+				`/// <reference path="${toForwardSlashPath(path.join(restura.resturaConfig.generatedTypesPath, 'restura.d.ts'))}" />`,
+				`/// <reference path="${toForwardSlashPath(path.join(restura.resturaConfig.generatedTypesPath, 'models.d.ts'))}" />`,
+				`/// <reference path="${toForwardSlashPath(path.join(restura.resturaConfig.generatedTypesPath, 'api.d.ts'))}" />`
+			].join('\n') + '\n';
+
+	const typesWithExport = currentSchema.customTypes.map((type) => {
+		// Add export if not already present
+		if (!type.trim().startsWith('export ')) {
+			return 'export ' + type;
+		}
+		return type;
+	});
+	fs.writeFileSync(temporaryFile.name, additionalImports + typesWithExport.join('\n'));
+
+	const config: Config = {
+		path: resolve(temporaryFile.name),
+		tsconfig: path.join(process.cwd(), 'tsconfig.json'),
+		skipTypeCheck: true
 	};
+	const generator = createGenerator(config);
 
-	const program = TJS.getProgramFromFiles(
-		[
-			resolve(temporaryFile.name),
-			...(ignoreGeneratedTypes
-				? []
-				: [
-						path.join(restura.resturaConfig.generatedTypesPath, 'restura.d.ts'),
-						path.join(restura.resturaConfig.generatedTypesPath, 'models.d.ts'),
-						path.join(restura.resturaConfig.generatedTypesPath, 'api.d.ts')
-					])
-		],
-		compilerOptions
-	);
 	customInterfaceNames.forEach((item) => {
-		const ddlSchema = TJS.generateSchema(program, item, {
-			required: true
-		});
-		schemaObject[item] = ddlSchema || {};
+		try {
+			const ddlSchema = generator.createSchema(item);
+			schemaObject[item] = ddlSchema || {};
+		} catch (error) {
+			logger.error('Failed to generate schema for custom type: ' + item, error);
+		}
 	});
 
 	temporaryFile.removeCallback();
@@ -64,9 +73,13 @@ export default function customTypeValidationGenerator(
 			if (!route.request || !Array.isArray(route.request)) continue;
 
 			const routeKey = `${route.method}:${route.path}`;
-			schemaObject[routeKey] = buildRouteSchema(route.request);
+			schemaObject[routeKey] = buildRouteSchema(routeKey, route.request);
 		}
 	}
 
 	return schemaObject;
+}
+
+function toForwardSlashPath(path: string): string {
+	return path.replaceAll('\\', '/');
 }

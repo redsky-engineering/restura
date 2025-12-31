@@ -11,12 +11,18 @@ export default function standardTypeValidationGenerator(currentSchema: ResturaSc
 			const routeKey = `${route.method}:${route.path}`;
 			if (!route.request || route.request.length === 0) {
 				schemaObject[routeKey] = {
-					type: 'object',
-					properties: {},
-					additionalProperties: false
+					$schema: 'http://json-schema.org/draft-07/schema#',
+					$ref: `#/definitions/${routeKey}`,
+					definitions: {
+						[routeKey]: {
+							type: 'object',
+							properties: {},
+							additionalProperties: false
+						}
+					}
 				};
 			} else {
-				schemaObject[routeKey] = buildRouteSchema(route.request);
+				schemaObject[routeKey] = buildRouteSchema(routeKey, route.request);
 			}
 		}
 	}
