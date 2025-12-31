@@ -73,7 +73,7 @@ export default function customTypeValidationGenerator(
 			if (!route.request || !Array.isArray(route.request)) continue;
 
 			const routeKey = `${route.method}:${route.path}`;
-			schemaObject[routeKey] = buildRouteSchema(route.request);
+			schemaObject[routeKey] = buildRouteSchema(routeKey, route.request);
 		}
 	}
 

@@ -1,8 +1,22 @@
 import { expect } from 'chai';
+import { Definition } from 'ts-json-schema-generator';
 import { RsError } from '../RsError.js';
 import { RouteData } from '../schemas/resturaSchema.js';
 import { RsRequest } from '../types/customExpressTypes.js';
 import requestValidator, { ValidationDictionary } from '../validators/requestValidator.js';
+
+/**
+ * Helper to wrap a plain schema in the definitions format expected by requestValidator.
+ */
+function wrapSchema(key: string, schema: object): Definition {
+	return {
+		$schema: 'http://json-schema.org/draft-07/schema#',
+		$ref: `#/definitions/${key}`,
+		definitions: {
+			[key]: schema
+		}
+	};
+}
 
 describe('validateRequestParams', () => {
 	const sampleRouteDataWithRequest: RouteData = {
@@ -98,94 +112,56 @@ describe('validateRequestParams', () => {
 	};
 
 	const customValidationSchema: ValidationDictionary = {
-		FilteredUser: {
+		FilteredUser: wrapSchema('FilteredUser', {
 			type: 'object',
 			properties: {
-				id: {
-					type: 'number'
-				},
-				companyId: {
-					type: 'number'
-				},
-				firstName: {
-					type: 'string'
-				},
-				lastName: {
-					type: 'string'
-				},
-				email: {
-					type: 'string'
-				},
-				role: {
-					type: 'string'
-				},
-				phone: {
-					type: 'string'
-				},
-				lastLoginOn: {
-					type: 'string'
-				}
+				id: { type: 'number' },
+				companyId: { type: 'number' },
+				firstName: { type: 'string' },
+				lastName: { type: 'string' },
+				email: { type: 'string' },
+				role: { type: 'string' },
+				phone: { type: 'string' },
+				lastLoginOn: { type: 'string' }
 			},
 			required: ['companyId', 'email', 'firstName', 'id', 'lastLoginOn', 'lastName', 'phone', 'role'],
-			$schema: 'http://json-schema.org/draft-07/schema#'
-		},
-		AuthResponse: {
+			additionalProperties: false
+		}),
+		AuthResponse: wrapSchema('AuthResponse', {
 			type: 'object',
 			properties: {
-				token: {
-					type: 'string'
-				},
-				tokenExp: {
-					type: 'string'
-				},
-				refreshToken: {
-					type: 'string'
-				},
-				refreshTokenExp: {
-					type: 'string'
-				}
+				token: { type: 'string' },
+				tokenExp: { type: 'string' },
+				refreshToken: { type: 'string' },
+				refreshTokenExp: { type: 'string' }
 			},
 			required: ['refreshToken', 'refreshTokenExp', 'token', 'tokenExp'],
-			$schema: 'http://json-schema.org/draft-07/schema#'
-		}
+			additionalProperties: false
+		})
 	} as ValidationDictionary;
 
 	const standardValidationSchema: ValidationDictionary = {
-		'GET:/users': {
+		'GET:/users': wrapSchema('GET:/users', {
 			type: 'object',
 			properties: {
-				id: {
-					type: 'number'
-				},
-				name: {
-					type: 'string'
-				},
-				active: {
-					type: 'boolean'
-				}
+				id: { type: 'number' },
+				name: { type: 'string' },
+				active: { type: 'boolean' }
 			},
 			required: [],
 			additionalProperties: false
-		},
-		'POST:/users': {
+		}),
+		'POST:/users': wrapSchema('POST:/users', {
 			type: 'object',
 			properties: {
-				firstName: {
-					type: 'string'
-				},
-				lastName: {
-					type: 'string'
-				},
-				email: {
-					type: 'string'
-				},
-				age: {
-					type: 'number'
-				}
+				firstName: { type: 'string' },
+				lastName: { type: 'string' },
+				email: { type: 'string' },
+				age: { type: 'number' }
 			},
 			required: ['firstName', 'email'],
 			additionalProperties: false
-		}
+		})
 	} as ValidationDictionary;
 
 	describe('Standard endpoint validation', () => {
@@ -422,30 +398,18 @@ describe('validateRequestParams', () => {
 					{
 						name: 'ids',
 						required: false,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'number[]'
-							}
-						]
+						validator: [{ type: 'TYPE_CHECK', value: 'number[]' }]
 					}
 				]
 			};
 
 			const standardSchemaWithArray: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						ids: {
-							type: 'array',
-							items: {
-								type: 'number'
-							}
-						}
-					},
+					properties: { ids: { type: 'array', items: { type: 'number' } } },
 					required: [],
 					additionalProperties: false
-				}
+				})
 			};
 
 			const req = {
@@ -611,27 +575,18 @@ describe('validateRequestParams', () => {
 						name: 'description',
 						required: false,
 						isNullable: true,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string'
-							}
-						]
+						validator: [{ type: 'TYPE_CHECK', value: 'string' }]
 					}
 				]
 			};
 
 			const standardSchemaWithNullable: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						description: {
-							type: ['string', 'null']
-						}
-					},
+					properties: { description: { type: ['string', 'null'] } },
 					required: [],
 					additionalProperties: false
-				}
+				})
 			};
 
 			const req = {
@@ -689,17 +644,12 @@ describe('validateRequestParams', () => {
 			};
 
 			const standardSchemaWithEnum: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						status: {
-							type: 'string',
-							enum: ['active', 'inactive', 'pending']
-						}
-					},
+					properties: { status: { type: 'string', enum: ['active', 'inactive', 'pending'] } },
 					required: ['status'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			const req = {
@@ -720,31 +670,20 @@ describe('validateRequestParams', () => {
 						name: 'status',
 						required: true,
 						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string'
-							},
-							{
-								type: 'ONE_OF',
-								value: ['active', 'inactive', 'pending']
-							}
+							{ type: 'TYPE_CHECK', value: 'string' },
+							{ type: 'ONE_OF', value: ['active', 'inactive', 'pending'] }
 						]
 					}
 				]
 			};
 
 			const standardSchemaWithEnum: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						status: {
-							type: 'string',
-							enum: ['active', 'inactive', 'pending']
-						}
-					},
+					properties: { status: { type: 'string', enum: ['active', 'inactive', 'pending'] } },
 					required: ['status'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			try {
@@ -789,17 +728,12 @@ describe('validateRequestParams', () => {
 			};
 
 			const standardSchemaWithNumericEnum: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						priority: {
-							type: 'number',
-							enum: [1, 2, 3]
-						}
-					},
+					properties: { priority: { type: 'number', enum: [1, 2, 3] } },
 					required: ['priority'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			const req = {
@@ -822,36 +756,21 @@ describe('validateRequestParams', () => {
 						name: 'age',
 						required: true,
 						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'number'
-							},
-							{
-								type: 'MIN',
-								value: 18
-							},
-							{
-								type: 'MAX',
-								value: 100
-							}
+							{ type: 'TYPE_CHECK', value: 'number' },
+							{ type: 'MIN', value: 18 },
+							{ type: 'MAX', value: 100 }
 						]
 					}
 				]
 			};
 
 			const standardSchemaWithMinMax: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						age: {
-							type: 'number',
-							minimum: 18,
-							maximum: 100
-						}
-					},
+					properties: { age: { type: 'number', minimum: 18, maximum: 100 } },
 					required: ['age'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			const req = {
@@ -886,25 +805,17 @@ describe('validateRequestParams', () => {
 			};
 
 			const standardSchemaWithMin: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						age: {
-							type: 'number',
-							minimum: 18
-						}
-					},
+					properties: { age: { type: 'number', minimum: 18 } },
 					required: ['age'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			try {
 				requestValidator(
-					{
-						query: { age: '10' },
-						method: 'GET'
-					} as unknown as RsRequest<unknown>,
+					{ query: { age: '10' }, method: 'GET' } as unknown as RsRequest<unknown>,
 					routeDataWithMin,
 					customValidationSchema,
 					standardSchemaWithMin
@@ -927,39 +838,25 @@ describe('validateRequestParams', () => {
 						name: 'age',
 						required: true,
 						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'number'
-							},
-							{
-								type: 'MAX',
-								value: 100
-							}
+							{ type: 'TYPE_CHECK', value: 'number' },
+							{ type: 'MAX', value: 100 }
 						]
 					}
 				]
 			};
 
 			const standardSchemaWithMax: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						age: {
-							type: 'number',
-							maximum: 100
-						}
-					},
+					properties: { age: { type: 'number', maximum: 100 } },
 					required: ['age'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			try {
 				requestValidator(
-					{
-						query: { age: '150' },
-						method: 'GET'
-					} as unknown as RsRequest<unknown>,
+					{ query: { age: '150' }, method: 'GET' } as unknown as RsRequest<unknown>,
 					routeDataWithMax,
 					customValidationSchema,
 					standardSchemaWithMax
@@ -982,36 +879,21 @@ describe('validateRequestParams', () => {
 						name: 'username',
 						required: true,
 						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string'
-							},
-							{
-								type: 'MIN',
-								value: 3
-							},
-							{
-								type: 'MAX',
-								value: 20
-							}
+							{ type: 'TYPE_CHECK', value: 'string' },
+							{ type: 'MIN', value: 3 },
+							{ type: 'MAX', value: 20 }
 						]
 					}
 				]
 			};
 
 			const standardSchemaWithStringLength: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						username: {
-							type: 'string',
-							minLength: 3,
-							maxLength: 20
-						}
-					},
+					properties: { username: { type: 'string', minLength: 3, maxLength: 20 } },
 					required: ['username'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			const req = {
@@ -1032,31 +914,20 @@ describe('validateRequestParams', () => {
 						name: 'username',
 						required: true,
 						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string'
-							},
-							{
-								type: 'MIN',
-								value: 3
-							}
+							{ type: 'TYPE_CHECK', value: 'string' },
+							{ type: 'MIN', value: 3 }
 						]
 					}
 				]
 			};
 
 			const standardSchemaWithMinLength: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						username: {
-							type: 'string',
-							minLength: 3
-						}
-					},
+					properties: { username: { type: 'string', minLength: 3 } },
 					required: ['username'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			try {
@@ -1087,39 +958,25 @@ describe('validateRequestParams', () => {
 						name: 'username',
 						required: true,
 						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string'
-							},
-							{
-								type: 'MAX',
-								value: 10
-							}
+							{ type: 'TYPE_CHECK', value: 'string' },
+							{ type: 'MAX', value: 10 }
 						]
 					}
 				]
 			};
 
 			const standardSchemaWithMaxLength: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						username: {
-							type: 'string',
-							maxLength: 10
-						}
-					},
+					properties: { username: { type: 'string', maxLength: 10 } },
 					required: ['username'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			try {
 				requestValidator(
-					{
-						query: { username: 'verylongusername' },
-						method: 'GET'
-					} as unknown as RsRequest<unknown>,
+					{ query: { username: 'verylongusername' }, method: 'GET' } as unknown as RsRequest<unknown>,
 					routeDataWithMaxLength,
 					customValidationSchema,
 					standardSchemaWithMaxLength
@@ -1142,39 +999,21 @@ describe('validateRequestParams', () => {
 						name: 'tags',
 						required: true,
 						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string[]'
-							},
-							{
-								type: 'MIN',
-								value: 2
-							},
-							{
-								type: 'MAX',
-								value: 5
-							}
+							{ type: 'TYPE_CHECK', value: 'string[]' },
+							{ type: 'MIN', value: 2 },
+							{ type: 'MAX', value: 5 }
 						]
 					}
 				]
 			};
 
 			const standardSchemaWithArrayLength: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						tags: {
-							type: 'array',
-							items: {
-								type: 'string'
-							},
-							minItems: 2,
-							maxItems: 5
-						}
-					},
+					properties: { tags: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 5 } },
 					required: ['tags'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			const req = {
@@ -1195,34 +1034,20 @@ describe('validateRequestParams', () => {
 						name: 'tags',
 						required: true,
 						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string[]'
-							},
-							{
-								type: 'MIN',
-								value: 2
-							}
+							{ type: 'TYPE_CHECK', value: 'string[]' },
+							{ type: 'MIN', value: 2 }
 						]
 					}
 				]
 			};
 
 			const standardSchemaWithMinItems: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						tags: {
-							type: 'array',
-							items: {
-								type: 'string'
-							},
-							minItems: 2
-						}
-					},
+					properties: { tags: { type: 'array', items: { type: 'string' }, minItems: 2 } },
 					required: ['tags'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			try {
@@ -1253,34 +1078,20 @@ describe('validateRequestParams', () => {
 						name: 'tags',
 						required: true,
 						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string[]'
-							},
-							{
-								type: 'MAX',
-								value: 3
-							}
+							{ type: 'TYPE_CHECK', value: 'string[]' },
+							{ type: 'MAX', value: 3 }
 						]
 					}
 				]
 			};
 
 			const standardSchemaWithMaxItems: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						tags: {
-							type: 'array',
-							items: {
-								type: 'string'
-							},
-							maxItems: 3
-						}
-					},
+					properties: { tags: { type: 'array', items: { type: 'string' }, maxItems: 3 } },
 					required: ['tags'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			try {
@@ -1308,40 +1119,19 @@ describe('validateRequestParams', () => {
 		it('should convert single value with [] notation to array', () => {
 			const routeDataWithArray: RouteData = {
 				...sampleRouteDataWithRequest,
-				request: [
-					{
-						name: 'ids',
-						required: false,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'number[]'
-							}
-						]
-					}
-				]
+				request: [{ name: 'ids', required: false, validator: [{ type: 'TYPE_CHECK', value: 'number[]' }] }]
 			};
 
 			const standardSchemaWithArray: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						ids: {
-							type: 'array',
-							items: {
-								type: 'number'
-							}
-						}
-					},
+					properties: { ids: { type: 'array', items: { type: 'number' } } },
 					required: [],
 					additionalProperties: false
-				}
+				})
 			};
 
-			const req = {
-				query: { 'ids[]': '123' },
-				method: 'GET'
-			} as unknown as RsRequest<unknown>;
+			const req = { query: { 'ids[]': '123' }, method: 'GET' } as unknown as RsRequest<unknown>;
 
 			requestValidator(req, routeDataWithArray, customValidationSchema, standardSchemaWithArray);
 
@@ -1354,40 +1144,19 @@ describe('validateRequestParams', () => {
 		it('should handle empty array', () => {
 			const routeDataWithArray: RouteData = {
 				...sampleRouteDataWithRequest,
-				request: [
-					{
-						name: 'ids',
-						required: false,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'number[]'
-							}
-						]
-					}
-				]
+				request: [{ name: 'ids', required: false, validator: [{ type: 'TYPE_CHECK', value: 'number[]' }] }]
 			};
 
 			const standardSchemaWithArray: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						ids: {
-							type: 'array',
-							items: {
-								type: 'number'
-							}
-						}
-					},
+					properties: { ids: { type: 'array', items: { type: 'number' } } },
 					required: [],
 					additionalProperties: false
-				}
+				})
 			};
 
-			const req = {
-				query: { 'ids[]': [] },
-				method: 'GET'
-			} as unknown as RsRequest<unknown>;
+			const req = { query: { 'ids[]': [] }, method: 'GET' } as unknown as RsRequest<unknown>;
 
 			requestValidator(req, routeDataWithArray, customValidationSchema, standardSchemaWithArray);
 
@@ -1399,34 +1168,16 @@ describe('validateRequestParams', () => {
 		it('should keep array that is already an array', () => {
 			const routeDataWithArray: RouteData = {
 				...sampleRouteDataWithRequest,
-				request: [
-					{
-						name: 'ids',
-						required: false,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'number[]'
-							}
-						]
-					}
-				]
+				request: [{ name: 'ids', required: false, validator: [{ type: 'TYPE_CHECK', value: 'number[]' }] }]
 			};
 
 			const standardSchemaWithArray: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						ids: {
-							type: 'array',
-							items: {
-								type: 'number'
-							}
-						}
-					},
+					properties: { ids: { type: 'array', items: { type: 'number' } } },
 					required: [],
 					additionalProperties: false
-				}
+				})
 			};
 
 			const req = {
@@ -1482,24 +1233,17 @@ describe('validateRequestParams', () => {
 			};
 
 			const standardSchemaWithObject: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						metadata: {
-							type: 'object'
-						}
-					},
+					properties: { metadata: { type: 'object' } },
 					required: ['metadata'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			try {
 				requestValidator(
-					{
-						query: { metadata: '{invalid json}' },
-						method: 'GET'
-					} as unknown as RsRequest<unknown>,
+					{ query: { metadata: '{invalid json}' }, method: 'GET' } as unknown as RsRequest<unknown>,
 					routeDataWithObject,
 					customValidationSchema,
 					standardSchemaWithObject
@@ -1524,36 +1268,21 @@ describe('validateRequestParams', () => {
 						name: 'tags',
 						required: false,
 						isNullable: true,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string[]'
-							}
-						]
+						validator: [{ type: 'TYPE_CHECK', value: 'string[]' }]
 					}
 				]
 			};
 
 			const standardSchemaWithNullableArray: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						tags: {
-							type: ['array', 'null'],
-							items: {
-								type: 'string'
-							}
-						}
-					},
+					properties: { tags: { type: ['array', 'null'], items: { type: 'string' } } },
 					required: [],
 					additionalProperties: false
-				}
+				})
 			};
 
-			const req = {
-				query: { tags: null },
-				method: 'GET'
-			} as unknown as RsRequest<unknown>;
+			const req = { query: { tags: null }, method: 'GET' } as unknown as RsRequest<unknown>;
 
 			requestValidator(req, routeDataWithNullableArray, customValidationSchema, standardSchemaWithNullableArray);
 
@@ -1568,36 +1297,21 @@ describe('validateRequestParams', () => {
 						name: 'tags',
 						required: false,
 						isNullable: true,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string[]'
-							}
-						]
+						validator: [{ type: 'TYPE_CHECK', value: 'string[]' }]
 					}
 				]
 			};
 
 			const standardSchemaWithNullableArray: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						tags: {
-							type: ['array', 'null'],
-							items: {
-								type: 'string'
-							}
-						}
-					},
+					properties: { tags: { type: ['array', 'null'], items: { type: 'string' } } },
 					required: [],
 					additionalProperties: false
-				}
+				})
 			};
 
-			const req = {
-				query: { 'tags[]': ['tag1', 'tag2'] },
-				method: 'GET'
-			} as unknown as RsRequest<unknown>;
+			const req = { query: { 'tags[]': ['tag1', 'tag2'] }, method: 'GET' } as unknown as RsRequest<unknown>;
 
 			requestValidator(req, routeDataWithNullableArray, customValidationSchema, standardSchemaWithNullableArray);
 
@@ -1621,20 +1335,15 @@ describe('validateRequestParams', () => {
 			};
 
 			const standardSchemaWithoutTypeCheck: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						freeform: {}
-					},
+					properties: { freeform: {} },
 					required: [],
 					additionalProperties: false
-				}
+				})
 			};
 
-			const req = {
-				query: { freeform: 'anything' },
-				method: 'GET'
-			} as unknown as RsRequest<unknown>;
+			const req = { query: { freeform: 'anything' }, method: 'GET' } as unknown as RsRequest<unknown>;
 
 			requestValidator(req, routeDataWithoutTypeCheck, customValidationSchema, standardSchemaWithoutTypeCheck);
 
@@ -1706,22 +1415,15 @@ describe('validateRequestParams', () => {
 			};
 
 			const patchSchema: ValidationDictionary = {
-				'PATCH:/users': {
+				'PATCH:/users': wrapSchema('PATCH:/users', {
 					type: 'object',
-					properties: {
-						id: {
-							type: 'number'
-						}
-					},
+					properties: { id: { type: 'number' } },
 					required: ['id'],
 					additionalProperties: false
-				}
+				})
 			};
 
-			const req = {
-				body: { id: 456 },
-				method: 'PATCH'
-			} as unknown as RsRequest<unknown>;
+			const req = { body: { id: 456 }, method: 'PATCH' } as unknown as RsRequest<unknown>;
 
 			requestValidator(req, patchRouteData, customValidationSchema, patchSchema);
 
@@ -1739,26 +1441,8 @@ describe('validateRequestParams', () => {
 				roles: ['admin'],
 				scopes: [],
 				request: [
-					{
-						name: 'id',
-						required: true,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'number'
-							}
-						]
-					},
-					{
-						name: 'name',
-						required: true,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'string'
-							}
-						]
-					}
+					{ name: 'id', required: true, validator: [{ type: 'TYPE_CHECK', value: 'number' }] },
+					{ name: 'name', required: true, validator: [{ type: 'TYPE_CHECK', value: 'string' }] }
 				],
 				joins: [],
 				response: [],
@@ -1767,19 +1451,12 @@ describe('validateRequestParams', () => {
 			};
 
 			const putSchema: ValidationDictionary = {
-				'PUT:/users': {
+				'PUT:/users': wrapSchema('PUT:/users', {
 					type: 'object',
-					properties: {
-						id: {
-							type: 'number'
-						},
-						name: {
-							type: 'string'
-						}
-					},
+					properties: { id: { type: 'number' }, name: { type: 'string' } },
 					required: ['id', 'name'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			const req = {
@@ -1823,22 +1500,15 @@ describe('validateRequestParams', () => {
 			};
 
 			const deleteSchema: ValidationDictionary = {
-				'DELETE:/users': {
+				'DELETE:/users': wrapSchema('DELETE:/users', {
 					type: 'object',
-					properties: {
-						id: {
-							type: 'number'
-						}
-					},
+					properties: { id: { type: 'number' } },
 					required: ['id'],
 					additionalProperties: false
-				}
+				})
 			};
 
-			const req = {
-				query: { id: '999' },
-				method: 'DELETE'
-			} as unknown as RsRequest<unknown>;
+			const req = { query: { id: '999' }, method: 'DELETE' } as unknown as RsRequest<unknown>;
 
 			requestValidator(req, deleteRouteData, customValidationSchema, deleteSchema);
 
@@ -1851,43 +1521,26 @@ describe('validateRequestParams', () => {
 		it('should validate nested object structure', () => {
 			const routeDataWithNestedObject: RouteData = {
 				...sampleRouteDataWithRequest,
-				request: [
-					{
-						name: 'address',
-						required: true,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'object'
-							}
-						]
-					}
-				]
+				request: [{ name: 'address', required: true, validator: [{ type: 'TYPE_CHECK', value: 'object' }] }]
 			};
 
 			const standardSchemaWithNestedObject: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
 					properties: {
 						address: {
 							type: 'object',
 							properties: {
-								street: {
-									type: 'string'
-								},
-								city: {
-									type: 'string'
-								},
-								zipCode: {
-									type: 'string'
-								}
+								street: { type: 'string' },
+								city: { type: 'string' },
+								zipCode: { type: 'string' }
 							},
 							required: ['street', 'city']
 						}
 					},
 					required: ['address'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			const req = {
@@ -1907,40 +1560,22 @@ describe('validateRequestParams', () => {
 		it('should fail if nested object is missing required properties', () => {
 			const routeDataWithNestedObject: RouteData = {
 				...sampleRouteDataWithRequest,
-				request: [
-					{
-						name: 'address',
-						required: true,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'object'
-							}
-						]
-					}
-				]
+				request: [{ name: 'address', required: true, validator: [{ type: 'TYPE_CHECK', value: 'object' }] }]
 			};
 
 			const standardSchemaWithNestedObject: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
 					properties: {
 						address: {
 							type: 'object',
-							properties: {
-								street: {
-									type: 'string'
-								},
-								city: {
-									type: 'string'
-								}
-							},
+							properties: { street: { type: 'string' }, city: { type: 'string' } },
 							required: ['street', 'city']
 						}
 					},
 					required: ['address'],
 					additionalProperties: false
-				}
+				})
 			};
 
 			try {
@@ -1968,37 +1603,19 @@ describe('validateRequestParams', () => {
 		it('should handle parameter names with underscores', () => {
 			const routeDataWithUnderscore: RouteData = {
 				...sampleRouteDataWithRequest,
-				request: [
-					{
-						name: 'user_id',
-						required: true,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'number'
-							}
-						]
-					}
-				]
+				request: [{ name: 'user_id', required: true, validator: [{ type: 'TYPE_CHECK', value: 'number' }] }]
 			};
 
 			const standardSchemaWithUnderscore: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						user_id: {
-							type: 'number'
-						}
-					},
+					properties: { user_id: { type: 'number' } },
 					required: ['user_id'],
 					additionalProperties: false
-				}
+				})
 			};
 
-			const req = {
-				query: { user_id: '123' },
-				method: 'GET'
-			} as unknown as RsRequest<unknown>;
+			const req = { query: { user_id: '123' }, method: 'GET' } as unknown as RsRequest<unknown>;
 
 			requestValidator(req, routeDataWithUnderscore, customValidationSchema, standardSchemaWithUnderscore);
 
@@ -2008,37 +1625,19 @@ describe('validateRequestParams', () => {
 		it('should handle parameter names with dashes', () => {
 			const routeDataWithDash: RouteData = {
 				...sampleRouteDataWithRequest,
-				request: [
-					{
-						name: 'user-id',
-						required: true,
-						validator: [
-							{
-								type: 'TYPE_CHECK',
-								value: 'number'
-							}
-						]
-					}
-				]
+				request: [{ name: 'user-id', required: true, validator: [{ type: 'TYPE_CHECK', value: 'number' }] }]
 			};
 
 			const standardSchemaWithDash: ValidationDictionary = {
-				'GET:/users': {
+				'GET:/users': wrapSchema('GET:/users', {
 					type: 'object',
-					properties: {
-						'user-id': {
-							type: 'number'
-						}
-					},
+					properties: { 'user-id': { type: 'number' } },
 					required: ['user-id'],
 					additionalProperties: false
-				}
+				})
 			};
 
-			const req = {
-				query: { 'user-id': '456' },
-				method: 'GET'
-			} as unknown as RsRequest<unknown>;
+			const req = { query: { 'user-id': '456' }, method: 'GET' } as unknown as RsRequest<unknown>;
 
 			requestValidator(req, routeDataWithDash, customValidationSchema, standardSchemaWithDash);
 

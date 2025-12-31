@@ -227,69 +227,75 @@ describe('standardTypeValidationGenerator', () => {
 
 		const expectedSchema = {
 			'GET:/test': {
-				type: 'object',
-				properties: {
-					username: {
-						type: 'string'
-					},
-					password: {
-						type: 'string',
-						minLength: 8,
-						maxLength: 50
-					},
-					age: {
-						type: 'number'
-					},
-					score: {
-						type: 'number',
-						minimum: 0,
-						maximum: 100
-					},
-					active: {
-						type: 'boolean'
-					},
-					role: {
-						type: 'string',
-						enum: ['admin', 'user', 'guest']
-					},
-					priority: {
-						type: 'number',
-						enum: [1, 2, 3, 4, 5]
-					},
-					middleName: {
-						type: ['string', 'null']
-					},
-					tags: {
-						type: 'array',
-						items: {
-							type: 'string'
-						}
-					},
-					scores: {
-						type: 'array',
-						items: {
-							type: 'number'
+				$schema: 'http://json-schema.org/draft-07/schema#',
+				$ref: '#/definitions/GET:/test',
+				definitions: {
+					'GET:/test': {
+						type: 'object',
+						properties: {
+							username: {
+								type: 'string'
+							},
+							password: {
+								type: 'string',
+								minLength: 8,
+								maxLength: 50
+							},
+							age: {
+								type: 'number'
+							},
+							score: {
+								type: 'number',
+								minimum: 0,
+								maximum: 100
+							},
+							active: {
+								type: 'boolean'
+							},
+							role: {
+								type: 'string',
+								enum: ['admin', 'user', 'guest']
+							},
+							priority: {
+								type: 'number',
+								enum: [1, 2, 3, 4, 5]
+							},
+							middleName: {
+								type: ['string', 'null']
+							},
+							tags: {
+								type: 'array',
+								items: {
+									type: 'string'
+								}
+							},
+							scores: {
+								type: 'array',
+								items: {
+									type: 'number'
+								},
+								minItems: 1,
+								maxItems: 10
+							},
+							optionalIds: {
+								type: ['array', 'null'],
+								items: {
+									type: 'number'
+								}
+							},
+							metadata: {
+								type: 'object'
+							},
+							status: {
+								enum: ['pending', 'approved', 'rejected'],
+								type: 'string'
+							},
+							freeform: {}
 						},
-						minItems: 1,
-						maxItems: 10
-					},
-					optionalIds: {
-						type: ['array', 'null'],
-						items: {
-							type: 'number'
-						}
-					},
-					metadata: {
-						type: 'object'
-					},
-					status: {
-						enum: ['pending', 'approved', 'rejected'],
-						type: 'string'
-					},
-					freeform: {}
-				},
-				required: ['username', 'password', 'score', 'role', 'scores', 'status'],
-				additionalProperties: false
+						required: ['username', 'password', 'score', 'role', 'scores', 'status'],
+						additionalProperties: false
+					}
+				}
 			}
 		};
 
@@ -332,7 +338,13 @@ describe('standardTypeValidationGenerator', () => {
 		const result = standardTypeValidationGenerator(testSchema);
 
 		expect(result).to.deep.equal({
-			'GET:/no-params': { type: 'object', properties: {}, additionalProperties: false }
+			'GET:/no-params': {
+				$schema: 'http://json-schema.org/draft-07/schema#',
+				$ref: '#/definitions/GET:/no-params',
+				definitions: {
+					'GET:/no-params': { type: 'object', properties: {}, additionalProperties: false }
+				}
+			}
 		});
 	});
 
@@ -410,8 +422,12 @@ describe('standardTypeValidationGenerator', () => {
 
 		expect(result).to.have.property('GET:/user');
 		expect(result).to.have.property('POST:/user');
-		expect(result['GET:/user'].properties).to.have.property('id');
-		expect(result['POST:/user'].properties).to.have.property('email');
+
+		const getUserDef = result['GET:/user'].definitions!['GET:/user'] as Record<string, unknown>;
+		const postUserDef = result['POST:/user'].definitions!['POST:/user'] as Record<string, unknown>;
+
+		expect(getUserDef.properties).to.have.property('id');
+		expect(postUserDef.properties).to.have.property('email');
 	});
 });
 

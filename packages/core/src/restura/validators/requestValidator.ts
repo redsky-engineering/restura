@@ -8,52 +8,124 @@ export interface ValidationDictionary {
 	[Key: string]: Definition;
 }
 
+/**
+ * Deeply resolves all $ref references in a JSON schema, inlining them recursively.
+ * This ensures nested refs (e.g., a property that refs another type) are fully resolved.
+ * Uses a seen set to prevent infinite loops from circular references.
+ */
+function deepResolveSchemaRefs(
+	schema: Schema,
+	definitions: { [key: string]: Schema } | undefined,
+	seen: Set<string> = new Set()
+): Schema {
+	if (!schema || typeof schema !== 'object') {
+		return schema;
+	}
+
+	// Handle $ref at current level
+	if ('$ref' in schema && typeof schema.$ref === 'string') {
+		const refPath = schema.$ref;
+		if (refPath.startsWith('#/definitions/') && definitions) {
+			const defName = refPath.substring('#/definitions/'.length);
+
+			// Prevent infinite loops from circular references
+			if (seen.has(defName)) {
+				return schema;
+			}
+
+			const resolved = definitions[defName];
+			if (resolved) {
+				seen.add(defName);
+				return deepResolveSchemaRefs(resolved as Schema, definitions, seen);
+			}
+		}
+		return schema;
+	}
+
+	// Deep clone and recursively resolve nested schemas
+	const result: Record<string, unknown> = {};
+
+	for (const [key, value] of Object.entries(schema)) {
+		if (key === 'definitions') {
+			// Skip definitions - they're just a lookup table
+			continue;
+		}
+
+		if (value && typeof value === 'object') {
+			if (Array.isArray(value)) {
+				// Handle arrays (e.g., items, allOf, anyOf, oneOf)
+				result[key] = value.map((item) =>
+					typeof item === 'object' ? deepResolveSchemaRefs(item as Schema, definitions, new Set(seen)) : item
+				);
+			} else {
+				// Handle nested objects (e.g., properties, additionalProperties)
+				result[key] = deepResolveSchemaRefs(value as Schema, definitions, new Set(seen));
+			}
+		} else {
+			result[key] = value;
+		}
+	}
+
+	return result as Schema;
+}
+
+/**
+ * Resolves a $ref reference in a JSON schema to its actual definition.
+ * Handles recursive refs (a ref pointing to another ref).
+ */
+function resolveSchemaRef(schema: Schema, definitions: { [key: string]: Schema } | undefined): Schema {
+	return deepResolveSchemaRefs(schema, definitions);
+}
+
 export default function requestValidator(
 	req: RsRequest<unknown>,
 	routeData: RouteData,
 	customValidationSchema: ValidationDictionary,
 	standardValidationSchema: ValidationDictionary
 ) {
-	let schemaForCoercion: Schema;
-	let skipAttributes: string[] = [];
+	const routeKey = `${routeData.method}:${routeData.path}`;
+	const isCustom =
+		routeData.type === 'CUSTOM_ONE' || routeData.type === 'CUSTOM_ARRAY' || routeData.type === 'CUSTOM_PAGED';
+	const isStandard = routeData.type === 'ONE' || routeData.type === 'ARRAY' || routeData.type === 'PAGED';
 
-	if (routeData.type === 'ONE' || routeData.type === 'ARRAY' || routeData.type === 'PAGED') {
-		// Standard endpoint request
-		const routeKey = `${routeData.method}:${routeData.path}`;
-
-		schemaForCoercion = standardValidationSchema[routeKey] as Schema;
-		if (!schemaForCoercion) {
-			throw new RsError('BAD_REQUEST', `No schema found for standard request route: ${routeKey}.`);
-		}
-	} else if (
-		routeData.type === 'CUSTOM_ONE' ||
-		routeData.type === 'CUSTOM_ARRAY' ||
-		routeData.type === 'CUSTOM_PAGED'
-	) {
-		// Custom endpoint request
-		if (!routeData.responseType) throw new RsError('BAD_REQUEST', `No response type defined for custom request.`);
-		if (!routeData.requestType && !routeData.request)
-			throw new RsError('BAD_REQUEST', `No request type defined for custom request.`);
-
-		const routeKey = `${routeData.method}:${routeData.path}`;
-
-		const currentInterface = customValidationSchema[routeData.requestType || routeKey];
-		schemaForCoercion = {
-			...currentInterface,
-			additionalProperties: false
-		} as Schema;
-		skipAttributes = ['type'];
-	} else {
+	if (!isStandard && !isCustom) {
 		throw new RsError('BAD_REQUEST', `Invalid route type: ${routeData.type}`);
 	}
 
+	if (isCustom) {
+		if (!routeData.responseType) throw new RsError('BAD_REQUEST', `No response type defined for custom request.`);
+		if (!routeData.requestType && !routeData.request)
+			throw new RsError('BAD_REQUEST', `No request type defined for custom request.`);
+	}
+
+	const schemaKey = isCustom ? routeData.requestType || routeKey : routeKey;
+	const schemaDictionary = isCustom ? customValidationSchema : standardValidationSchema;
+	const schemaRoot = schemaDictionary[schemaKey];
+
+	if (!schemaRoot) {
+		const requestType = isCustom ? 'custom' : 'standard';
+		throw new RsError('BAD_REQUEST', `No schema found for ${requestType} request: ${schemaKey}.`);
+	}
+
+	const schemaForValidation = schemaRoot as Schema;
+	const schemaDefinitions = schemaRoot.definitions as { [key: string]: Schema } | undefined;
+	const rawInterface = schemaRoot.definitions![schemaKey] as Schema;
+	const schemaForCoercion = isCustom ? resolveSchemaRef(rawInterface, schemaDefinitions) : rawInterface;
 	const requestData = getRequestData(req as RsRequest<unknown>, schemaForCoercion);
 	req.data = requestData;
 
 	const validator = new jsonschema.Validator();
-	const executeValidation = validator.validate(req.data, schemaForCoercion, {
-		skipAttributes
-	});
+
+	// Add all definitions to the validator so $ref can be resolved
+	if (schemaDefinitions) {
+		for (const [defName, defSchema] of Object.entries(schemaDefinitions)) {
+			validator.addSchema(defSchema as Schema, `/definitions/${defName}`);
+		}
+	}
+
+	// Resolve the $ref to get the actual schema to validate against
+	const resolvedSchema = resolveSchemaRef(schemaForValidation as Schema, schemaDefinitions);
+	const executeValidation = validator.validate(req.data, resolvedSchema);
 
 	if (!executeValidation.valid) {
 		const errorMessages = executeValidation.errors
