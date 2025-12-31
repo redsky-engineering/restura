@@ -35,7 +35,7 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		});
 
 		it('Should parse in (matches any value)', function (done: Done) {
-			test('(id,in,1|2|3)', `("id" IN ('1', '2', '3'))`);
+			test('(id,in,1|2|3)', `("id" IN (1, 2, 3))`);
 			test('(status,in,ACTIVE|PENDING|PROCESSING)', `("status" IN ('ACTIVE', 'PENDING', 'PROCESSING'))`);
 			done();
 		});
@@ -170,13 +170,13 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 
 	describe('IN Operator Edge Cases', function () {
 		it('Should handle IN with single value', function (done: Done) {
-			test('(id,in,123)', `("id" IN ('123'))`);
+			test('(id,in,123)', `("id" IN (123))`);
 			test('(status,in,ACTIVE)', `("status" IN ('ACTIVE'))`);
 			done();
 		});
 
 		it('Should handle IN with many values', function (done: Done) {
-			test('(id,in,1|2|3|4|5|6|7|8|9|10)', `("id" IN ('1', '2', '3', '4', '5', '6', '7', '8', '9', '10'))`);
+			test('(id,in,1|2|3|4|5|6|7|8|9|10)', `("id" IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10))`);
 			done();
 		});
 
@@ -298,8 +298,8 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		});
 
 		it('Should be case-insensitive for IN operator', function (done: Done) {
-			test('(id,IN,1|2|3)', `("id" IN ('1', '2', '3'))`);
-			test('(id,In,1|2|3)', `("id" IN ('1', '2', '3'))`);
+			test('(id,IN,1|2|3)', `("id" IN (1, 2, 3))`);
+			test('(id,In,1|2|3)', `("id" IN (1, 2, 3))`);
 			done();
 		});
 
@@ -350,7 +350,7 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 			// Whitespace after comma is consumed by the grammar, not included in value
 			test('(status, ACTIVE)', `("status" = 'ACTIVE')`);
 			test('(price, gt, 100)', `("price" > 100)`);
-			test('(id, in, 1|2|3)', `("id" IN ('1', '2', '3'))`);
+			test('(id, in, 1|2|3)', `("id" IN (1, 2, 3))`);
 			done();
 		});
 

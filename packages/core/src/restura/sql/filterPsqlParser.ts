@@ -49,7 +49,7 @@ const initializers = `
     // Build SQL IN clause from pipe-separated values
     function buildInClause(column, rawValue) {
         var values = splitPipeValues(rawValue);
-        var literals = values.map(function(v) { return format.literal(v); });
+        var literals = values.map(function(v) { return formatValue(v); });
         return column + ' IN (' + literals.join(', ') + ')';
     }
 
