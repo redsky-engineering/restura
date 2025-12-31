@@ -30,7 +30,7 @@ function deepResolveSchemaRefs(
 
 			// Prevent infinite loops from circular references
 			if (seen.has(defName)) {
-				return schema;
+				return { type: 'object', properties: {} } as Schema;
 			}
 
 			const resolved = definitions[defName];
@@ -99,6 +99,8 @@ export default function requestValidator(
 	}
 
 	const schemaKey = isCustom ? routeData.requestType || routeKey : routeKey;
+	if (!schemaKey) throw new RsError('BAD_REQUEST', `No schema key defined for request: ${routeKey}.`);
+
 	const schemaDictionary = isCustom ? customValidationSchema : standardValidationSchema;
 	const schemaRoot = schemaDictionary[schemaKey];
 
