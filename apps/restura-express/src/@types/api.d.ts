@@ -310,6 +310,36 @@ declare namespace Api {
 					}
 				}
 			}
+			export namespace Paged {
+				// Get Users Paged
+				// Gets a list of users paged
+				export namespace Get {
+					export interface Req {
+						page?: number;
+						perPage?: number;
+						filter?: string;
+						sortBy?: string;
+						sortOrder?: 'ASC' | 'DESC' | 'NONE' | 'RAND';
+					}
+					export interface Res {
+						id: number;
+						createdOn: string;
+						modifiedOn: string;
+						firstName: string;
+						lastName: string;
+						companyId: number;
+						email: string;
+						role: 'admin' | 'user';
+						permissionLogin: boolean;
+						lastLoginOn: string | null;
+						phone: string | null;
+						accountStatus: 'banned' | 'view_only' | 'active';
+						onboardingStatus: 'verify_email' | 'complete';
+						testAge: number;
+						metadata: object;
+					}
+				}
+			}
 		}
 		export namespace Weather {
 			// Get Weather Data
@@ -350,16 +380,6 @@ declare namespace Api {
 						modifiedOn: string;
 						orderAmountCents: number | null;
 					}
-				}
-			}
-			export namespace Many {
-				// Get Item Details Many
-				// Get multiple detailed information about an item from an array of ids.
-				export namespace Get {
-					export interface Req {
-						ids: number[];
-					}
-					export type Res = boolean;
 				}
 			}
 		}
