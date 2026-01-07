@@ -1,0 +1,24 @@
+meta {
+  name: Get User Paged
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{host}}/api/v1/user/paged?filter=(column:email,value:plvr.com,type:contains)
+  body: none
+  auth: inherit
+}
+
+params:query {
+  filter: (column:email,value:plvr.com,type:contains)
+  ~page: 1
+  ~perPage: 10
+  ~sortBy: createdOn
+  ~sortOrder: ASC
+}
+
+settings {
+  encodeUrl: false
+  timeout: 0
+}

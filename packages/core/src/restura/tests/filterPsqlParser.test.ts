@@ -605,6 +605,16 @@ B%')`,
 			test("(column:name,value:i'm,type:startsWith)", `("name"::text ILIKE 'i''m%')`, true);
 			done();
 		});
+
+		it('Should handle periods in values', function (done: Done) {
+			test('(column:name,value:John.Doe,type:startsWith)', `("name"::text ILIKE 'John.Doe%')`, true);
+			done();
+		});
+
+		it('Should handle a period in the column name and the value', function (done: Done) {
+			test('(column:user.last,value:John.Doe,type:startsWith)', `("user"."last"::text ILIKE 'John.Doe%')`, true);
+			done();
+		});
 	});
 
 	describe('Invalid Input Rejection', function () {

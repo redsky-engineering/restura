@@ -968,23 +968,6 @@
 					"where": []
 				},
 				{
-					"description": "Get multiple detailed information about an item from an array of ids.",
-					"method": "GET",
-					"name": "Get Item Details Many",
-					"path": "/item/many",
-					"request": [
-						{
-							"name": "ids",
-							"required": true,
-							"validator": [{ "type": "TYPE_CHECK", "value": "number[]" }]
-						}
-					],
-					"responseType": "boolean",
-					"roles": [],
-					"scopes": [],
-					"type": "CUSTOM_ARRAY"
-				},
-				{
 					"assignments": [],
 					"deprecation": {
 						"date": "2025-12-22T20:50:59.010Z",
@@ -1018,6 +1001,63 @@
 					"table": "user",
 					"type": "ONE",
 					"where": [{ "columnName": "id", "operator": "=", "tableName": "user", "value": "#userId" }]
+				},
+				{
+					"assignments": [],
+					"description": "Gets a list of users paged",
+					"joins": [],
+					"method": "GET",
+					"name": "Get Users Paged",
+					"path": "/user/paged",
+					"request": [
+						{
+							"name": "page",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "perPage",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "filter",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "sortBy",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "sortOrder",
+							"required": false,
+							"validator": [{ "type": "ONE_OF", "value": ["ASC", "DESC", "NONE", "RAND"] }]
+						}
+					],
+					"response": [
+						{ "name": "id", "selector": "user.id" },
+						{ "name": "createdOn", "selector": "user.createdOn" },
+						{ "name": "modifiedOn", "selector": "user.modifiedOn" },
+						{ "name": "firstName", "selector": "user.firstName" },
+						{ "name": "lastName", "selector": "user.lastName" },
+						{ "name": "companyId", "selector": "user.companyId" },
+						{ "name": "email", "selector": "user.email" },
+						{ "name": "role", "selector": "user.role" },
+						{ "name": "permissionLogin", "selector": "user.permissionLogin" },
+						{ "name": "lastLoginOn", "selector": "user.lastLoginOn" },
+						{ "name": "phone", "selector": "user.phone" },
+						{ "name": "accountStatus", "selector": "user.accountStatus" },
+						{ "name": "onboardingStatus", "selector": "user.onboardingStatus" },
+						{ "name": "testAge", "selector": "user.testAge" },
+						{ "name": "metadata", "selector": "user.metadata" }
+					],
+					"roles": ["user", "admin"],
+					"scopes": [],
+					"table": "user",
+					"type": "PAGED",
+					"where": []
 				}
 			]
 		}

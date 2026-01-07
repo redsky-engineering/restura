@@ -97,7 +97,7 @@ OldOperator
     = "and"i / "or"i
 
 OldColumn
-    = first:OldText rest:("." OldText)* { 
+    = first:OldColumnPart rest:("." OldColumnPart)* { 
         const partsArray = [first];
         if (rest && rest.length > 0) {
             partsArray.push(...rest.map(item => item[1]));
@@ -125,8 +125,13 @@ OldColumn
         return result;
     }
 
-OldText
+OldColumnPart
     = text:[a-z0-9 \\t\\r\\n\\-_:@']i+ {
+        return text.join(""); 
+    }
+
+OldText
+    = text:[a-z0-9 \\t\\r\\n\\-_:@'\.]i+ {
         return text.join(""); 
     }
 
