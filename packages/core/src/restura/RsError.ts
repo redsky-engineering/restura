@@ -3,16 +3,6 @@
    codes were meant as a server signaling a client about some error either in the request
    and not the necessarily that a credit card was declined for example.
  */
-
-// Internal data is used for passing around until we finally get to the sending externally
-export interface RsErrorInternalData<T extends Record<string, unknown> = Record<string, unknown>> {
-	err: ErrorCode;
-	msg: string;
-	stack: string;
-	status: number;
-	options?: T;
-}
-
 export enum HtmlStatusCodes {
 	BAD_REQUEST = 400,
 	UNAUTHORIZED = 401,
@@ -68,19 +58,31 @@ export type ErrorCode =
 	| 'SCHEMA_ERROR'
 	| 'DATABASE_ERROR';
 
-export class RsError<T extends Record<string, unknown> = Record<string, unknown>> {
+export class RsError<T extends Record<string, unknown> = Record<string, unknown>> extends Error {
 	err: ErrorCode;
 	msg: string;
 	options?: T;
 	status?: number;
-	stack: string;
 
 	constructor(errCode: ErrorCode, message?: string, options?: T) {
+		super(message);
+		this.name = 'RsError';
 		this.err = errCode;
 		this.msg = message || '';
 		this.status = RsError.htmlStatus(errCode);
-		this.stack = new Error().stack || '';
 		this.options = options;
+	}
+
+	toJSON(): Record<string, unknown> {
+		return {
+			type: this.name,
+			err: this.err,
+			message: this.message,
+			msg: this.msg,
+			status: this.status ?? 500,
+			stack: this.stack ?? '',
+			options: this.options
+		};
 	}
 
 	static htmlStatus(code: ErrorCode): number {
