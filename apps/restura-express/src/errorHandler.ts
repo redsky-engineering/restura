@@ -1,15 +1,8 @@
-import {
-	HtmlStatusCodes,
-	logger,
-	RsError,
-	type RsErrorInternalData,
-	type RsRequest,
-	type RsResponse
-} from '@restura/core';
+import { HtmlStatusCodes, logger, RsError, type RsRequest, type RsResponse } from '@restura/core';
 import type { NextFunction } from 'express';
 
 export default function errorHandler(
-	err: RsErrorInternalData | unknown,
+	err: unknown,
 	_req: RsRequest<unknown>,
 	res: RsResponse<unknown>,
 	next: NextFunction
@@ -19,7 +12,7 @@ export default function errorHandler(
 		return;
 	}
 
-	logger.error(JSON.stringify(err));
+	logger.error(err);
 
 	if (err instanceof RsError) {
 		// Handle err's thar are of type RsError.
@@ -32,7 +25,7 @@ export default function errorHandler(
 	// thus lets check if its available first.
 	if (res.sendError) {
 		if (err instanceof RsError) {
-			res.sendError(err.err, err.msg || 'error', err.status, err.stack);
+			res.sendError(err.err, err.msg, err.status, err.stack);
 		} else if (err instanceof Error) {
 			res.sendError('UNKNOWN_ERROR', err.message || 'A server error occurred', 500, err.stack);
 		} else {

@@ -1,6 +1,7 @@
 import { config } from '@restura/internal';
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
+import { RsError } from '../restura/RsError.js';
 import { loggerConfigSchema } from './loggerConfigSchema.js';
 
 const loggerConfig = await config.validate('logger', loggerConfigSchema);
@@ -51,6 +52,10 @@ const defaultSerializer = (error: unknown) => {
 			status: err.response?.status,
 			responseData: err.response?.data
 		};
+	}
+
+	if (RsError.isRsError(error)) {
+		return error.toJSON();
 	}
 
 	return baseSerializer(error as Error);

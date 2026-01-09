@@ -4,7 +4,10 @@
    and not the necessarily that a credit card was declined for example.
  */
 
-// Internal data is used for passing around until we finally get to the sending externally
+/**
+ * @deprecated This is used for passing around until we finally get to the sending externally
+ * // TODO: Remove once backwards compatibility is no longer needed
+ */
 export interface RsErrorInternalData<T extends Record<string, unknown> = Record<string, unknown>> {
 	err: ErrorCode;
 	msg: string;
@@ -68,19 +71,31 @@ export type ErrorCode =
 	| 'SCHEMA_ERROR'
 	| 'DATABASE_ERROR';
 
-export class RsError<T extends Record<string, unknown> = Record<string, unknown>> {
+export class RsError<T extends Record<string, unknown> = Record<string, unknown>> extends Error {
 	err: ErrorCode;
 	msg: string;
 	options?: T;
 	status?: number;
-	stack: string;
 
 	constructor(errCode: ErrorCode, message?: string, options?: T) {
+		super(message);
+		this.name = 'RsError';
 		this.err = errCode;
 		this.msg = message || '';
 		this.status = RsError.htmlStatus(errCode);
-		this.stack = new Error().stack || '';
 		this.options = options;
+	}
+
+	toJSON(): Record<string, unknown> {
+		return {
+			type: this.name,
+			err: this.err,
+			message: this.message,
+			msg: this.msg,
+			status: this.status ?? 500,
+			stack: this.stack ?? '',
+			options: this.options
+		};
 	}
 
 	static htmlStatus(code: ErrorCode): number {
