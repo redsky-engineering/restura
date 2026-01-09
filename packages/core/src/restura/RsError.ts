@@ -3,6 +3,19 @@
    codes were meant as a server signaling a client about some error either in the request
    and not the necessarily that a credit card was declined for example.
  */
+
+/**
+ * @deprecated This is used for passing around until we finally get to the sending externally
+ * // TODO: Remove once backwards compatibility is no longer needed
+ */
+export interface RsErrorInternalData<T extends Record<string, unknown> = Record<string, unknown>> {
+	err: ErrorCode;
+	msg: string;
+	stack: string;
+	status: number;
+	options?: T;
+}
+
 export enum HtmlStatusCodes {
 	BAD_REQUEST = 400,
 	UNAUTHORIZED = 401,
