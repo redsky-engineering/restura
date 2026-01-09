@@ -312,6 +312,86 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		});
 	});
 
+	describe('Type Casting', function () {
+		it('Should parse all 8 supported types with equality operator', function (done: Done) {
+			test('(name,John::text)', `("name" = 'John'::text)`);
+			test('(age,25::int)', `("age" = 25::int)`);
+			test('(id,123456789::bigint)', `("id" = 123456789::bigint)`);
+			test('(price,99.99::numeric)', `("price" = 99.99::numeric)`);
+			test('(active,true::boolean)', `("active" = 'true'::boolean)`);
+			test('(createdAt,2024-01-15::date)', `("createdAt" = '2024-01-15'::date)`);
+			test('(updatedAt,2024-01-15T10:30:00::timestamp)', `("updatedAt" = '2024-01-15T10:30:00'::timestamp)`);
+			test(
+				'(eventTime,2024-01-15T10:30:00Z::timestamptz)',
+				`("eventTime" = '2024-01-15T10:30:00Z'::timestamptz)`
+			);
+			done();
+		});
+
+		it('Should parse casting with comparison operators', function (done: Done) {
+			test('(age,gt,25::int)', `("age" > 25::int)`);
+			test('(price,gte,100::numeric)', `("price" >= 100::numeric)`);
+			test('(count,lt,10::bigint)', `("count" < 10::bigint)`);
+			test('(score,lte,50::int)', `("score" <= 50::int)`);
+			test('(status,ne,active::text)', `("status" <> 'active'::text)`);
+			done();
+		});
+
+		it('Should parse casting with string operators', function (done: Done) {
+			test('(name,has,test::text)', `("name"::text ILIKE '%test%'::text)`);
+			test('(email,sw,admin::text)', `("email"::text ILIKE 'admin%'::text)`);
+			test('(file,ew,.pdf::text)', `("file"::text ILIKE '%.pdf'::text)`);
+			done();
+		});
+
+		it('Should parse casting with IN operator', function (done: Done) {
+			test('(id,in,1|2|3::int)', `("id" IN (1::int, 2::int, 3::int))`);
+			test('(status,in,ACTIVE|PENDING::text)', `("status" IN ('ACTIVE'::text, 'PENDING'::text))`);
+			done();
+		});
+
+		it('Should be case-insensitive for type names', function (done: Done) {
+			test('(age,25::INT)', `("age" = 25::int)`);
+			test('(name,John::TEXT)', `("name" = 'John'::text)`);
+			test('(active,true::BOOLEAN)', `("active" = 'true'::boolean)`);
+			test('(createdAt,2024-01-15::DATE)', `("createdAt" = '2024-01-15'::date)`);
+			test('(price,99.99::Numeric)', `("price" = 99.99::numeric)`);
+			test('(id,123::BigInt)', `("id" = 123::bigint)`);
+			test('(time,2024-01-15T10:30:00::Timestamp)', `("time" = '2024-01-15T10:30:00'::timestamp)`);
+			test('(time,2024-01-15T10:30:00Z::TimestampTZ)', `("time" = '2024-01-15T10:30:00Z'::timestamptz)`);
+			done();
+		});
+
+		it('Should work without cast (backward compatibility)', function (done: Done) {
+			// These should still work without a cast
+			test('(name,John)', `("name" = 'John')`);
+			test('(age,gt,25)', `("age" > 25)`);
+			test('(id,in,1|2|3)', `("id" IN (1, 2, 3))`);
+			done();
+		});
+
+		it('Should parse casting with negation', function (done: Done) {
+			test('!(age,25::int)', `NOT ("age" = 25::int)`);
+			test('!(price,gt,100::numeric)', `NOT ("price" > 100::numeric)`);
+			done();
+		});
+
+		it('Should parse casting with logical operators', function (done: Done) {
+			test('(age,gt,18::int)and(status,active::text)', `("age" > 18::int) AND ("status" = 'active'::text)`);
+			test(
+				'(price,lt,100::numeric)or(price,gt,500::numeric)',
+				`("price" < 100::numeric) OR ("price" > 500::numeric)`
+			);
+			done();
+		});
+
+		it('Should parse casting with column paths', function (done: Done) {
+			test('(user.age,gt,18::int)', `("user"."age" > 18::int)`);
+			test('(order.total,99.99::numeric)', `("order"."total" = 99.99::numeric)`);
+			done();
+		});
+	});
+
 	describe('Mixed Old and New Syntax (Transition Period)', function () {
 		it('Should still parse old syntax', function (done: Done) {
 			// Verify old verbose syntax still works alongside new compact syntax
