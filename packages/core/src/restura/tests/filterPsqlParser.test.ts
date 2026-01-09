@@ -65,20 +65,20 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		});
 
 		it('Should parse has (contains substring)', function (done: Done) {
-			test('(name,has,test)', `("name"::text ILIKE '%test%')`);
-			test('(description,has,important)', `("description"::text ILIKE '%important%')`);
+			test('(name,has,test)', `("name" ILIKE '%test%')`);
+			test('(description,has,important)', `("description" ILIKE '%important%')`);
 			done();
 		});
 
 		it('Should parse sw (starts with)', function (done: Done) {
-			test('(email,sw,admin)', `("email"::text ILIKE 'admin%')`);
-			test('(code,sw,PRE)', `("code"::text ILIKE 'PRE%')`);
+			test('(email,sw,admin)', `("email" ILIKE 'admin%')`);
+			test('(code,sw,PRE)', `("code" ILIKE 'PRE%')`);
 			done();
 		});
 
 		it('Should parse ew (ends with)', function (done: Done) {
-			test('(file,ew,.pdf)', `("file"::text ILIKE '%.pdf')`);
-			test('(email,ew,@gmail.com)', `("email"::text ILIKE '%@gmail.com')`);
+			test('(file,ew,.pdf)', `("file" ILIKE '%.pdf')`);
+			test('(email,ew,@gmail.com)', `("email" ILIKE '%@gmail.com')`);
 			done();
 		});
 
@@ -104,13 +104,13 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 
 		it('Should parse two-part column (table.column)', function (done: Done) {
 			test('(order.status,ACTIVE)', `("order"."status" = 'ACTIVE')`);
-			test('(user.email,sw,admin)', `("user"."email"::text ILIKE 'admin%')`);
+			test('(user.email,sw,admin)', `("user"."email" ILIKE 'admin%')`);
 			test('(product.price,gt,100)', `("product"."price" > 100)`);
 			done();
 		});
 
 		it('Should parse three-part column (table.column.jsonField)', function (done: Done) {
-			test('(order.address.zip,has,123)', `("order"."address"->>'zip'::text ILIKE '%123%')`);
+			test('(order.address.zip,has,123)', `("order"."address"->>'zip' ILIKE '%123%')`);
 			test('(user.metadata.role,admin)', `("user"."metadata"->>'role' = 'admin')`);
 			test('(config.settings.theme,ne,dark)', `("config"."settings"->>'theme' <> 'dark')`);
 			done();
@@ -125,29 +125,29 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 
 	describe('Special Character Escaping', function () {
 		it('Should handle escaped commas in values', function (done: Done) {
-			test('(company,has,Acme\\, Inc.)', `("company"::text ILIKE '%Acme, Inc.%')`);
+			test('(company,has,Acme\\, Inc.)', `("company" ILIKE '%Acme, Inc.%')`);
 			test('(name,Doe\\, John)', `("name" = 'Doe, John')`);
-			test('(address,has,123 Main St\\, Suite 100)', `("address"::text ILIKE '%123 Main St, Suite 100%')`);
+			test('(address,has,123 Main St\\, Suite 100)', `("address" ILIKE '%123 Main St, Suite 100%')`);
 			done();
 		});
 
 		it('Should handle escaped pipes in values', function (done: Done) {
-			test('(description,has,Use A\\|B format)', `("description"::text ILIKE '%Use A|B format%')`);
-			test('(formula,has,x\\|y\\|z)', `("formula"::text ILIKE '%x|y|z%')`);
+			test('(description,has,Use A\\|B format)', `("description" ILIKE '%Use A|B format%')`);
+			test('(formula,has,x\\|y\\|z)', `("formula" ILIKE '%x|y|z%')`);
 			done();
 		});
 
 		it('Should handle escaped backslashes in values', function (done: Done) {
 			// pg-format uses E'...' escape syntax for strings containing backslashes
-			test('(path,sw,C:\\\\Windows)', `("path"::text ILIKE E'C:\\\\Windows%')`);
-			test('(path,has,\\\\server\\\\share)', `("path"::text ILIKE E'%\\\\server\\\\share%')`);
+			test('(path,sw,C:\\\\Windows)', `("path" ILIKE E'C:\\\\Windows%')`);
+			test('(path,has,\\\\server\\\\share)', `("path" ILIKE E'%\\\\server\\\\share%')`);
 			done();
 		});
 
 		it('Should handle spaces in values (no escaping needed)', function (done: Done) {
-			test('(name,has,John Doe)', `("name"::text ILIKE '%John Doe%')`);
+			test('(name,has,John Doe)', `("name" ILIKE '%John Doe%')`);
 			test('(title,Hello World)', `("title" = 'Hello World')`);
-			test('(desc,has,multiple   spaces)', `("desc"::text ILIKE '%multiple   spaces%')`);
+			test('(desc,has,multiple   spaces)', `("desc" ILIKE '%multiple   spaces%')`);
 			done();
 		});
 
@@ -155,7 +155,7 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 			// pg-format uses E'...' escape syntax for strings containing backslashes
 			test(
 				'(text,has,Test\\, with \\\\backslash\\| and pipe)',
-				`("text"::text ILIKE E'%Test, with \\\\backslash| and pipe%')`
+				`("text" ILIKE E'%Test, with \\\\backslash| and pipe%')`
 			);
 			test('(data,A\\, B\\| C\\\\D)', `("data" = E'A, B| C\\\\D')`);
 			done();
@@ -282,10 +282,10 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		});
 
 		it('Should be case-insensitive for string operators', function (done: Done) {
-			test('(name,HAS,test)', `("name"::text ILIKE '%test%')`);
-			test('(name,Has,test)', `("name"::text ILIKE '%test%')`);
-			test('(email,SW,admin)', `("email"::text ILIKE 'admin%')`);
-			test('(file,EW,.pdf)', `("file"::text ILIKE '%.pdf')`);
+			test('(name,HAS,test)', `("name" ILIKE '%test%')`);
+			test('(name,Has,test)', `("name" ILIKE '%test%')`);
+			test('(email,SW,admin)', `("email" ILIKE 'admin%')`);
+			test('(file,EW,.pdf)', `("file" ILIKE '%.pdf')`);
 			done();
 		});
 
@@ -338,9 +338,9 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		});
 
 		it('Should parse casting with string operators', function (done: Done) {
-			test('(name,has,test::text)', `("name"::text ILIKE '%test%'::text)`);
-			test('(email,sw,admin::text)', `("email"::text ILIKE 'admin%'::text)`);
-			test('(file,ew,.pdf::text)', `("file"::text ILIKE '%.pdf'::text)`);
+			test('(name,has,test::text)', `("name" ILIKE '%test%'::text)`);
+			test('(email,sw,admin::text)', `("email" ILIKE 'admin%'::text)`);
+			test('(file,ew,.pdf::text)', `("file" ILIKE '%.pdf'::text)`);
 			done();
 		});
 
@@ -397,7 +397,7 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 			// Verify old verbose syntax still works alongside new compact syntax
 			test('(column:status,value:ACTIVE,type:exact)', `("status" = 'ACTIVE')`, true);
 			test('(column:price,value:100,type:greaterThan)', `("price" > 100)`, true);
-			test('(column:name,value:test,type:contains)', `("name"::text ILIKE '%test%')`, true);
+			test('(column:name,value:test,type:contains)', `("name" ILIKE '%test%')`, true);
 			done();
 		});
 
@@ -436,7 +436,7 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 
 		it('Should preserve spaces within values', function (done: Done) {
 			test('(name,John Doe)', `("name" = 'John Doe')`);
-			test('(title,has,hello world)', `("title"::text ILIKE '%hello world%')`);
+			test('(title,has,hello world)', `("title" ILIKE '%hello world%')`);
 			done();
 		});
 	});
@@ -452,19 +452,19 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		});
 
 		it('Should parse type:contains (ILIKE %value%)', function (done: Done) {
-			test('(column:id,value:251,type:contains)', `("id"::text ILIKE '%251%')`, true);
-			test('(column:id,value:4504055,type:contains)', `("id"::text ILIKE '%4504055%')`, true);
+			test('(column:id,value:251,type:contains)', `("id" ILIKE '%251%')`, true);
+			test('(column:id,value:4504055,type:contains)', `("id" ILIKE '%4504055%')`, true);
 			done();
 		});
 
 		it('Should parse type:startsWith (ILIKE value%)', function (done: Done) {
-			test('(column:id,value:251,type:startsWith)', `("id"::text ILIKE '251%')`, true);
-			test('(column:id,value:Tanner B,type:startsWith)', `("id"::text ILIKE 'Tanner B%')`, true);
+			test('(column:id,value:251,type:startsWith)', `("id" ILIKE '251%')`, true);
+			test('(column:id,value:Tanner B,type:startsWith)', `("id" ILIKE 'Tanner B%')`, true);
 			done();
 		});
 
 		it('Should parse type:endsWith (ILIKE %value)', function (done: Done) {
-			test('(column:id,value:251,type:endsWith)', `("id"::text ILIKE '%251')`, true);
+			test('(column:id,value:251,type:endsWith)', `("id" ILIKE '%251')`, true);
 			done();
 		});
 
@@ -549,7 +549,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse three-part column (table.column.jsonField)', function (done: Done) {
 			test(
 				`(column:order.billingAddress.zip,value:47,type:contains)`,
-				`("order"."billingAddress"->>'zip'::text ILIKE '%47%')`,
+				`("order"."billingAddress"->>'zip' ILIKE '%47%')`,
 				true
 			);
 			done();
@@ -574,7 +574,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse OR operator', function (done: Done) {
 			test(
 				'(column:id,value:251,type:endsWith)or(column:id,value:278,type:endsWith)',
-				`("id"::text ILIKE '%251') or ("id"::text ILIKE '%278')`,
+				`("id" ILIKE '%251') or ("id" ILIKE '%278')`,
 				true
 			);
 			done();
@@ -590,10 +590,10 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		});
 
 		it('Should parse deeply nested groups', function (done: Done) {
-			test('(((column:id,value:4504055,type:contains)))', `((("id"::text ILIKE '%4504055%')))`, true);
+			test('(((column:id,value:4504055,type:contains)))', `((("id" ILIKE '%4504055%')))`, true);
 			test(
 				'!(!(column:userId,value:15234,type:exact)and!(column:name,value:jim,type:startsWith))or(column:name,value:bob)',
-				` NOT ( NOT ("userId" = 15234) and  NOT ("name"::text ILIKE 'jim%')) or ("name" = 'bob')`,
+				` NOT ( NOT ("userId" = 15234) and  NOT ("name" ILIKE 'jim%')) or ("name" = 'bob')`,
 				true
 			);
 			done();
@@ -602,8 +602,8 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 
 	describe('Negation', function () {
 		it('Should parse negated expressions', function (done: Done) {
-			test('!(column:id,value:4504055,type:contains)', ` NOT ("id"::text ILIKE '%4504055%')`, true);
-			test('!(column:id,value:4504055,type:startsWith)', ` NOT ("id"::text ILIKE '4504055%')`, true);
+			test('!(column:id,value:4504055,type:contains)', ` NOT ("id" ILIKE '%4504055%')`, true);
+			test('!(column:id,value:4504055,type:startsWith)', ` NOT ("id" ILIKE '4504055%')`, true);
 			test('!(column:userId,value:15234,type:exact)', ` NOT ("userId" = 15234)`, true);
 			done();
 		});
@@ -611,7 +611,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 		it('Should parse negation with logical operators', function (done: Done) {
 			test(
 				'!(column:id,value:4504055,type:contains)and!(column:name,value:jim,type:endsWith)',
-				` NOT ("id"::text ILIKE '%4504055%') and  NOT ("name"::text ILIKE '%jim')`,
+				` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`,
 				true
 			);
 			test(
@@ -625,13 +625,13 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 
 	describe('Whitespace Handling', function () {
 		it('Should allow spaces in values', function (done: Done) {
-			test('(column:id,value:Tanner B,type:startsWith)', `("id"::text ILIKE 'Tanner B%')`, true);
-			test('(column:id,value:Tanner  B,type:startsWith)', `("id"::text ILIKE 'Tanner  B%')`, true);
+			test('(column:id,value:Tanner B,type:startsWith)', `("id" ILIKE 'Tanner B%')`, true);
+			test('(column:id,value:Tanner  B,type:startsWith)', `("id" ILIKE 'Tanner  B%')`, true);
 			done();
 		});
 
 		it('Should allow tabs in values', function (done: Done) {
-			test(`(column:id,value:Tanner	B,type:startsWith)`, `("id"::text ILIKE 'Tanner	B%')`, true);
+			test(`(column:id,value:Tanner	B,type:startsWith)`, `("id" ILIKE 'Tanner	B%')`, true);
 			done();
 		});
 
@@ -639,7 +639,7 @@ describe('Filter Psql Parsing test - Old Syntax', function () {
 			test(
 				`(column:id,value:Tanner
 B,type:startsWith)`,
-				`("id"::text ILIKE 'Tanner
+				`("id" ILIKE 'Tanner
 B%')`,
 				true
 			);
@@ -647,10 +647,10 @@ B%')`,
 		});
 
 		it('Should allow whitespace around keywords', function (done: Done) {
-			test('(column: id ,value: Tanner B ,type:startsWith)', `(" id "::text ILIKE ' Tanner B %')`, true);
+			test('(column: id ,value: Tanner B ,type:startsWith)', `(" id " ILIKE ' Tanner B %')`, true);
 			test(
 				'! ( column :id, value :4504055,  type: contains )   and ! ( column :name, value :jim, type : endsWith ) ',
-				` NOT ("id"::text ILIKE '%4504055%') and  NOT ("name"::text ILIKE '%jim')`,
+				` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`,
 				true
 			);
 			done();
@@ -659,12 +659,12 @@ B%')`,
 		it('Should allow whitespace around logical operators', function (done: Done) {
 			test(
 				'!(column:id,value:4504055,type:contains)   and!(column:name,value:jim,type:endsWith)',
-				` NOT ("id"::text ILIKE '%4504055%') and  NOT ("name"::text ILIKE '%jim')`,
+				` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`,
 				true
 			);
 			test(
 				'!(column:id,value:4504055,type :contains)   and!(column:name,value:jim,type:endsWith)',
-				` NOT ("id"::text ILIKE '%4504055%') and  NOT ("name"::text ILIKE '%jim')`,
+				` NOT ("id" ILIKE '%4504055%') and  NOT ("name" ILIKE '%jim')`,
 				true
 			);
 			done();
@@ -673,7 +673,7 @@ B%')`,
 		it('Should preserve trailing spaces in values', function (done: Done) {
 			test(
 				'!(column:id,value:4504055 ,  type:contains)   and!(column:name,value:jim,type:endsWith)',
-				` NOT ("id"::text ILIKE '%4504055 %') and  NOT ("name"::text ILIKE '%jim')`,
+				` NOT ("id" ILIKE '%4504055 %') and  NOT ("name" ILIKE '%jim')`,
 				true
 			);
 			done();
@@ -682,17 +682,17 @@ B%')`,
 
 	describe('Special Characters', function () {
 		it('Should handle single quotes in values (SQL escaping)', function (done: Done) {
-			test("(column:name,value:i'm,type:startsWith)", `("name"::text ILIKE 'i''m%')`, true);
+			test("(column:name,value:i'm,type:startsWith)", `("name" ILIKE 'i''m%')`, true);
 			done();
 		});
 
 		it('Should handle periods in values', function (done: Done) {
-			test('(column:name,value:John.Doe,type:startsWith)', `("name"::text ILIKE 'John.Doe%')`, true);
+			test('(column:name,value:John.Doe,type:startsWith)', `("name" ILIKE 'John.Doe%')`, true);
 			done();
 		});
 
 		it('Should handle a period in the column name and the value', function (done: Done) {
-			test('(column:user.last,value:John.Doe,type:startsWith)', `("user"."last"::text ILIKE 'John.Doe%')`, true);
+			test('(column:user.last,value:John.Doe,type:startsWith)', `("user"."last" ILIKE 'John.Doe%')`, true);
 			done();
 		});
 	});
@@ -765,7 +765,7 @@ describe('SQL Injection Prevention', function () {
 		it('Should escape semicolon-based injection attempts as literals', function (done: Done) {
 			// Semicolons are allowed in values and get escaped as harmless literals
 			test('(id,1; DROP TABLE users; --)', `("id" = '1; DROP TABLE users; --')`);
-			test("(name,has,test'; DELETE FROM users; --)", `("name"::text ILIKE '%test''; DELETE FROM users; --%')`);
+			test("(name,has,test'; DELETE FROM users; --)", `("name" ILIKE '%test''; DELETE FROM users; --%')`);
 			done();
 		});
 
@@ -778,7 +778,7 @@ describe('SQL Injection Prevention', function () {
 		it('Should safely escape single quotes in values', function (done: Done) {
 			// Single quotes are escaped by pg-format, making injection harmless
 			test("(name,O'Brien)", `("name" = 'O''Brien')`);
-			test("(name,has,O'Malley)", `("name"::text ILIKE '%O''Malley%')`);
+			test("(name,has,O'Malley)", `("name" ILIKE '%O''Malley%')`);
 			test('(company,Test\'s "Company")', `("company" = 'Test''s "Company"')`);
 			done();
 		});
