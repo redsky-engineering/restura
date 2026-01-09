@@ -61,6 +61,22 @@ const initializers = `
         }
         return format.literal(value);
     }
+
+    // Format a value with optional type cast
+    function formatValueWithCast(rawValue, cast) {
+        var formatted = formatValue(unescapeValue(rawValue));
+        return cast ? formatted + '::' + cast : formatted;
+    }
+
+    // Build SQL IN clause from pipe-separated values with optional cast
+    function buildInClauseWithCast(column, rawValue, cast) {
+        var values = splitPipeValues(rawValue);
+        var literals = values.map(function(v) {
+            var formatted = formatValue(v);
+            return cast ? formatted + '::' + cast : formatted;
+        });
+        return column + ' IN (' + literals.join(', ') + ')';
+    }
 `;
 
 const entryGrammar = `
@@ -181,8 +197,8 @@ SimpleExpr
         { return (negate ? 'NOT ' : '') + '(' + op(col) + ')'; }
     / negate:"!"? _ "(" _ col:Column _ "," _ op:NullOperator _ ")" _
         { return (negate ? 'NOT ' : '') + '(' + op(col) + ')'; }
-    / negate:"!"? _ "(" _ col:Column _ "," _ val:Value _ ")" _
-        { return (negate ? 'NOT ' : '') + '(' + col + ' = ' + formatValue(unescapeValue(val)) + ')'; }
+    / negate:"!"? _ "(" _ col:Column _ "," _ val:CastedValue _ ")" _
+        { return (negate ? 'NOT ' : '') + '(' + col + ' = ' + formatValueWithCast(val.value, val.cast) + ')'; }
 
 Column
     = first:ColPart rest:("." ColPart)* {
@@ -218,15 +234,25 @@ NullOperator
     / "null"i { return function(col) { return col + ' IS NULL'; }; }
 
 OperatorWithValue
-    = "in"i _ "," _ val:ValueWithPipes { return function(col) { return buildInClause(col, val); }; }
-    / "ne"i _ "," _ val:Value { return function(col) { return col + ' <> ' + formatValue(unescapeValue(val)); }; }
-    / "gte"i _ "," _ val:Value { return function(col) { return col + ' >= ' + formatValue(unescapeValue(val)); }; }
-    / "gt"i _ "," _ val:Value { return function(col) { return col + ' > ' + formatValue(unescapeValue(val)); }; }
-    / "lte"i _ "," _ val:Value { return function(col) { return col + ' <= ' + formatValue(unescapeValue(val)); }; }
-    / "lt"i _ "," _ val:Value { return function(col) { return col + ' < ' + formatValue(unescapeValue(val)); }; }
-    / "has"i _ "," _ val:Value { return function(col) { return col + '::text ILIKE ' + format.literal('%' + unescapeValue(val) + '%'); }; }
-    / "sw"i _ "," _ val:Value { return function(col) { return col + '::text ILIKE ' + format.literal(unescapeValue(val) + '%'); }; }
-    / "ew"i _ "," _ val:Value { return function(col) { return col + '::text ILIKE ' + format.literal('%' + unescapeValue(val)); }; }
+    = "in"i _ "," _ val:CastedValueWithPipes { return function(col) { return buildInClauseWithCast(col, val.value, val.cast); }; }
+    / "ne"i _ "," _ val:CastedValue { return function(col) { return col + ' <> ' + formatValueWithCast(val.value, val.cast); }; }
+    / "gte"i _ "," _ val:CastedValue { return function(col) { return col + ' >= ' + formatValueWithCast(val.value, val.cast); }; }
+    / "gt"i _ "," _ val:CastedValue { return function(col) { return col + ' > ' + formatValueWithCast(val.value, val.cast); }; }
+    / "lte"i _ "," _ val:CastedValue { return function(col) { return col + ' <= ' + formatValueWithCast(val.value, val.cast); }; }
+    / "lt"i _ "," _ val:CastedValue { return function(col) { return col + ' < ' + formatValueWithCast(val.value, val.cast); }; }
+    / "has"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value) + '%'); return col + '::text ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
+    / "sw"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal(unescapeValue(val.value) + '%'); return col + '::text ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
+    / "ew"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value)); return col + '::text ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
+
+CastedValue
+    = val:Value cast:TypeCast? { return { value: val, cast: cast }; }
+
+CastedValueWithPipes
+    = val:ValueWithPipes cast:TypeCast? { return { value: val, cast: cast }; }
+
+TypeCast
+    = "::" type:("timestamptz"i / "timestamp"i / "boolean"i / "numeric"i / "bigint"i / "text"i / "date"i / "int"i)
+        { return type.toLowerCase(); }
 
 Value
     = chars:ValueChar+ { return chars.join(''); }
@@ -235,7 +261,8 @@ ValueChar
     = "\\\\\\\\" { return '\\\\\\\\'; }
     / "\\\\," { return '\\\\,'; }
     / "\\\\|" { return '\\\\|'; }
-    / [^,()\\\\|]
+    / [^,()\\\\|:]
+    / c:":" !":"  { return c; }
 
 ValueWithPipes
     = chars:ValueWithPipesChar+ { return chars.join(''); }
@@ -244,7 +271,8 @@ ValueWithPipesChar
     = "\\\\\\\\" { return '\\\\\\\\'; }
     / "\\\\," { return '\\\\,'; }
     / "\\\\|" { return '\\\\|'; }
-    / [^,()\\\\]
+    / [^,()\\\\:]
+    / c:":" !":"  { return c; }
 `;
 
 const fullGrammar = entryGrammar + oldGrammar + newGrammar;
