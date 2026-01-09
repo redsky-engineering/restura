@@ -62,18 +62,18 @@ export function insertObjectQuery(table: string, obj: DynamicObject, options?: {
 	const values = params.map((value) => SQL`${value}`).join(', ');
 
 	let query = `
-INSERT INTO "${table}" (${columns})
-                 VALUES (${values})
-                 RETURNING *`;
+		INSERT INTO "${table}" (${columns})
+		VALUES (${values})
+		RETURNING *`;
 
 	if (customSelect) {
 		query = `
-WITH inserted AS (
-	INSERT INTO "${table}" (${columns})
-	VALUES (${values})
-	RETURNING *
-)
-${customSelect}`;
+		WITH inserted AS (
+			INSERT INTO "${table}" (${columns})
+			VALUES (${values})
+			RETURNING *
+		)
+		${customSelect}`;
 	}
 
 	query = query.replace(/'(\?)'/g, '?');
