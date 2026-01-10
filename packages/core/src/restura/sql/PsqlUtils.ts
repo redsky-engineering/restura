@@ -45,10 +45,16 @@ export function questionMarksToOrderedParams(query: string) {
 /**
  * Creates a query to insert an object into a table.
  * @param table Table name to insert the object into
- * @param obj  Data to insert into the table
- * @returns the query to insert the object into the table
+ * @param obj Data to insert into the table
+ * @param options.customSelect Optional custom SELECT clause that wraps the INSERT in a CTE.
+ *        When provided, the INSERT is wrapped in `WITH inserted AS (INSERT ... RETURNING *)`,
+ *        and your customSelect should reference the `inserted` alias.
+ *        Example: `{ customSelect: 'SELECT i.*, u.email FROM inserted i JOIN "user" u ON i."userId" = u.id' }`
+ * @returns The query to insert the object into the table
  */
-export function insertObjectQuery(table: string, obj: DynamicObject): string {
+export function insertObjectQuery(table: string, obj: DynamicObject, options?: { customSelect?: string }): string {
+	const { customSelect } = options ?? {};
+
 	const keys = Object.keys(obj);
 	const params = Object.values(obj);
 
@@ -56,9 +62,19 @@ export function insertObjectQuery(table: string, obj: DynamicObject): string {
 	const values = params.map((value) => SQL`${value}`).join(', ');
 
 	let query = `
-INSERT INTO "${table}" (${columns})
-                 VALUES (${values})
-                 RETURNING *`;
+		INSERT INTO "${table}" (${columns})
+		VALUES (${values})
+		RETURNING *`;
+
+	if (customSelect) {
+		query = `
+		WITH inserted AS (
+			INSERT INTO "${table}" (${columns})
+			VALUES (${values})
+			RETURNING *
+		)
+		${customSelect}`;
+	}
 
 	query = query.replace(/'(\?)'/g, '?');
 	return query;

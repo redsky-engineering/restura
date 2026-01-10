@@ -16,6 +16,7 @@ describe('PsqlUtils', () => {
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
+
 	it('should convert an object with an assignment to an insert statement', () => {
 		const query = insertObjectQuery('USER', { id: 1, partnerId: '?' });
 		const expectedQuery = `INSERT INTO "USER" ("id", "partnerId")
@@ -23,6 +24,48 @@ describe('PsqlUtils', () => {
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
+
+	it('should wrap insert in CTE when customSelect is provided', () => {
+		const query = insertObjectQuery(
+			'USER',
+			{ id: 1, firstName: 'bob' },
+			{ customSelect: 'SELECT * FROM inserted' }
+		);
+		const expectedQuery = `WITH inserted AS (
+			INSERT INTO "USER" ("id", "firstName")
+			VALUES (1, 'bob')
+			RETURNING *
+		)
+		SELECT * FROM inserted`;
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
+	});
+
+	it('should allow customSelect to join with other tables in CTE', () => {
+		const query = insertObjectQuery(
+			'order',
+			{ id: 1, userId: 5, total: 100 },
+			{ customSelect: 'SELECT i.*, u."email" FROM inserted i JOIN "user" u ON i."userId" = u."id"' }
+		);
+		const expectedQuery = `WITH inserted AS (
+			INSERT INTO "order" ("id", "userId", "total")
+			VALUES (1, 5, 100)
+			RETURNING *
+		)
+		SELECT i.*, u."email" FROM inserted i JOIN "user" u ON i."userId" = u."id"`;
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
+	});
+
+	it('should handle CTE with assignment placeholders', () => {
+		const query = insertObjectQuery('USER', { id: 1, partnerId: '?' }, { customSelect: 'SELECT * FROM inserted' });
+		const expectedQuery = `WITH inserted AS (
+			INSERT INTO "USER" ("id", "partnerId")
+			VALUES (1, ?)
+			RETURNING *
+		)
+		SELECT * FROM inserted`;
+		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
+	});
+
 	it('should convert an object to an update statement', () => {
 		const query = updateObjectQuery('USER', { firstName: 'bob', isActive: true }, 'WHERE "id" = 1');
 		const expectedQuery = `UPDATE "USER"
@@ -32,21 +75,25 @@ describe('PsqlUtils', () => {
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
+
 	it('should escape a column name that is simple', () => {
 		const columnName = 'id';
 		const escapedColumnName = escapeColumnName(columnName);
 		expect(escapedColumnName).to.equal('"id"');
 	});
+
 	it('should escape a column name that is has sql injection', () => {
 		const columnName = '""; drop db;';
 		const escapedColumnName = escapeColumnName(columnName);
 		expect(escapedColumnName).to.equal('"; drop db;"');
 	});
+
 	it('should escape a column that has a period in it', () => {
 		const columnName = 'user.id';
 		const escapedColumnName = escapeColumnName(columnName);
 		expect(escapedColumnName).to.equal('"user"."id"');
 	});
+
 	it('should format a query and escape user input', () => {
 		const firstName = 'bob';
 		const isActive = true;
@@ -63,6 +110,7 @@ describe('PsqlUtils', () => {
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
+
 	it('should format a query and treat phone_numbers as a string', () => {
 		const phoneNumber = '+18018885555';
 		const id = 1;
@@ -76,6 +124,7 @@ describe('PsqlUtils', () => {
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
+
 	it('should format a query and prevent sql injection', () => {
 		const firstName = "'; drop db;";
 		const isActive = true;
@@ -92,6 +141,7 @@ describe('PsqlUtils', () => {
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
+
 	it('should format a query and properly parse JSON root array as an escaped JSON string', () => {
 		const issues = [{ key: "'; SELECT 1; --" }];
 		const id = 1;
@@ -105,6 +155,7 @@ describe('PsqlUtils', () => {
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
+
 	it('should replace ? with numbered params', () => {
 		const query = questionMarksToOrderedParams(`UPDATE "USER"
                                                 SET "firstName" =?,
@@ -118,6 +169,7 @@ describe('PsqlUtils', () => {
                            RETURNING *`;
 		expect(trimRedundantWhitespace(query)).to.equal(trimRedundantWhitespace(expectedQuery));
 	});
+
 	it('should replace ? with numbered params and handle the issue of string literals that might have ? inside them', () => {
 		const query = questionMarksToOrderedParams(`UPDATE "USER"
 												SET "firstName" ='Jimmy?'
@@ -194,4 +246,5 @@ describe('PsqlUtils', () => {
 		});
 	});
 });
+
 const trimRedundantWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
