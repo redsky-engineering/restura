@@ -157,9 +157,9 @@ OldType
     }
 
 OldTypeString
-    = text:"startsWith" { return function(column, value) { return \`\${column}::text ILIKE '\${format.literal(value).slice(1,-1)}%'\`; } }
-    / text:"endsWith"  { return function(column, value) { return \`\${column}::text ILIKE '%\${format.literal(value).slice(1,-1)}'\`; } }
-    / text:"contains" { return function(column, value) { return \`\${column}::text ILIKE '%\${format.literal(value).slice(1,-1)}%'\`; } }
+    = text:"startsWith" { return function(column, value) { return \`\${column} ILIKE '\${format.literal(value).slice(1,-1)}%'\`; } }
+    / text:"endsWith"  { return function(column, value) { return \`\${column} ILIKE '%\${format.literal(value).slice(1,-1)}'\`; } }
+    / text:"contains" { return function(column, value) { return \`\${column} ILIKE '%\${format.literal(value).slice(1,-1)}%'\`; } }
     / text:"exact" { return function(column, value)    { return \`\${column} = \${formatValue(value)}\`; } }
     / text:"greaterThanEqual" { return function(column, value) { return \`\${column} >= \${formatValue(value)}\`; } }
     / text:"greaterThan" { return function(column, value) { return \`\${column} > \${formatValue(value)}\`; } }
@@ -240,9 +240,9 @@ OperatorWithValue
     / "gt"i _ "," _ val:CastedValue { return function(col) { return col + ' > ' + formatValueWithCast(val.value, val.cast); }; }
     / "lte"i _ "," _ val:CastedValue { return function(col) { return col + ' <= ' + formatValueWithCast(val.value, val.cast); }; }
     / "lt"i _ "," _ val:CastedValue { return function(col) { return col + ' < ' + formatValueWithCast(val.value, val.cast); }; }
-    / "has"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value) + '%'); return col + '::text ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
-    / "sw"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal(unescapeValue(val.value) + '%'); return col + '::text ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
-    / "ew"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value)); return col + '::text ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
+    / "has"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value) + '%'); return col + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
+    / "sw"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal(unescapeValue(val.value) + '%'); return col + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
+    / "ew"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value)); return col + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
 
 CastedValue
     = val:Value cast:TypeCast? { return { value: val, cast: cast }; }
