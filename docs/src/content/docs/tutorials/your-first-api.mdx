@@ -1,0 +1,692 @@
+---
+title: Build Your First API - Blog REST API
+description: Build a complete blog REST API with users and posts using Restura
+---
+
+import { Aside, Code, TabItem, Tabs } from '@astrojs/starlight/components';
+
+This tutorial will walk you through building a complete blog REST API from scratch using Restura. You'll create a multi-table database with users and blog posts, along with API endpoints to manage them—**all using the Visual Editor**.
+
+<Aside type="tip">
+	**Already have Express and PostgreSQL?** Follow the [QuickStart](../../quickstart) guide and then skip to [Step 7:
+	Setup the Visual Editor](#step-7-setup-the-visual-editor).
+</Aside>
+
+## What You'll Build
+
+By the end of this tutorial, you'll have a complete blog API with:
+
+- An Express application with Restura integrated
+- A local PostgreSQL database running in Docker
+- The Restura Visual Editor running and connected to your API
+- A `user` table for blog authors
+- A `post` table with a foreign key relationship to users
+- REST API endpoints to:
+    - List all users
+    - List all posts
+    - Get posts by a specific author
+    - Get a single post with author information (using JOINs)
+    - Add a new post
+    - Add a new user
+
+## What You'll Learn
+
+This tutorial teaches you the **real Restura workflow**:
+
+1. Set up the infrastructure (Express, PostgreSQL, Restura)
+2. Use the Visual Editor to design database tables with relationships
+3. Use the Visual Editor to create API endpoints with JOINs
+4. Let Restura automatically generate SQL, types, and API handlers
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) 18+ installed
+- [Docker Compose](https://docs.docker.com/compose/) installed
+- [Git](https://git-scm.com/) installed
+- A terminal and text editor
+- Basic knowledge of JavaScript/TypeScript
+
+## Step 1: Create an Express Application
+
+First, let's create a new Express project.
+
+### Create a new project directory
+
+Run the following commands in your terminal:
+
+export const setupProjectNpmCode = `mkdir restura-demo
+cd restura-demo
+npm init -y
+npm install express`;
+
+export const setupProjectPnpmCode = `mkdir restura-demo
+cd restura-demo
+pnpm init
+pnpm add express`;
+
+export const setupProjectYarnCode = `mkdir restura-demo
+cd restura-demo
+yarn init -y
+yarn add express`;
+
+export const setupProjectBunCode = `mkdir restura-demo
+cd restura-demo
+bun init -y
+bun add express`;
+
+<Tabs>
+	<TabItem label="npm">
+		<Code code={setupProjectNpmCode} lang="bash" />
+	</TabItem>
+	<TabItem label="pnpm">
+		<Code code={setupProjectPnpmCode} lang="bash" />
+	</TabItem>
+	<TabItem label="yarn">
+		<Code code={setupProjectYarnCode} lang="bash" />
+	</TabItem>
+	<TabItem label="bun">
+		<Code code={setupProjectBunCode} lang="bash" />
+	</TabItem>
+</Tabs>
+
+### Install TypeScript (Optional but Recommended)
+
+If you want to use TypeScript, install it now:
+
+export const installTypescriptNpmCode = `npm install -D typescript @types/express @types/node
+npx tsc --init`;
+
+export const installTypescriptPnpmCode = `pnpm add -D typescript @types/express @types/node
+pnpx tsc --init`;
+
+export const installTypescriptYarnCode = `yarn add -D typescript @types/express @types/node
+yarn tsc --init`;
+
+export const installTypescriptBunCode = `bun add -D @types/express`;
+
+<Tabs>
+	<TabItem label="npm">
+		<Code code={installTypescriptNpmCode} lang="bash" />
+	</TabItem>
+	<TabItem label="pnpm">
+		<Code code={installTypescriptPnpmCode} lang="bash" />
+	</TabItem>
+	<TabItem label="yarn">
+		<Code code={installTypescriptYarnCode} lang="bash" />
+	</TabItem>
+	<TabItem label="bun">
+		<Code code={installTypescriptBunCode} lang="bash" />
+	</TabItem>
+</Tabs>
+
+<Aside type="note">Bun includes TypeScript support by default, so you only need to install type definitions.</Aside>
+
+### Create an entry file
+
+Create a file called `server.ts` (or `server.js` if not using TypeScript):
+
+We'll add content to this file after installing Restura.
+
+## Step 2: Install Restura
+
+Now install the Restura Engine:
+
+<Tabs>
+	<TabItem label="npm">
+		<Code code="npm install @restura/core" lang="bash" />
+	</TabItem>
+	<TabItem label="pnpm">
+		<Code code="pnpm add @restura/core" lang="bash" />
+	</TabItem>
+	<TabItem label="yarn">
+		<Code code="yarn add @restura/core" lang="bash" />
+	</TabItem>
+	<TabItem label="bun">
+		<Code code="bun add @restura/core" lang="bash" />
+	</TabItem>
+</Tabs>
+
+## Step 3: Initialize Restura in Your Express App
+
+Open your `server.ts` (or `server.js`) file and add the following code:
+
+export const expressTypescriptCode = `import { PsqlPool, restura, type OnValidAuthenticationCallback, type RsRequest, type RsResponse } from '@restura/core';
+import express from 'express';
+
+const app = express();
+
+// Create a PostgreSQL connection pool
+// We'll use these credentials with our Docker setup below
+const pool = new PsqlPool({
+host: "localhost",
+port: 5432,
+user: "postgres",
+password: "postgres",
+database: "restura",
+});
+
+// Define an authentication handler
+// For now, we'll allow all requests as the 'user' role
+const authHandler = async (req: RsRequest<unknown>, res: RsResponse<unknown>, onValid: OnValidAuthenticationCallback) => {
+onValid({ role: 'user', scopes: [] });
+};
+
+// Initialize Restura
+await restura.init(app, authHandler, pool);
+
+app.listen(3001, () => {
+console.log('Server is running on http://localhost:3001');
+});`;
+
+export const expressJavascriptCode = `const { PsqlPool, restura } = require('@restura/core');
+const express = require('express');
+
+const app = express();
+
+// Create a PostgreSQL connection pool
+// We'll use these credentials with our Docker setup below
+const pool = new PsqlPool({
+host: "localhost",
+port: 5432,
+user: "postgres",
+password: "postgres",
+database: "restura",
+});
+
+// Define an authentication handler
+// For now, we'll allow all requests as the 'user' role
+const authHandler = async (req, res, onValid) => {
+onValid({ role: 'user', scopes: [] });
+};
+
+// Initialize Restura
+(async () => {
+await restura.init(app, authHandler, pool);
+
+app.listen(3001, () => {
+console.log('Server is running on http://localhost:3001');
+});
+})();`;
+
+<Tabs>
+	<TabItem label="TypeScript">
+		<Code code={expressTypescriptCode} lang="typescript" title="server.ts" />
+	</TabItem>
+	<TabItem label="JavaScript">
+		<Code code={expressJavascriptCode} lang="javascript" title="server.js" />
+	</TabItem>
+</Tabs>
+
+<Aside type="note">
+	The authentication handler is called for every request. For this tutorial, we're allowing all requests as the 'user'
+	role. In production, you'd validate JWT tokens, API keys, or sessions here.
+</Aside>
+
+### Add a start script
+
+Update your `package.json` to add a start script:
+
+export const packageJsonTypescriptCode = `{
+  "type": "module",
+  "scripts": {
+    "start": "node server.ts"
+  }
+}`;
+
+export const packageJsonJavascriptCode = `{
+  "scripts": {
+    "start": "node server.js"
+  }
+}`;
+
+<Tabs>
+	<TabItem label="TypeScript">
+		<Code code={packageJsonTypescriptCode} lang="json" title="package.json" />
+	</TabItem>
+	<TabItem label="JavaScript">
+		<Code code={packageJsonJavascriptCode} lang="json" title="package.json" />
+	</TabItem>
+</Tabs>
+
+<Aside type="note">
+	**Node 23.6+:** You can run `node server.ts` directly.
+	**Node < 23.6:** Use `tsx server.ts` or compile with tsc first. You may need to install `tsx`: `npm install -D tsx` and change the script to `"start": "tsx server.ts"`
+</Aside>
+
+## Step 4: Create Configuration Files
+
+Restura needs two configuration files to work.
+
+### Create restura.config.mjs
+
+Create a `restura.config.mjs` file in your project root:
+
+export const resturaConfigCode = `export default {
+    logger: {
+        level: "info" // Options: "debug", "info", "warn", "error"
+    },
+    restura: {
+       authToken: "12345" // Used by the Visual Editor to connect to your API
+    }
+}`;
+
+<Code code={resturaConfigCode} lang="javascript" title="restura.config.mjs" />
+
+<Aside type="note">
+	The `authToken` is important! The Visual Editor will use this token to authenticate with your Restura API. You can
+	change it to any value you want, just remember it for later.
+</Aside>
+
+### Create an empty schema file
+
+Create a `restura.schema.json` file in your project root.
+
+Add the following content to the file:
+
+export const createSchemaCode = `{
+  "customTypes": [],
+  "database": [],
+  "endpoints": [
+    {
+      "baseUrl": "/api/v1",
+      "description": "V1 Endpoints",
+      "name": "V1",
+      "routes": []
+    }
+  ],
+  "globalParams": ["userId"],
+  "roles": ["anonymous", "user", "admin"],
+  "scopes": ["read:user", "write:user"]
+}`;
+
+<Code code={createSchemaCode} title="restura.schema.json" lang="json" />
+
+This creates a minimal schema with an empty database and endpoint structure that the Visual Editor can work with.
+
+## Step 5: Setup a Local PostgreSQL Database
+
+For this tutorial, we'll use Docker Compose to run a local PostgreSQL database.
+
+Create a `docker-compose.yml` file in the root of your project with the following content:
+
+export const dockerComposeCode = `
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: restura
+`;
+
+<Code code={dockerComposeCode} lang="yaml" title="docker-compose.yml" />
+
+export const dockerComposeUpCode = `
+docker compose up -d
+`;
+
+Then run the following command to start the local PostgreSQL database:
+
+<Code code={dockerComposeUpCode} lang="bash" />
+
+The database is now running in the background. The credentials in your `server.ts` file match this setup, so you're ready to go!
+
+## Step 6: Start Your Restura API
+
+Now let's start your API server. Open a terminal and run:
+
+```bash
+npm start # or pnpm start, yarn start, bun start, etc.
+```
+
+You should see output like:
+
+```bash
+INFO [2026-01-12 04:25:34.373]: Restura loaded (0) endpoint
+INFO [2026-01-12 04:25:34.379]: Restura Engine Initialized
+INFO [2026-01-12 04:25:34.495]: Successfully connected to database triggers
+INFO [2026-01-12 04:25:34.498]: Connected to PostgreSQL database
+Server is running on http://localhost:3001
+```
+
+<Aside type="note">
+	It shows 0 endpoints because we haven't created any yet! We'll do that next with the Visual Editor.
+</Aside>
+
+Keep this terminal running. Your API server needs to be running for the Visual Editor to connect to it.
+
+## Step 7: Setup the Visual Editor
+
+The Visual Editor is a web application that lets you visually design your database tables and API endpoints.
+
+<Aside type="note">
+	Follow the **[Visual Editor Setup Guide](../../visual-editor)** to clone, install, and start the Visual Editor. Then
+	come back here to continue the tutorial.
+</Aside>
+
+Once you've completed the Visual Editor setup and signed in, you should see an empty dashboard with options to create database tables and endpoints.
+
+## Step 8: Create Your Database Tables Using the Visual Editor
+
+Now let's create the database schema for our blog. We'll create two tables: `user` (for authors) and `post` (for blog posts).
+
+### Create the User table
+
+First, let's create a table to store blog authors.
+
+1. In the Visual Editor, click on **"Database"** in the left sidebar
+2. Click the **"+ Add Table"** button
+3. Name your table `user`
+4. Click **"Create"**
+
+### Add columns to the user table
+
+Click on your new `user` table to open the table editor, then add these columns:
+
+1. **firstName** column:
+    - Click **"+ Add Column"**
+    - Name: `firstName`
+    - Type: `VARCHAR`
+    - Length: `150`
+    - Nullable: ✗
+
+2. **lastName** column:
+    - Click **"+ Add Column"**
+    - Name: `lastName`
+    - Type: `VARCHAR`
+    - Length: `150`
+    - Nullable: ✗
+
+3. **email** column:
+    - Click **"+ Add Column"**
+    - Name: `email`
+    - Type: `VARCHAR`
+    - Length: `255`
+    - Nullable: ✗
+
+4. **bio** column:
+    - Click **"+ Add Column"**
+    - Name: `bio`
+    - Type: `TEXT`
+    - Nullable: ✓ (bio is optional)
+
+5. **role** column:
+    - Click **"+ Add Column"**
+    - Name: `role`
+    - Type: `VARCHAR`
+    - Length: `50`
+    - Nullable: ✗
+
+<Aside type="note">`id`, `createdOn` and `modifiedOn` are auto-created by Restura.</Aside>
+
+### Add unique indexes
+
+1. In the table editor, scroll to the **"Indexes"** section
+2. Click **"+ Add Index"**
+    - Name: `user_email_unique_index`
+    - Columns: Select `email`
+    - Unique: ✓
+3. Click **"Save"** to save the user table
+
+### Create the Post table
+
+Now let's create a table for blog posts that references the user table.
+
+1. Click **"+ Add Table"** again
+2. Name your table `post`
+3. Click **"Create"**
+
+### Add columns to the post table
+
+Click on your new `post` table and add these columns:
+
+1. **title** column:
+    - Click **"+ Add Column"**
+    - Name: `title`
+    - Type: `VARCHAR`
+    - Length: `200`
+    - Nullable: ✗
+
+2. **content** column:
+    - Click **"+ Add Column"**
+    - Name: `content`
+    - Type: `TEXT`
+    - Nullable: ✗
+
+3. **authorId** column (foreign key to user):
+    - Click **"+ Add Column"**
+    - Name: `authorId`
+    - Type: `BIGINT`
+    - Nullable: ✗
+
+4. **published** column:
+    - Click **"+ Add Column"**
+    - Name: `published`
+    - Type: `BOOLEAN`
+    - Default: `false`
+    - Nullable: ✗
+
+<Aside type="note">
+	`authorId` is a foreign key to the `user.id` column. Restura will auto-create the foreign key relationship for you.
+</Aside>
+
+### Add an index on authorId
+
+1. Scroll to the **"Indexes"** section
+2. Click **"+ Add Index"**
+3. Name: `post_author_id_index`
+4. Columns: Select `authorId`
+5. Unique: ✗ (one author can have many posts)
+6. Click **"Save"**
+
+### Save and apply the schema
+
+1. Click **"Save"** in the top right of the Visual Editor
+2. The Visual Editor will update your `restura.schema.json` file automatically
+3. Your Restura API will detect the change and reload
+
+<Aside type="note">
+	The Visual Editor only updates the `restura.schema.json` file. To actually create the table in PostgreSQL, you need
+	to apply the schema to your database. The Visual Editor can generate the SQL for you!
+</Aside>
+
+### Generate and apply the SQL
+
+1. In the Visual Editor, go to **"Database"** → **"Generate SQL"**
+2. Copy the generated SQL
+3. In your project terminal, create a file called `schema.sql` and paste the SQL
+4. Run this command to apply it:
+
+export const applySchemaSqlCode = `docker compose exec -T postgres psql -U postgres -d restura < ./schema.sql`;
+
+<Code code={applySchemaSqlCode} lang="bash" />
+
+### Add sample data
+
+Let's add a sample user to test with. Run this command:
+
+export const insertUserCode = `docker compose exec -T postgres psql -U postgres -d restura -c "
+INSERT INTO public.\\"user\\" (
+  \\"firstName\\", 
+  \\"lastName\\", 
+  email,
+  role
+) VALUES (
+  'Test', 
+  'User', 
+  'test@restura.io', 
+  'user'
+);"`;
+
+<Code code={insertUserCode} lang="bash" />
+
+Now let's add a sample blog post. Run this command:
+
+export const insertPostCode = `docker compose exec -T postgres psql -U postgres -d restura -c "
+INSERT INTO public.post (
+  title, 
+  content, 
+  \\"authorId\\"
+) VALUES (
+  'Welcome to My Blog', 
+  'This is my first blog post using Restura! It''s amazing how easy it is to build APIs without writing SQL queries or endpoint handlers.', 
+  1
+);"`;
+
+<Code code={insertPostCode} lang="bash" />
+
+## Step 9: Create Your First API Endpoint
+
+Now let's create an API endpoint to list all users.
+
+### Create a new endpoint
+
+1. In the Visual Editor, click on **"API"** in the left sidebar
+2. Click **"New"**
+
+### Configure the endpoint
+
+Fill in the route details:
+
+1. **Name**: `Get Users`
+2. **Description**: `Gets all users`
+3. **Method**: `GET`
+4. **Path**: `/user/list`
+5. **Type**: `ARRAY` (returns an array of results)
+6. **Table**: Select `user`
+7. **Roles**: Select `user` and `admin` (who can access this endpoint)
+
+### Configure the response
+
+In the **"Response"** section, add the fields you want to return:
+
+1. Click **"+ Add Field"** for each column:
+    - Field name: `id`, Selector: `user.id`
+    - Field name: `createdOn`, Selector: `user.createdOn`
+    - Field name: `modifiedOn`, Selector: `user.modifiedOn`
+    - Field name: `firstName`, Selector: `user.firstName`
+    - Field name: `lastName`, Selector: `user.lastName`
+    - Field name: `email`, Selector: `user.email`
+    - Field name: `role`, Selector: `user.role`
+
+<Aside type="tip">
+	The Visual Editor has a shortcut: you can click **"Add All Columns"** to automatically add all fields from the
+	selected table!
+</Aside>
+
+### Save the endpoint
+
+1. Click **"Save"** in the top right
+2. The Visual Editor updates your `restura.schema.json` file
+3. Your Restura API automatically reloads and registers the new endpoint
+
+Check your API server terminal—you should now see:
+
+```bash
+INFO: Restura loaded (1) endpoint
+```
+
+## Step 10: Examine the Generated Schema
+
+Let's take a look at what the Visual Editor created. Open your `restura.schema.json` file in your text editor.
+
+You'll see:
+
+- **`database` array**: Contains your `user` table definition with all columns, indexes, and constraints
+- **`endpoints` array**: Contains your V1 endpoint group
+- **`routes` array**: Contains your `GET /user/list` endpoint with response fields
+- **`roles` and `scopes`**: Access control configuration
+
+The Visual Editor generated all of this JSON for you! You never had to write it manually.
+
+<Aside type="tip">
+	**This is the power of Restura**: You design visually, and Restura generates the configuration, SQL, TypeScript
+	types, and API endpoints automatically.
+</Aside>
+
+### Check the generated TypeScript types
+
+Restura also generated TypeScript type definitions in `src/@types/`:
+
+- `api.d.ts` - Types for your API endpoints (including the `/user/list` endpoint)
+- `model.d.ts` - Types for your database tables (including the `user` table)
+- `restura.d.ts` - General Restura types
+
+Open `src/@types/api.d.ts` and you'll see type definitions for your new endpoint!
+
+## Step 11: Test Your API
+
+Congratulations! Your API is now running. Let's test it.
+
+### Query the user list endpoint
+
+Open a new terminal and run:
+
+export const curlTestCode = `curl -X GET http://localhost:3001/api/v1/user/list`;
+
+<Code code={curlTestCode} lang="bash" />
+
+You should receive a JSON response with your user data:
+
+```json
+[
+	{
+		"id": 1,
+		"createdOn": "2026-01-12T12:00:00.000Z",
+		"modifiedOn": "2026-01-12T12:00:00.000Z",
+		"firstName": "Test",
+		"lastName": "User",
+		"email": "test@restura.io",
+		"role": "user"
+	}
+]
+```
+
+🎉 **It works!** You just built a complete REST API without writing any SQL queries or endpoint handler code!
+
+### Understanding what happened
+
+When you made the request:
+
+1. Restura received the GET request at `/api/v1/user/list`
+2. Your `authHandler` validated the request and assigned the 'user' role
+3. Restura checked that 'user' role has permission to access this endpoint (you configured this in the Visual Editor)
+4. Restura automatically generated and executed this SQL query:
+    ```sql
+    SELECT id, "createdOn", "modifiedOn", "firstName", "lastName", email, role
+    FROM "user"
+    ```
+5. The results were formatted as JSON and returned
+
+### Finish the API
+
+Now that you've built your first endpoint, try adding these features using the Visual Editor:
+
+1. **Create a GET endpoint** at `/post/list` that returns all posts
+2. **Create a GET endpoint** at `/post/by-author` that filters posts by author
+3. **Create a GET endpoint** at `/post/by-id` that returns a single post by ID
+
+## The Restura Workflow
+
+You've just experienced the core Restura workflow:
+
+1. **Design** → Use the Visual Editor to design tables and endpoints
+2. **Generate** → Restura generates schema JSON, SQL, and TypeScript types
+3. **Deploy** → Apply SQL to database, Restura handles the rest
+4. **Use** → Your API is ready with full type safety
+
+No manual SQL queries. No endpoint handler code. No type definitions to maintain. Just design and go!
+
+## What You've Learned
+
+In this tutorial, you:
+
+- ✅ Set up an Express application with Restura
+- ✅ Created a local PostgreSQL database with Docker
+- ✅ Connected the Visual Editor to Restura
+- ✅ **Created a database table using the Visual Editor** (no manual JSON editing!)
+- ✅ **Created a REST API endpoint using the Visual Editor** (no code required!)
+- ✅ Examined the automatically generated schema and TypeScript types
+- ✅ Tested your endpoint and saw it work

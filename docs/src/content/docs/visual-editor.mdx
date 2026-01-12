@@ -1,0 +1,85 @@
+---
+title: Run the Visual Editor
+---
+
+import { Aside, Code, TabItem, Tabs } from '@astrojs/starlight/components';
+
+The visual editor is a companion application to the Restura Engine that allows you to visually create and modify the database tables and endpoints found in the `restura.schema.json` file.
+
+## Clone the Restura repository
+
+Currently, there is no standalone application binary for the visual editor. You will need to download and run the application locally.
+
+Start by cloning the repository:
+
+export const resturaCloneHTTPSCode = `git clone https://github.com/redsky-engineering/restura.git`;
+
+export const resturaCloneSSHCode = `git clone git@github.com:redsky-engineering/restura.git`;
+
+<Tabs>
+	<TabItem label="HTTPS">
+		<Code code={resturaCloneHTTPSCode} lang="bash" />
+	</TabItem>
+	<TabItem label="SSH">
+		<Code code={resturaCloneSSHCode} lang="bash" />
+	</TabItem>
+</Tabs>
+
+Navigate to the `restura-ui` directory and run the following command to start the Restura UI:
+
+export const resturaUiNpmCode = `cd restura
+cd apps/restura-ui
+npm install
+npm run start`;
+
+export const resturaUiPnpmCode = `cd restura
+cd apps/restura-ui
+pnpm install
+pnpm run start`;
+
+export const resturaUiYarnCode = `cd restura
+cd apps/restura-ui
+yarn install
+yarn start`;
+
+export const resturaUiBunCode = `cd restura
+cd apps/restura-ui
+bun install
+bun run start`;
+
+<Tabs>
+	<TabItem label="npm">
+		<Code code={resturaUiNpmCode} lang="bash" />
+	</TabItem>
+	<TabItem label="pnpm">
+		<Code code={resturaUiPnpmCode} lang="bash" />
+	</TabItem>
+	<TabItem label="yarn">
+		<Code code={resturaUiYarnCode} lang="bash" />
+	</TabItem>
+	<TabItem label="bun">
+		<Code code={resturaUiBunCode} lang="bash" />
+	</TabItem>
+</Tabs>
+
+With the application running, you can now access the visual editor at: <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer">http://localhost:3000</a>.
+
+## Sign In
+
+When the application opens, you will be prompted to enter a token. The token is the `authToken` that is set in the `restura.config.mjs` file.
+
+Click the "SIGN IN" button to login.
+
+Congratulations! You can now start creating and modifying your database tables and endpoints using the visual editor.
+
+## Next Steps
+
+Now that you have run the Restura UI, you can:
+
+- **[Create your first database table](../guides/database-table)** - Define tables using the Visual Editor
+- **[Build a standard endpoint](../guides/standard-endpoint)** - Create a GET endpoint that queries your data
+
+Or dive deeper:
+
+- [Explore the schema reference](../reference/schema)
+- [Explore the configuration reference](../reference/config)

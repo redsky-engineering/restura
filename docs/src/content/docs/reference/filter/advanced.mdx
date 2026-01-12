@@ -1,0 +1,241 @@
+---
+title: Filter - Advanced Topics
+description: Value types, SQL injection prevention, and error handling
+---
+
+## Value Types
+
+Values are automatically typed based on content:
+
+| Input      | Type   | SQL Output   |
+| ---------- | ------ | ------------ |
+| `123`      | Number | `123`        |
+| `-45.67`   | Number | `-45.67`     |
+| `ACTIVE`   | String | `'ACTIVE'`   |
+| `John Doe` | String | `'John Doe'` |
+
+## Type Casting
+
+When PostgreSQL cannot compare values of different types, you can explicitly cast values using the `::` operator followed by a type name.
+
+### Supported Cast Types
+
+| Cast Operator   | PostgreSQL Type | Description                  |
+| --------------- | --------------- | ---------------------------- |
+| `::text`        | `TEXT`          | String/text type             |
+| `::int`         | `INTEGER`       | 32-bit integer               |
+| `::bigint`      | `BIGINT`        | 64-bit integer               |
+| `::numeric`     | `NUMERIC`       | Arbitrary precision decimal  |
+| `::boolean`     | `BOOLEAN`       | Boolean (true/false)         |
+| `::date`        | `DATE`          | Date (without time)          |
+| `::timestamp`   | `TIMESTAMP`     | Timestamp (without timezone) |
+| `::timestamptz` | `TIMESTAMPTZ`   | Timestamp (with timezone)    |
+
+### Examples
+
+**Example 1 - Filter:**
+
+```
+(code,1::text)
+```
+
+**SQL:**
+
+```sql
+"code" = '1'::text
+```
+
+**Explanation:** The column `code` is a string type, but `1` is automatically detected as a number. Casting `1::text` allows PostgreSQL to compare the string column with a text value.
+
+---
+
+**Example 2 - Filter:**
+
+```
+(userId,42::bigint)
+```
+
+**SQL:**
+
+```sql
+"userId" = 42::bigint
+```
+
+---
+
+**Example 3 - Filter:**
+
+```
+(price,100.50::numeric)
+```
+
+**SQL:**
+
+```sql
+"price" = 100.50::numeric
+```
+
+---
+
+**Example 4 - Filter:**
+
+```
+(isActive,true::boolean)
+```
+
+**SQL:**
+
+```sql
+"isActive" = true::boolean
+```
+
+---
+
+**Example 5 - Filter:**
+
+```
+(createdAt,2024-01-15::date)
+```
+
+**SQL:**
+
+```sql
+"createdAt" = '2024-01-15'::date
+```
+
+---
+
+**Example 6 - Filter:**
+
+```
+(updatedAt,2024-01-15 10:30:00::timestamp)
+```
+
+**SQL:**
+
+```sql
+"updatedAt" = '2024-01-15 10:30:00'::timestamp
+```
+
+---
+
+**Example 7 - Filter:**
+
+```
+(scheduledAt,2024-01-15 10:30:00-05::timestamptz)
+```
+
+**SQL:**
+
+```sql
+"scheduledAt" = '2024-01-15 10:30:00-05'::timestamptz
+```
+
+### Type Casting with Operators
+
+Type casting works with all comparison operators:
+
+**Example 8 - Filter:**
+
+```
+(age,18::int)and(balance,gt,1000.00::numeric)
+```
+
+**SQL:**
+
+```sql
+"age" = 18::int AND "balance" > 1000.00::numeric
+```
+
+---
+
+**Example 9 - Filter:**
+
+```
+(code,in,A1::text|B2::text|C3::text)
+```
+
+**SQL:**
+
+```sql
+"code" IN ('A1'::text, 'B2'::text, 'C3'::text)
+```
+
+## SQL Injection Prevention
+
+The filter parser is designed to prevent SQL injection:
+
+1. **Column names** are always double-quoted as SQL identifiers
+2. **Values** are escaped using `pg-format` library
+3. **Parentheses** in values are rejected by the grammar (cannot inject sub-expressions)
+4. **SQL keywords** in values become harmless literals
+
+Examples of safely escaped input:
+
+**Example 1 - Filter:**
+
+```
+(name,O'Brien)
+```
+
+**SQL:**
+
+```sql
+"name" = 'O''Brien'
+```
+
+---
+
+**Example 2 - Filter:**
+
+```
+(password,' OR '1'='1)
+```
+
+**SQL:**
+
+```sql
+"password" = ''' OR ''1''=''1'
+```
+
+---
+
+**Example 3 - Filter:**
+
+```
+(id,1; DROP TABLE users; --)
+```
+
+**SQL:**
+
+```sql
+"id" = '1; DROP TABLE users; --'
+```
+
+---
+
+**Example 4 - Filter:**
+
+```
+(path,C:\\Windows\\System32)
+```
+
+**SQL:**
+
+```sql
+"path" = E'C:\\Windows\\System32'
+```
+
+## Error Cases
+
+The parser rejects malformed input with a `SyntaxError`:
+
+| Invalid Input              | Reason                      |
+| -------------------------- | --------------------------- |
+| `()`                       | Empty expression            |
+| `(field)`                  | Missing value               |
+| `(field,)`                 | Empty value                 |
+| `(field,gt,)`              | Empty operator value        |
+| `(,value)`                 | Missing column              |
+| `(a.b.c.d,value)`          | Column path exceeds 3 parts |
+| `(((a,1)or(b,2))and(c,3))` | Nesting depth exceeds limit |

@@ -1,0 +1,70 @@
+---
+title: Create a Database Table
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This guide walks you through creating and configuring database tables using the Restura visual editor.
+
+## Step 1: Navigate to the Database Page
+
+Click **Database** in the sidebar to open the schema editor.
+
+## Step 2: Add a New Table
+
+Click the **"Add Table"** button in the top-right corner.
+
+Your new table is created with a random name and three default columns (`id`, `createdOn`, `modifiedOn`).
+
+## Step 3: Rename the Table
+
+1. Click the **pencil icon** next to the table name
+2. Type your table name (e.g., `user_profile`)
+3. Press **Enter** to save
+
+## Step 4: Add Columns
+
+1. Click the **"+"** button below the Columns section
+2. Click the column name to edit it
+3. Select a type from the **Type** dropdown
+4. Configure other properties as needed (nullable, default value, etc.)
+
+<Aside type="tip">Name columns ending with `Id` (e.g., `userId`) to auto-create foreign keys.</Aside>
+
+## Step 5: Add Indexes
+
+1. Scroll to the **Indexes** section
+2. Click the **"+"** button
+3. Select the column(s) to index
+4. Toggle **Unique** if needed
+5. Add a **Where** clause if needed
+
+<Aside type="tip">Use the **Unique** toggle in the column row for single-column unique indexes.</Aside>
+
+---
+
+## Step 6: Add Foreign Keys
+
+1. Scroll to the **Foreign Keys** section
+2. Click the **"+"** button
+3. Select your column, the referenced table, and referenced column
+4. Choose **On Delete** and **On Update** actions
+
+---
+
+## Step 7: Apply Changes
+
+1. Click **"Preview Schema"** in the top bar
+2. Review the SQL migration
+3. Click **"Submit"**
+
+---
+
+## What Else Can You Do?
+
+- **Check Constraints** - Add custom validation rules
+- **Notifications** - Set up PostgreSQL NOTIFY triggers
+- **Filter & Search** - Use the filter buttons to show/hide sections, or search by table name or column type
+- **Delete** - Click the trash icon to remove columns, indexes, foreign keys, or entire tables
+
+For detailed information on column types, smart detection, and all available options, see the [Database Reference](../../reference/database/tables).

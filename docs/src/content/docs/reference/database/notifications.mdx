@@ -1,0 +1,481 @@
+---
+title: Notifications
+description: Configuring real-time database notifications in Restura
+---
+
+Configure PostgreSQL `NOTIFY` triggers to emit real-time events when rows change. This enables event-driven architectures and real-time updates.
+
+## Notification Modes
+
+| Mode       | Description                                                        |
+| ---------- | ------------------------------------------------------------------ |
+| **None**   | No notifications (default)                                         |
+| **All**    | Notify on all INSERT, UPDATE, DELETE operations with full row data |
+| **Custom** | Notify only for specific columns                                   |
+
+---
+
+## Event Types
+
+When notifications are enabled, Restura creates triggers for:
+
+| Event    | Payload Includes                                                |
+| -------- | --------------------------------------------------------------- |
+| `insert` | `tableName`, `insertedId`, `insertObject`, `queryMetadata`      |
+| `update` | `tableName`, `changedId`, `newData`, `oldData`, `queryMetadata` |
+| `delete` | `tableName`, `deletedId`, `deletedRow`, `queryMetadata`         |
+
+### Insert Event
+
+Triggered when a new row is inserted into the table.
+
+**Payload:**
+
+```typescript
+{
+  tableName: 'user',
+  insertedId: 123,
+  insertObject: {
+    id: 123,
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john@example.com',
+    role: 'USER',
+    isActive: true,
+    createdOn: '2024-01-15T10:30:00Z'
+  },
+  queryMetadata: {
+    userId: 1,
+    companyId: 5
+  }
+}
+```
+
+### Update Event
+
+Triggered when an existing row is updated.
+
+**Payload:**
+
+```typescript
+{
+  tableName: 'order',
+  changedId: 456,
+  newData: {
+    id: 456,
+    status: 'SHIPPED',
+    modifiedOn: '2024-01-15T14:20:00Z'
+  },
+  oldData: {
+    id: 456,
+    status: 'PROCESSING',
+    modifiedOn: '2024-01-15T10:00:00Z'
+  },
+  queryMetadata: {
+    userId: 1,
+    companyId: 5
+  }
+}
+```
+
+### Delete Event
+
+Triggered when a row is deleted from the table.
+
+**Payload:**
+
+```typescript
+{
+  tableName: 'user',
+  deletedId: 789,
+  deletedRow: {
+    id: 789,
+    firstName: 'Jane',
+    lastName: 'Smith',
+    email: 'jane@example.com'
+  },
+  queryMetadata: {
+    userId: 1,
+    companyId: 5
+  }
+}
+```
+
+---
+
+## Listening for Events
+
+Use the EventManager in your application to handle notifications.
+
+### Row Insert Handler
+
+```typescript
+import eventManager from '@restura/core';
+
+// Listen for new users
+eventManager.addRowInsertHandler<User>(
+	async (data, queryMetadata) => {
+		console.log('New user created:', data.insertObject);
+		console.log('User ID:', data.insertedId);
+
+		// Send welcome email
+		await sendWelcomeEmail(data.insertObject.email);
+
+		// Log to analytics
+		await analytics.track('user_created', {
+			userId: data.insertedId,
+			email: data.insertObject.email
+		});
+	},
+	{ tableName: 'user' }
+);
+```
+
+### Column Change Handler
+
+```typescript
+// Listen for order status changes
+eventManager.addColumnChangeHandler<Order>(
+	async (data, queryMetadata) => {
+		console.log('Order status changed:', data.newData.status);
+		console.log('Previous status:', data.oldData.status);
+
+		// Send notification to customer
+		if (data.newData.status === 'SHIPPED') {
+			await sendShippingNotification(data.changedId);
+		}
+
+		// Update inventory
+		if (data.newData.status === 'COMPLETED') {
+			await updateInventory(data.changedId);
+		}
+	},
+	{ tableName: 'order', columns: ['status'] }
+);
+```
+
+### Row Delete Handler
+
+```typescript
+// Listen for user deletions
+eventManager.addRowDeleteHandler<User>(
+	async (data, queryMetadata) => {
+		console.log('User deleted:', data.deletedId);
+		console.log('Previous data:', data.deletedRow);
+
+		// Clean up related data
+		await cleanupUserData(data.deletedId);
+
+		// Log to audit trail
+		await auditLog.record('user_deleted', {
+			userId: data.deletedId,
+			email: data.deletedRow.email,
+			deletedBy: queryMetadata.userId
+		});
+	},
+	{ tableName: 'user' }
+);
+```
+
+---
+
+## Custom Column Notifications
+
+When using Custom mode, select specific columns to include in notifications. This reduces payload size and allows filtering.
+
+### Configuration
+
+**Table:** `order`
+
+**Notification mode:** Custom
+
+**Selected columns:**
+
+- `status`
+- `total`
+- `modifiedOn`
+
+### Benefits
+
+- **Smaller payloads** – Only selected columns are included
+- **Targeted handlers** – Listen for specific column changes
+- **Better performance** – Less data to serialize and transmit
+- **Privacy** – Exclude sensitive columns from notifications
+
+### Example Handler
+
+```typescript
+// Only notified when status, total, or modifiedOn changes
+eventManager.addColumnChangeHandler<Order>(
+	async (data, queryMetadata) => {
+		// data.newData only contains: id, status, total, modifiedOn
+		// Other columns are not included
+
+		if (data.newData.status !== data.oldData.status) {
+			console.log('Status changed:', data.oldData.status, '→', data.newData.status);
+		}
+
+		if (data.newData.total !== data.oldData.total) {
+			console.log('Total changed:', data.oldData.total, '→', data.newData.total);
+		}
+	},
+	{ tableName: 'order', columns: ['status', 'total'] }
+);
+```
+
+---
+
+## Use Cases
+
+### Real-Time Dashboards
+
+```typescript
+// Update dashboard when orders are created
+eventManager.addRowInsertHandler<Order>(
+	async (data) => {
+		await websocket.broadcast('dashboard', {
+			type: 'new_order',
+			order: data.insertObject
+		});
+	},
+	{ tableName: 'order' }
+);
+```
+
+### Audit Logging
+
+```typescript
+// Log all changes to sensitive tables
+eventManager.addRowUpdateHandler<User>(
+	async (data, queryMetadata) => {
+		await auditLog.record('user_updated', {
+			userId: data.changedId,
+			changes: compareObjects(data.oldData, data.newData),
+			modifiedBy: queryMetadata.userId,
+			timestamp: new Date()
+		});
+	},
+	{ tableName: 'user' }
+);
+```
+
+### Email Notifications
+
+```typescript
+// Send email when order status changes
+eventManager.addColumnChangeHandler<Order>(
+	async (data) => {
+		if (data.newData.status === 'SHIPPED') {
+			const order = await getOrderDetails(data.changedId);
+			await sendEmail(order.customerEmail, 'Your order has shipped!', {
+				orderId: order.id,
+				trackingNumber: order.trackingNumber
+			});
+		}
+	},
+	{ tableName: 'order', columns: ['status'] }
+);
+```
+
+### Cache Invalidation
+
+```typescript
+// Invalidate cache when products are updated
+eventManager.addRowUpdateHandler<Product>(
+	async (data) => {
+		await cache.delete(`product:${data.changedId}`);
+		await cache.delete('products:list');
+	},
+	{ tableName: 'product' }
+);
+```
+
+### Webhook Triggers
+
+```typescript
+// Trigger webhooks on specific events
+eventManager.addRowInsertHandler<Order>(
+	async (data) => {
+		const webhooks = await getWebhooksForEvent('order.created');
+
+		await Promise.all(
+			webhooks.map((webhook) =>
+				fetch(webhook.url, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						event: 'order.created',
+						data: data.insertObject
+					})
+				})
+			)
+		);
+	},
+	{ tableName: 'order' }
+);
+```
+
+### Inventory Management
+
+```typescript
+// Update inventory when orders are completed
+eventManager.addColumnChangeHandler<Order>(
+	async (data) => {
+		if (data.newData.status === 'COMPLETED' && data.oldData.status !== 'COMPLETED') {
+			const items = await getOrderItems(data.changedId);
+
+			for (const item of items) {
+				await decrementInventory(item.productId, item.quantity);
+			}
+		}
+	},
+	{ tableName: 'order', columns: ['status'] }
+);
+```
+
+---
+
+## Performance Considerations
+
+### Notification Overhead
+
+- Notifications add minimal overhead to database operations
+- Triggers execute synchronously (blocking the transaction)
+- Keep trigger logic simple and fast
+- Offload heavy processing to async handlers
+
+### Handler Performance
+
+- Handlers execute asynchronously (non-blocking)
+- Use queues for long-running tasks
+- Implement error handling and retries
+- Monitor handler execution time
+
+### Scaling
+
+- Notifications are per-database connection
+- Use connection pooling for multiple listeners
+- Consider message queues for high-volume notifications
+- Use custom column mode to reduce payload size
+
+---
+
+## Best Practices
+
+### Choose the Right Mode
+
+- **None** – Default, no overhead
+- **All** – Simple setup, includes all data
+- **Custom** – Best for large tables or sensitive data
+
+### Handle Errors Gracefully
+
+```typescript
+eventManager.addRowInsertHandler<User>(
+	async (data) => {
+		try {
+			await sendWelcomeEmail(data.insertObject.email);
+		} catch (error) {
+			console.error('Failed to send welcome email:', error);
+			// Don't throw – let other handlers continue
+		}
+	},
+	{ tableName: 'user' }
+);
+```
+
+### Use Specific Handlers
+
+```typescript
+// Good: Specific handler for status changes
+eventManager.addColumnChangeHandler<Order>(
+	async (data) => {
+		// Only called when status changes
+	},
+	{ tableName: 'order', columns: ['status'] }
+);
+
+// Less optimal: Generic handler for all changes
+eventManager.addRowUpdateHandler<Order>(
+	async (data) => {
+		// Called for any column change
+		if (data.newData.status !== data.oldData.status) {
+			// Handle status change
+		}
+	},
+	{ tableName: 'order' }
+);
+```
+
+### Avoid Circular Updates
+
+```typescript
+// Bad: Can cause infinite loop
+eventManager.addRowUpdateHandler<User>(
+	async (data) => {
+		// This triggers another update, which triggers this handler again!
+		await updateUser(data.changedId, { lastNotifiedOn: new Date() });
+	},
+	{ tableName: 'user' }
+);
+
+// Good: Use a flag or separate table
+eventManager.addRowUpdateHandler<User>(
+	async (data) => {
+		// Store notification timestamp in a separate table
+		await insertNotificationLog(data.changedId, new Date());
+	},
+	{ tableName: 'user' }
+);
+```
+
+### Monitor Handler Execution
+
+```typescript
+eventManager.addRowInsertHandler<Order>(
+	async (data, queryMetadata) => {
+		const startTime = Date.now();
+
+		try {
+			await processOrder(data.insertObject);
+		} finally {
+			const duration = Date.now() - startTime;
+			await metrics.record('order_handler_duration', duration);
+		}
+	},
+	{ tableName: 'order' }
+);
+```
+
+---
+
+## Troubleshooting
+
+### Notifications Not Firing
+
+1. Check that notification mode is enabled (not "None")
+2. Verify the table name matches exactly
+3. Ensure the database connection is active
+4. Check for errors in the database logs
+
+### Handler Not Called
+
+1. Verify the handler is registered before the event occurs
+2. Check the table name and column names match exactly
+3. Ensure the handler function is async
+4. Look for errors in the handler code
+
+### Performance Issues
+
+1. Use custom column mode to reduce payload size
+2. Offload heavy processing to background jobs
+3. Implement batching for bulk operations
+4. Monitor handler execution time
+
+---
+
+## Next Steps
+
+- [Learn about database tables](/reference/database/tables/)
+- [Configure permissions](/reference/database/permissions/)
+- [Set up relationships](/reference/database/relationships/)
