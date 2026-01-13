@@ -1,0 +1,20 @@
+---
+import Default from '@astrojs/starlight/components/PageFrame.astro';
+
+const isHomepage = Astro.locals.starlightRoute.id === '';
+---
+
+<Default {...Astro.props}>
+  <slot name="header" slot="header" />
+  <slot name="sidebar" slot="sidebar" />
+  <slot />
+</Default>
+
+{
+  isHomepage && (
+<footer class="py-12" style="background-color: var(--sl-color-bg-nav);">
+  <div class="text-center text-sm text-gray-500 dark:text-gray-400">
+    © 2026 RedSky Engineering
+  </div>
+</footer>)
+}

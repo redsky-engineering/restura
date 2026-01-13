@@ -1,0 +1,225 @@
+---
+title: QuickStart
+description: Quickstart guide to get started with Restura
+---
+
+import { Aside, Code, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Welcome to the Restura Quickstart! This guide will walk you through the process of setting up a new Restura project.
+
+## Before you begin
+
+Make sure you have:
+
+- [Node.js](https://nodejs.org/) 18+ installed on your machine
+- An [ExpressJS](https://expressjs.com/) application (Express 5+)
+- Credentials for a [PostgreSQL](https://www.postgresql.org/) database
+- A terminal to execute commands
+
+## Installation
+
+Start by installing the Restura Engine. Run the following command in your terminal:
+
+<Tabs>
+	<TabItem label="npm">
+		<Code code="npm install @restura/core" lang="bash" />
+	</TabItem>
+	<TabItem label="pnpm">
+		<Code code="pnpm add @restura/core" lang="bash" />
+	</TabItem>
+	<TabItem label="yarn">
+		<Code code="yarn add @restura/core" lang="bash" />
+	</TabItem>
+	<TabItem label="bun">
+		<Code code="bun add @restura/core" lang="bash" />
+	</TabItem>
+</Tabs>
+
+## Initialize Restura in Your Express App
+
+In your ExpressJS entry file, add the following code to initialize the Restura Engine:
+
+export const expressTypescriptCode = `
+import { PsqlPool, restura, type OnValidAuthenticationCallback, type RsRequest, type RsResponse } from '@restura/core';
+import express from 'express';
+
+const app = express();
+
+// Create a PostgreSQL connection pool
+const pool = new PsqlPool({
+host: "<host>", // Replace with your database host
+port: <port>, // Replace with your database port
+user: "<user>", // Replace with your database user
+password: "<password>", // Replace with your database password
+database: "<database>", // Replace with your database name
+});
+
+// Define an authentication handler
+const authHandler = async (req: RsRequest<unknown>, res: RsResponse<unknown>, onValid: OnValidAuthenticationCallback) => {
+onValid({ role: 'user', scopes: [] });
+};
+
+// Initialize Restura
+await restura.init(app, authHandler, pool);
+
+app.listen(3001, () => { // This is the default port for the Restura Engine
+console.log('Server is running on port 3001');
+});
+`;
+
+export const expressJavascriptCode = `
+const { PsqlPool, restura } = require('@restura/core');
+const express = require('express');
+
+const app = express();
+
+// Create a PostgreSQL connection pool
+const pool = new PsqlPool({
+host: "<host>", // Replace with your database host
+port: <port>, // Replace with your database port
+user: "<user>", // Replace with your database user
+password: "<password>", // Replace with your database password
+database: "<database>", // Replace with your database name
+});
+
+// Define an authentication handler
+const authHandler = async (req, res, onValid) => {
+onValid({ role: 'user', scopes: [] });
+};
+
+// Initialize Restura
+(async () => {
+await restura.init(app, authHandler, pool);
+
+app.listen(3001, () => { // This is the default port for the Restura Engine
+console.log('Server is running on port 3001');
+});
+})();
+`;
+
+<Tabs>
+	<TabItem label="TypeScript">
+		<Code code={expressTypescriptCode} lang="typescript" title="server.ts" />
+	</TabItem>
+	<TabItem label="JavaScript">
+		<Code code={expressJavascriptCode} lang="javascript" title="server.js" />
+	</TabItem>
+</Tabs>
+
+The Restura Engine is initialized by calling `restura.init` with the following parameters:
+
+- `app` - An instance of the Express application
+- `authHandler` - An authentication handler function
+- `pool` - An instance of the `PsqlPool` class
+
+<Aside type="note">
+	The authentication handler is called for every request. It should validate the user's credentials (JWT token,
+	session, API key, etc.) and call `onValid()` with the user's role and scopes. For now, we're allowing all requests
+	as the 'user' role.
+</Aside>
+
+## Create a Restura Schema file
+
+The schema file defines your database tables, API endpoints, and access control. Restura reads this file on startup and generates everything needed to run your API.
+
+Create a `restura.schema.json` file in your project root.
+
+Add this minimal schema to get started:
+
+export const resturaSchemaCode = `
+{
+	"customTypes": [],
+	"database": [],
+	"endpoints": [
+		{
+			"baseUrl": "/api/v1",
+			"description": "V1 Endpoints",
+			"name": "V1",
+			"routes": []
+		}
+	],
+	"globalParams": ["userId"],
+	"roles": ["user"],
+	"scopes": ["read:user", "write:user"]
+}
+`;
+
+<Code code={resturaSchemaCode} lang="json" title="restura.schema.json" />
+
+<Aside type="note">
+This minimal schema includes:
+- **`database`**: Empty array - we'll add tables later
+- **`endpoints`**: One endpoint group at `/api/v1` - we'll add routes later
+- **`globalParams`**: `userId` will be available in all endpoints (populated by your auth handler)
+- **`roles`**: Defines the 'user' role for access control
+- **`scopes`**: Defines read/write permissions for fine-grained access control
+
+Learn more about the [schema structure](../reference/schema).
+
+</Aside>
+
+## Make a Restura Configuration file
+
+Restura loads a configuration file from the root of your project on startup called `restura.config.mjs`.
+
+Create a `restura.config.mjs` file in your project root.
+
+Add the following content:
+
+export const resturaConfigCode = `
+export default {
+    logger: {
+        level: "info" // Default log level is info
+    },
+    restura: {
+       authToken: "12345" // This is the auth token used by the visual editor to update the schema
+    }
+}
+`;
+
+<Code code={resturaConfigCode} lang="javascript" title="restura.config.mjs" />
+
+## Run the Restura Engine
+
+Now that you have installed and added the required files, you can run the Restura Engine by starting your Express application.
+
+```bash
+npm start # or pnpm start, yarn start, bun start, etc.
+```
+
+When the Restura Engine starts, it will:
+
+1. Load and validate your schema file
+2. Generate TypeScript type definitions in `src/@types/`:
+    - `api.d.ts` - API endpoint types
+    - `model.d.ts` - Database table types
+    - `restura.d.ts` - General types used by Restura
+3. Register all endpoints defined in your schema
+4. Start listening for requests
+
+You should see output like:
+
+```bash
+INFO [2026-01-12 04:25:34.373]: Restura loaded (0) endpoint
+INFO [2026-01-12 04:25:34.379]: Restura Engine Initialized
+INFO [2026-01-12 04:25:34.495]: Successfully connected to database triggers
+INFO [2026-01-12 04:25:34.498]: Connected to PostgreSQL database
+```
+
+<Aside type="tip">
+	Since your schema has no database tables or endpoints yet, Restura won't register any routes. That's normal!
+	Continue to the next steps to add your first table and endpoint.
+</Aside>
+
+## What's Next?
+
+Now that Restura is installed and running, you can:
+
+- **[Run the Visual Editor](../visual-editor)** - Use the UI to manage your schema visually
+- **[Create your first database table](../guides/database-table)** - Define tables using the Visual Editor
+- **[Build a standard endpoint](../guides/standard-endpoint)** - Create a GET endpoint that queries your data
+
+Or dive deeper:
+
+- [Explore the schema reference](../reference/schema)
+- [Explore the configuration reference](../reference/config)

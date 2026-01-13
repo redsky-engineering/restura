@@ -1,0 +1,115 @@
+---
+title: Create a Custom Endpoint
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This guide walks you through creating an endpoint with your own TypeScript implementation. Use custom endpoints when you need logic beyond simple CRUD—like authentication, file uploads, or external API calls.
+
+## Step 1: Create a Custom Type (Optional)
+
+If your endpoint returns a custom response structure:
+
+1. Navigate to **Global** in the sidebar. You will be navigated to the **Custom Types** page
+2. Enter your TypeScript interface into the text area
+
+```typescript
+export interface AuthResponse {
+	token: string;
+	tokenExp: string;
+	refreshToken: string;
+	refreshTokenExp: string;
+}
+```
+
+## Step 2: Create the Endpoint
+
+1. Navigate to **API**
+2. Click **New**
+3. Set **Type** to "Custom One" or "Custom Array" or "Custom Paged"
+4. Fill in name, description, method, and path
+
+## Step 3: Add Request Parameters
+
+Type each parameter name, click **Add**, then configure:
+
+- Check **Required** if mandatory
+- Set the validator type (`string`, `number`, `boolean`, etc.)
+
+<Aside type="note">**Alternative:** Uncheck "Standard Request" to use a custom request type instead.</Aside>
+
+## Step 4: Set the Response Type
+
+1. Click the **Response** tab
+2. Select your custom type (e.g., `AuthResponse`) or a primitive (`boolean`, `string`, `number`)
+
+## Step 5: Apply Schema Changes
+
+Click **Preview Schema**, review, and **Submit**.
+
+## Step 6: Create the Handler File
+
+Create a file in `src/api/v1/` named after the first path segment:
+
+| Path            | File                |
+| --------------- | ------------------- |
+| `/user/login`   | `user.api.v1.ts`    |
+| `/order/status` | `order.api.v1.ts`   |
+| `/weather`      | `weather.api.v1.ts` |
+
+## Step 7: Implement the Handler
+
+The function name combines the HTTP method with the path in PascalCase:
+
+| Endpoint               | Function Name      |
+| ---------------------- | ------------------ |
+| `POST /user/login`     | `postUserLogin`    |
+| `GET /user/me`         | `getUserMe`        |
+| `POST /user/me/avatar` | `postUserMeAvatar` |
+| `PATCH /order/status`  | `patchOrderStatus` |
+
+```typescript
+import type { RsRequest, RsResponse } from '@restura/core';
+
+export default class UserApiV1 {
+	constructor() {}
+
+	async postUserLogin(req: RsRequest<Api.V1.User.Login.Post.Req>, res: RsResponse<Api.V1.User.Login.Post.Res>) {
+		const { username, password } = req.data;
+
+		// Your logic here...
+
+		res.sendData({
+			token: 'abc123',
+			tokenExp: '2025-01-01T00:00:00.000Z',
+			refreshToken: 'xyz789',
+			refreshTokenExp: '2025-06-01T00:00:00.000Z'
+		});
+	}
+}
+```
+
+## Step 8: Test Your Endpoint
+
+**Example request:**
+
+```bash
+curl -X POST "http://localhost:3001/v1/user/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "john", "password": "secret"}'
+```
+
+**Example response:**
+
+```json
+{
+	"data": {
+		"token": "abc123",
+		"tokenExp": "2025-01-01T00:00:00.000Z",
+		"refreshToken": "xyz789",
+		"refreshTokenExp": "2025-06-01T00:00:00.000Z"
+	}
+}
+```
+
+For more details on types, error handling, and file uploads, see the [Endpoints Reference](../../reference/endpoints/overview).

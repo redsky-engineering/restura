@@ -1,0 +1,184 @@
+---
+title: Create a Standard Endpoint
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This guide walks you through building a GET endpoint that fetches data from a table, filters by a request parameter, and joins to a related table.
+
+---
+
+## Step 1: Navigate to the Endpoints Page
+
+Click **API** in the sidebar to open the endpoint editor.
+
+---
+
+## Step 2: Create a New Endpoint
+
+Click the **"New"** button in the top-right of the endpoint list.
+
+A new route is created with a placeholder path like `/_new/X7K2`.
+
+---
+
+## Step 3: Configure Basic Details
+
+In the **API Details** tab, set the following:
+
+| Field           | What to Enter                                            |
+| --------------- | -------------------------------------------------------- |
+| **Type**        | `ONE` for a single record, `ARRAY` for a list            |
+| **Name**        | A descriptive name for your endpoint                     |
+| **Description** | What this endpoint does                                  |
+| **Method**      | `GET` for read operations                                |
+| **Path**        | The URL path (e.g., `/product/by-sku`, `/order/details`) |
+
+<Aside>**Example:** For a user lookup, you might use: - **Name:** `Get User By Name` - **Path:** `/user/by-name`</Aside>
+
+---
+
+## Step 4: Set the Base Table
+
+Select your **Base Table** — the primary table this endpoint queries.
+
+This determines which columns are available for filtering and response mapping.
+
+| If you're building... | Base table might be |
+| --------------------- | ------------------- |
+| User directory        | `user`              |
+| Product catalog       | `product`           |
+| Order lookup          | `order`             |
+
+---
+
+## Step 5: Add a Request Parameter
+
+Define parameters that callers must (or can) provide when calling the endpoint.
+
+In the **Parameters** section:
+
+1. Enter a parameter name in the input field
+2. Click **Add**
+3. Check **Required** if the parameter is mandatory
+4. Set the validator (e.g., `Type Check` → `string` or `integer`)
+
+| If filtering by... | Parameter name | Validator |
+| ------------------ | -------------- | --------- |
+| Name               | `name`         | `string`  |
+| ID                 | `id`           | `integer` |
+| SKU                | `sku`          | `string`  |
+| Status             | `status`       | `string`  |
+
+<Aside>**Example:** Add a `firstName` parameter with `string` validation to filter users by name.</Aside>
+
+---
+
+## Step 6: Add a Join (Optional)
+
+If your response needs data from a related table, add a join.
+
+Click **Add Join** to open the join selector:
+
+1. **For foreign key relationships:** You'll see tables that have foreign key relationships with your base table. Click the **"+"** button on the table you want to join.
+
+2. **For custom joins:** Click the **pencil icon** to open the join editor and define a custom relationship.
+
+The join appears with:
+
+- **Alias:** `{localColumn}_{foreignTable}` (e.g., `companyId_company`)
+- **Type:** `INNER` (only matching rows) or `LEFT` (include nulls)
+
+To change the join type, click the dropdown menu and select your preferred option.
+
+<Aside type="caution">
+	Use `LEFT` join if the relationship is optional. For example, if users might not have a company, use `LEFT` to avoid
+	excluding those users from results.
+</Aside>
+
+---
+
+## Step 7: Add a Where Clause
+
+Filter the results based on your request parameter.
+
+Click **Add Statement** to add a filter condition:
+
+1. Select the **table** and **column** to filter on
+2. Set the **operator** (`=`, `LIKE`, `>`, etc.)
+3. Set the **value** to `$parameterName` to reference your request parameter
+
+<Aside type="tip">
+	Use `$paramName` syntax to reference request parameters. For example, `$firstName` references the `firstName`
+	parameter from Step 5.
+</Aside>
+
+---
+
+## Step 8: Configure the Response
+
+Define which fields to return in the API response.
+
+Click the **Response** tab at the top of the editor.
+
+Click **Add Property** for each field:
+
+1. Enter the **property name** (how it appears in the JSON response)
+2. Select the **column** from the available tables
+
+For joined tables, columns are available under the join alias:
+
+| Source              | Selector format                         |
+| ------------------- | --------------------------------------- |
+| Base table column   | `{baseTable}.{column}`                  |
+| Joined table column | `{localColumn}_{foreignTable}.{column}` |
+
+<Aside>
+**Example response mapping:**
+
+| Property      | Selector                 |
+| ------------- | ------------------------ |
+| `id`          | `user.id`                |
+| `firstName`   | `user.firstName`         |
+| `companyName` | `companyId_company.name` |
+
+</Aside>
+
+---
+
+## Step 9: Apply Changes
+
+1. Click **"Preview Schema"** in the top bar to review your changes
+2. Verify the endpoint configuration looks correct
+3. Click **"Submit"** to save
+
+---
+
+## Test Your Endpoint
+
+Call your endpoint with the required parameters:
+
+```bash
+curl "http://localhost:3001/api/v1/{your-path}?{parameter}={value}"
+```
+
+**Example request:**
+
+```bash
+curl "http://localhost:3001/api/v1/user/by-name?firstName=John"
+```
+
+**Example response:**
+
+```json
+{
+	"data": {
+		"id": 1,
+		"firstName": "John",
+		"lastName": "Doe",
+		"companyName": "Acme Corp"
+	}
+}
+```
+
+For more configuration options, see the [Endpoints Reference](../../reference/endpoints/overview).

@@ -1,0 +1,268 @@
+---
+title: Contributing to Restura
+---
+
+import { Aside, Code, TabItem, Tabs } from '@astrojs/starlight/components';
+
+This guide covers everything you need to set up your local development environment and start contributing to Restura.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- [Node.js](https://nodejs.org/) 18+
+- [pnpm](https://pnpm.io/) 8+
+- [Docker Compose](https://docs.docker.com/compose/) (required for PostgreSQL and running tests)
+- [PostgreSQL client](https://www.postgresql.org/) (`psql`) for database setup
+
+## Quick Start
+
+Clone the repository:
+
+export const cloneHttpsCode = `git clone https://github.com/redsky-engineering/restura.git`;
+
+export const cloneSshCode = `git clone git@github.com:redsky-engineering/restura.git`;
+
+<Tabs>
+	<TabItem label="HTTPS">
+		<Code code={cloneHttpsCode} lang="bash" />
+	</TabItem>
+	<TabItem label="SSH">
+		<Code code={cloneSshCode} lang="bash" />
+	</TabItem>
+</Tabs>
+
+Navigate to the `restura-ui` directory and run the following command to start the Restura UI:
+
+export const startUiNpmCode = `cd restura
+cd apps/restura-ui
+npm install`;
+
+export const startUiPnpmCode = `cd restura
+cd apps/restura-ui
+pnpm install`;
+
+export const startUiYarnCode = `cd restura
+cd apps/restura-ui
+yarn install`;
+
+export const startUiBunCode = `cd restura
+cd apps/restura-ui
+bun install`;
+
+<Tabs>
+	<TabItem label="npm">
+		<Code code={startUiNpmCode} lang="bash" />
+	</TabItem>
+	<TabItem label="pnpm">
+		<Code code={startUiPnpmCode} lang="bash" />
+	</TabItem>
+	<TabItem label="yarn">
+		<Code code={startUiYarnCode} lang="bash" />
+	</TabItem>
+	<TabItem label="bun">
+		<Code code={startUiBunCode} lang="bash" />
+	</TabItem>
+</Tabs>
+
+### Repository Structure
+
+import { FileTree } from '@astrojs/starlight/components';
+
+<FileTree>
+
+- packages
+    - core # @restura/core - Restura Engine
+        - src
+            - ...
+        - package.json
+        - tsconfig.json
+    - internal # @restura/internal - Shared utilities
+        - src
+            - ...
+        - package.json
+        - tsconfig.json
+- apps
+    - restura-express # Test application that loads the Restura Engine
+        - migrations
+            - schema.sql # SQL schema file needed for tests
+            - data.sql # SQL data file needed for tests
+        - src
+            - ...
+        - docker-compose.local.yaml
+        - package.json
+        - tsconfig.json
+    - restura-ui # Visual editor
+        - src
+            - ...
+        - package.json
+        - tsconfig.json
+- docs # Documentation website
+    - src
+        - ...
+    - package.json
+    - tsconfig.json
+
+</FileTree>
+
+## Database Setup
+
+The example Express app uses a PostgreSQL database running in Docker on port `5488`.
+
+### 1. Start the PostgreSQL Container
+
+```bash
+# From the project root
+cd apps/restura-express
+
+# Start the database container
+pnpm run startDevDockerDb
+```
+
+This starts a PostgreSQL 16.1 container with:
+
+- **Port:** `5488` (mapped to container's `5432`)
+- **User:** `postgres`
+- **Password:** `postgres`
+
+### 2. Create the Database Schema
+
+Apply the schema migration to set up all tables, indexes, and triggers:
+
+```bash
+# From apps/restura-express directory
+psql -h localhost -p 5488 -U postgres -f ./migrations/schema.sql
+```
+
+When prompted, enter the password: `postgres`
+
+### 3. Load Initial Data
+
+Populate the database with sample data for development:
+
+```bash
+psql -h localhost -p 5488 -U postgres -f ./migrations/data.sql
+```
+
+## Running the Express App
+
+Once the database is set up, you can run the example Express application:
+
+```bash
+# From the project root
+pnpm express:dev
+```
+
+This command:
+
+1. Rebuilds all workspace packages
+2. Compiles the Express app TypeScript
+3. Starts the development server
+
+Alternatively, use `tsx` for faster iteration (skips compilation):
+
+```bash
+cd apps/restura-express
+pnpm run devTsx
+```
+
+## Development Workflow
+
+### Editing Restura Core
+
+When contributing to `@restura/core` (`packages/core/`):
+
+1. **Make your changes** in `packages/core/src/`
+
+2. **Restart the Express app** to test your changes:
+    ```bash
+    pnpm express:dev
+    ```
+
+### Editing the UI
+
+To work on the visual editor (`apps/restura-ui/`):
+
+```bash
+# Start the Vite dev server
+pnpm ui:start
+```
+
+## Running Tests
+
+<Aside type="caution">Docker must be running for tests to work, as they require PostgreSQL.</Aside>
+
+### Run All Tests
+
+```bash
+pnpm test
+```
+
+### Run Tests for a Specific Package
+
+```bash
+# Core package tests
+cd packages/core
+pnpm test
+```
+
+### Run Linting
+
+```bash
+# Lint all packages
+pnpm lint
+
+# Lint a specific package
+cd packages/core
+pnpm lint
+```
+
+## Adding Tests
+
+When adding new features or fixing bugs, please include tests.
+
+### Core Package Tests
+
+Tests in `@restura/core` use Mocha and Chai:
+
+```typescript
+// packages/core/src/yourModule.test.ts
+import { expect } from 'chai';
+import { yourFunction } from './yourModule.js';
+
+describe('yourFunction', () => {
+	it('should do something', () => {
+		const result = yourFunction('input');
+		expect(result).to.equal('expected output');
+	});
+});
+```
+
+Run tests with:
+
+```bash
+cd packages/core
+pnpm test
+```
+
+## Code Style
+
+This project uses:
+
+- **[ESLint](https://eslint.org/)** for code linting
+- **[Prettier](https://prettier.io/)** for code formatting
+- **[Husky](https://typicode.github.io/husky/)** with **[lint-staged](https://github.com/lint-staged/lint-staged)** for pre-commit hooks
+
+Prettier runs automatically on staged files when you commit. To manually format:
+
+```bash
+pnpm exec prettier --write .
+```
+
+## Pull Request Guidelines
+
+1. **Fork** the repository and create a feature branch
+2. **Write tests** for new functionality
+3. **Ensure all tests pass:** `pnpm test`
+4. **Lint your code:** `pnpm lint`
+5. **Submit a PR** with a clear description of changes

@@ -1,0 +1,170 @@
+---
+title: Filter - Old Syntax
+description: Deprecated verbose filter syntax
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+<Aside type="caution">
+	This syntax is deprecated. Use the [new syntax](/reference/filter/new-syntax/) for new code.
+</Aside>
+
+The verbose syntax is still supported for backwards compatibility.
+
+## Basic Format
+
+```
+(column:columnName,value:val,type:operator)
+```
+
+## Type Operators
+
+| Type               | SQL Equivalent  | Example                                          |
+| ------------------ | --------------- | ------------------------------------------------ |
+| `exact`            | `=`             | `(column:status,value:ACTIVE,type:exact)`        |
+| `contains`         | `ILIKE '%val%'` | `(column:name,value:test,type:contains)`         |
+| `startsWith`       | `ILIKE 'val%'`  | `(column:email,value:admin,type:startsWith)`     |
+| `endsWith`         | `ILIKE '%val'`  | `(column:file,value:.pdf,type:endsWith)`         |
+| `greaterThan`      | `>`             | `(column:price,value:100,type:greaterThan)`      |
+| `greaterThanEqual` | `>=`            | `(column:price,value:100,type:greaterThanEqual)` |
+| `lessThan`         | `<`             | `(column:stock,value:10,type:lessThan)`          |
+| `lessThanEqual`    | `<=`            | `(column:score,value:100,type:lessThanEqual)`    |
+| `isNull`           | `IS NULL`       | `(column:deletedAt,type:isNull)`                 |
+
+When `type` is omitted:
+
+- With `value`: defaults to equality (`=`)
+- Without `value`: defaults to `IS NULL`
+
+## Old Syntax Column Paths
+
+**Example 1 - Filter:**
+
+```
+(column:id,value:123,type:exact)
+```
+
+**SQL:**
+
+```sql
+"id" = 123
+```
+
+---
+
+**Example 2 - Filter:**
+
+```
+(column:orderV2.id,value:215)
+```
+
+**SQL:**
+
+```sql
+"orderV2"."id" = 215
+```
+
+---
+
+**Example 3 - Filter:**
+
+```
+(column:order.billingAddress.zip,value:47,type:contains)
+```
+
+**SQL:**
+
+```sql
+"order"."billingAddress"->>'zip'::text ILIKE '%47%'
+```
+
+## Old Syntax Logical Operators
+
+**Example 1 - Filter:**
+
+```
+(column:id,value:251)or(column:id,value:278)
+```
+
+**SQL:**
+
+```sql
+("id" = 251) or ("id" = 278)
+```
+
+---
+
+**Example 2 - Filter:**
+
+```
+(column:id,value:215)AND(column:totalPriceCents,value:3069,type:greaterThan)
+```
+
+**SQL:**
+
+```sql
+("id" = 215) AND ("totalPriceCents" > 3069)
+```
+
+## Old Syntax Grouping and Negation
+
+**Example 1 - Filter:**
+
+```
+((column:id,value:251)or(column:id,value:278))AND(column:status,value:ACTIVE,type:exact)
+```
+
+**SQL:**
+
+```sql
+(("id" = 251) or ("id" = 278)) AND ("status" = 'ACTIVE')
+```
+
+---
+
+**Example 2 - Filter:**
+
+```
+!(column:userId,value:15234,type:exact)
+```
+
+**SQL:**
+
+```sql
+NOT ("userId" = 15234)
+```
+
+---
+
+**Example 3 - Filter:**
+
+```
+!(column:id,value:4504055,type:contains)and!(column:name,value:jim,type:endsWith)
+```
+
+**SQL:**
+
+```sql
+NOT ("id"::text ILIKE '%4504055%') and NOT ("name"::text ILIKE '%jim')
+```
+
+## Syntax Comparison
+
+| Operation        | New Syntax            | Old Syntax                                       |
+| ---------------- | --------------------- | ------------------------------------------------ |
+| Equality         | `(status,ACTIVE)`     | `(column:status,value:ACTIVE,type:exact)`        |
+| Not equal        | `(status,ne,DELETED)` | —                                                |
+| Contains         | `(name,has,test)`     | `(column:name,value:test,type:contains)`         |
+| Starts with      | `(email,sw,admin)`    | `(column:email,value:admin,type:startsWith)`     |
+| Ends with        | `(file,ew,.pdf)`      | `(column:file,value:.pdf,type:endsWith)`         |
+| Greater than     | `(price,gt,100)`      | `(column:price,value:100,type:greaterThan)`      |
+| Greater or equal | `(price,gte,100)`     | `(column:price,value:100,type:greaterThanEqual)` |
+| Less than        | `(stock,lt,10)`       | `(column:stock,value:10,type:lessThan)`          |
+| Less or equal    | `(score,lte,100)`     | `(column:score,value:100,type:lessThanEqual)`    |
+| Is null          | `(deletedAt,null)`    | `(column:deletedAt,type:isNull)`                 |
+| Is not null      | `(createdAt,notnull)` | —                                                |
+| In set           | `(id,in,1\|2\|3)`     | —                                                |
+
+<Aside type="tip">
+	Migrate to the [new syntax](/reference/filter/new-syntax/) for better readability and more features.
+</Aside>

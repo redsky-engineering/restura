@@ -1,0 +1,423 @@
+---
+title: Columns & Data Types
+description: Configuring columns and understanding data types in Restura
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Column Properties
+
+| Property           | Description                                               |
+| ------------------ | --------------------------------------------------------- |
+| **Name**           | Column name (use `camelCase`, e.g., `firstName`)          |
+| **Type**           | Data type (see Column Types below)                        |
+| **Column Value**   | Values for ENUM, JSON type hints, or DECIMAL precision    |
+| **Length**         | Character length for VARCHAR/CHAR types                   |
+| **Auto Increment** | Enable auto-increment (numeric types only)                |
+| **Primary**        | Mark as primary key column                                |
+| **Unique**         | Creates a unique constraint on this column                |
+| **Nullable**       | Whether NULL values are allowed                           |
+| **Default**        | Default value expression (e.g., `now()`, `'active'`, `0`) |
+| **Comment**        | Documentation comment stored in the database              |
+| **Roles**          | User roles that can access this column                    |
+| **Scopes**         | OAuth-style scopes for column-level access control        |
+
+---
+
+## Numeric Types
+
+| Type                | Size     | Description                                    | TypeScript |
+| ------------------- | -------- | ---------------------------------------------- | ---------- |
+| `SMALLINT`          | 2 bytes  | -32,768 to 32,767                              | `number`   |
+| `INTEGER`           | 4 bytes  | -2,147,483,648 to 2,147,483,647                | `number`   |
+| `BIGINT`            | 8 bytes  | Large integers (use for IDs and foreign keys)  | `number`   |
+| `BIGSERIAL`         | 8 bytes  | Auto-incrementing big integer                  | `number`   |
+| `SERIAL`            | 4 bytes  | Auto-incrementing integer                      | `number`   |
+| `DECIMAL`/`NUMERIC` | Variable | Exact numeric with user-specified precision    | `string`   |
+| `REAL`              | 4 bytes  | 6 decimal digits precision (single precision)  | `number`   |
+| `DOUBLE PRECISION`  | 8 bytes  | 15 decimal digits precision (double precision) | `number`   |
+| `BOOLEAN`           | 1 byte   | True/false values                              | `boolean`  |
+
+<Aside type="note">
+	DECIMAL/NUMERIC types are returned as strings in TypeScript to preserve precision for financial calculations.
+</Aside>
+
+<Aside type="caution" title="BIGINT Precision Warning">
+	**BIGINT and BIGSERIAL are mapped to JavaScript `number`, which can lose precision for values outside ±9,007,199,254,740,991 (±2^53-1).** PostgreSQL BIGINT supports values up to ±9,223,372,036,854,775,807 (±2^63-1). For most applications using auto-incrementing IDs, this is not an issue until you exceed ~9 quadrillion records. However, if you're storing large integers from external systems or need guaranteed precision for all BIGINT values, be aware that precision loss can occur silently. Consider using DECIMAL/NUMERIC (returned as `string`) if you need to preserve exact values beyond JavaScript's safe integer range.
+</Aside>
+
+### When to Use Each Type
+
+**BIGINT / BIGSERIAL:**
+
+- Primary keys (`id`) – safe for auto-incrementing IDs up to ~9 quadrillion
+- Foreign keys (`userId`, `companyId`)
+- Large counters or identifiers
+
+⚠️ **Note:** Values exceeding ±2^53-1 may lose precision when mapped to JavaScript `number`. For most applications this is not a concern.
+
+**INTEGER:**
+
+- Quantities, counts
+- Age, year values
+- Status codes
+
+**DECIMAL:**
+
+- Money amounts
+- Percentages requiring precision
+- Any value where rounding errors are unacceptable
+
+**REAL / DOUBLE PRECISION:**
+
+- Scientific measurements
+- Coordinates (latitude/longitude)
+- Statistical calculations where small rounding is acceptable
+
+**BOOLEAN:**
+
+- Flags (`isActive`, `hasAccess`)
+- Yes/no questions
+- Binary states
+
+### DECIMAL Precision
+
+For DECIMAL columns, specify precision in the Column Value field using the format `precision-scale`:
+
+- `10-2` → 10 total digits, 2 after decimal (e.g., `12345678.90`)
+- `5-3` → 5 total digits, 3 after decimal (e.g., `12.345`)
+- `19-4` → 19 total digits, 4 after decimal (e.g., `123456789012345.1234`)
+
+**Example for currency:**
+
+```
+Column: price
+Type: DECIMAL
+Column Value: 10-2
+```
+
+This allows values from `-99999999.99` to `99999999.99`.
+
+---
+
+## String Types
+
+| Type      | Description                                      | TypeScript |
+| --------- | ------------------------------------------------ | ---------- |
+| `CHAR`    | Fixed-length, blank-padded (set length required) | `string`   |
+| `VARCHAR` | Variable-length with limit (set length required) | `string`   |
+| `TEXT`    | Variable-length without limit                    | `string`   |
+| `BYTEA`   | Binary data                                      | `string`   |
+
+### When to Use Each Type
+
+**VARCHAR:**
+
+- Names, emails, usernames (with appropriate length)
+- Short descriptions
+- Status values (though ENUM is often better)
+
+**TEXT:**
+
+- Long descriptions, comments
+- Article content
+- Any text without a known maximum length
+
+**CHAR:**
+
+- Fixed-length codes (country codes, state abbreviations)
+- Rarely used in modern applications
+
+### Common VARCHAR Lengths
+
+```
+firstName, lastName: VARCHAR(30)
+email: VARCHAR(255)
+username: VARCHAR(50)
+phone: VARCHAR(20)
+zipCode: VARCHAR(10)
+```
+
+### MariaDB String Types
+
+| Type         | Max Size | Description          |
+| ------------ | -------- | -------------------- |
+| `TINYTEXT`   | 255 B    | Small text           |
+| `TEXT`       | 64 KB    | Standard text        |
+| `MEDIUMTEXT` | 16 MB    | Medium text          |
+| `LONGTEXT`   | ~2 GB    | Large text           |
+| `TINYBLOB`   | 255 B    | Small binary data    |
+| `BLOB`       | 64 KB    | Standard binary data |
+| `MEDIUMBLOB` | 16 MB    | Medium binary data   |
+| `LONGBLOB`   | ~2 GB    | Large binary data    |
+
+---
+
+## Date/Time Types
+
+| Type          | Description                                      | TypeScript |
+| ------------- | ------------------------------------------------ | ---------- |
+| `DATE`        | Calendar date (year, month, day)                 | `string`   |
+| `TIME`        | Time of day (without time zone)                  | `string`   |
+| `TIMESTAMP`   | Date and time (without time zone)                | `string`   |
+| `TIMESTAMPTZ` | Date and time (with time zone) - **recommended** | `string`   |
+| `INTERVAL`    | Time span                                        | `string`   |
+| `DATETIME`    | Date and time (MariaDB, mapped to TIMESTAMPTZ)   | `string`   |
+
+<Aside type="tip">
+	Use `TIMESTAMPTZ` (timestamp with time zone) for most date/time fields to avoid timezone issues.
+</Aside>
+
+### When to Use Each Type
+
+**TIMESTAMPTZ:**
+
+- Created/modified timestamps
+- Event times
+- Any datetime that needs timezone awareness
+- **This should be your default choice**
+
+**DATE:**
+
+- Birth dates
+- Due dates
+- Any date without a specific time
+
+**TIME:**
+
+- Business hours (opening/closing times)
+- Duration without date context
+
+**INTERVAL:**
+
+- Duration between two times
+- Elapsed time calculations
+
+### Common Patterns
+
+```
+createdOn: TIMESTAMPTZ, default: now()
+modifiedOn: TIMESTAMPTZ, default: now()
+deletedOn: TIMESTAMPTZ, nullable
+birthDate: DATE
+scheduledTime: TIMESTAMPTZ
+```
+
+---
+
+## JSON Types
+
+| Type    | Description                                         | TypeScript         |
+| ------- | --------------------------------------------------- | ------------------ |
+| `JSON`  | Stores JSON data as raw text                        | `object` or custom |
+| `JSONB` | Binary JSON format, optimized for query performance | `object` or custom |
+
+### When to Use JSON
+
+- User preferences/settings
+- Flexible metadata
+- API response caching
+- Semi-structured data
+
+**JSONB vs JSON:**
+
+- **JSONB** is faster for queries and indexing
+- **JSON** preserves exact formatting and key order
+- **Use JSONB** unless you have a specific reason not to
+
+### JSON Type Hints
+
+For JSON/JSONB columns, you can specify TypeScript type hints in the Column Value field:
+
+```
+MyCustomType, AnotherType
+```
+
+This generates: `MyCustomType | AnotherType` in the TypeScript definitions.
+
+**Example:**
+
+```
+Column: preferences
+Type: JSONB
+Column Value: UserPreferences, AdminPreferences
+```
+
+TypeScript will type this as: `preferences: UserPreferences | AdminPreferences`
+
+---
+
+## Enumerated Types
+
+| Type   | Description                                          | TypeScript   |
+| ------ | ---------------------------------------------------- | ------------ |
+| `ENUM` | Enumerated values (PostgreSQL uses CHECK constraint) | String union |
+
+### When to Use ENUM
+
+- Status fields with fixed values
+- Categories or types
+- Role names
+- Any field with a small, fixed set of options
+
+### ENUM Values
+
+Define ENUM options in the Column Value field:
+
+```
+'PENDING','ACTIVE','COMPLETED'
+```
+
+This generates:
+
+- Database: `CHECK ("status" IN ('PENDING','ACTIVE','COMPLETED'))`
+- TypeScript: `'PENDING' | 'ACTIVE' | 'COMPLETED'`
+
+### Common ENUM Examples
+
+**Order status:**
+
+```
+Column: status
+Type: ENUM
+Column Value: 'PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED'
+```
+
+**User role:**
+
+```
+Column: role
+Type: ENUM
+Column Value: 'ADMIN','MANAGER','USER','GUEST'
+```
+
+**Priority:**
+
+```
+Column: priority
+Type: ENUM
+Column Value: 'LOW','MEDIUM','HIGH','URGENT'
+```
+
+---
+
+## Type Mappings
+
+Restura automatically maps database types to TypeScript types:
+
+| Database Type                 | TypeScript Type                        | Notes                                      |
+| ----------------------------- | -------------------------------------- | ------------------------------------------ |
+| BOOLEAN, TINYINT(1)           | `boolean`                              |                                            |
+| SMALLINT, INTEGER             | `number`                               |                                            |
+| BIGINT, BIGSERIAL             | `number`                               | ⚠️ Precision loss possible beyond ±2^53-1 |
+| SERIAL                        | `number`                               |                                            |
+| REAL, DOUBLE PRECISION, FLOAT | `number`                               |                                            |
+| DECIMAL, NUMERIC              | `string` (for precision)               |                                            |
+| CHAR, VARCHAR, TEXT           | `string`                               |                                            |
+| DATE, TIME, TIMESTAMP         | `string`                               |                                            |
+| JSON, JSONB                   | `object` (or custom type if specified) |                                            |
+| ENUM                          | String union type                      |                                            |
+| BYTEA, BLOB                   | `string`                               |                                            |
+
+---
+
+## Column Examples
+
+### User Table Columns
+
+```
+id: BIGSERIAL, primary key, auto-increment
+firstName: VARCHAR(30), not nullable
+lastName: VARCHAR(30), not nullable
+email: VARCHAR(255), unique, not nullable
+passwordHash: TEXT, not nullable
+role: ENUM('ADMIN','USER'), default: 'USER'
+isActive: BOOLEAN, default: true
+lastLoginOn: TIMESTAMPTZ, nullable
+createdOn: TIMESTAMPTZ, default: now()
+modifiedOn: TIMESTAMPTZ, default: now()
+```
+
+### Order Table Columns
+
+```
+id: BIGSERIAL, primary key, auto-increment
+userId: BIGINT, not nullable, foreign key to user.id
+status: ENUM('PENDING','PROCESSING','COMPLETED','CANCELLED')
+subtotal: DECIMAL(10,2), not nullable
+tax: DECIMAL(10,2), not nullable
+shipping: DECIMAL(10,2), not nullable
+total: DECIMAL(10,2), not nullable
+notes: TEXT, nullable
+metadata: JSONB, nullable
+createdOn: TIMESTAMPTZ, default: now()
+modifiedOn: TIMESTAMPTZ, default: now()
+```
+
+### Product Table Columns
+
+```
+id: BIGSERIAL, primary key, auto-increment
+sku: VARCHAR(50), unique, not nullable
+name: VARCHAR(100), not nullable
+description: TEXT, nullable
+price: DECIMAL(10,2), not nullable
+compareAtPrice: DECIMAL(10,2), nullable
+inventory: INTEGER, default: 0
+isActive: BOOLEAN, default: true
+tags: JSONB, nullable
+images: JSONB, nullable
+createdOn: TIMESTAMPTZ, default: now()
+modifiedOn: TIMESTAMPTZ, default: now()
+```
+
+---
+
+## Best Practices
+
+### Choosing Data Types
+
+1. **Use the smallest type that fits your data** – Saves storage and improves performance
+2. **Use BIGINT for IDs** – Prevents overflow on large tables (safe up to ~9 quadrillion for auto-incrementing IDs)
+3. **Use DECIMAL for money** – Avoids rounding errors
+4. **Use TIMESTAMPTZ for dates** – Handles timezones correctly
+5. **Use ENUM for fixed sets** – Enforces valid values at the database level
+
+<Aside type="tip">
+	For INTEGER vs BIGINT: Use `INTEGER` (max ~2.1 billion) for most auto-incrementing IDs unless you expect extremely high volume. Use `BIGINT` for tables that may exceed 2 billion records or when storing large integers from external systems. Be aware that BIGINT values beyond JavaScript's safe integer range (±2^53-1) may lose precision.
+</Aside>
+
+### Nullability
+
+- Make columns NOT NULL when the value is required
+- Use NULL for truly optional values
+- Consider using default values instead of allowing NULL
+- Document the meaning of NULL in your schema
+
+### Default Values
+
+- Use `now()` for timestamp fields
+- Use `true` or `false` for boolean fields
+- Use `0` for numeric counters
+- Use `'PENDING'` or similar for status fields
+- Avoid complex expressions in defaults
+
+### Column-Level Permissions
+
+Use roles and scopes to control access to sensitive columns:
+
+```
+Column: socialSecurityNumber
+Roles: ['ADMIN', 'HR']
+Scopes: []
+```
+
+Learn more about [permissions](/reference/database/permissions/).
+
+---
+
+## Next Steps
+
+- [Set up relationships with indexes and foreign keys](/reference/database/relationships/)
+- [Add validation with constraints](/reference/database/constraints/)
+- [Configure permissions](/reference/database/permissions/)

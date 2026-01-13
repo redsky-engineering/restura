@@ -1,0 +1,245 @@
+---
+title: restura.config.mjs
+description: Syntax and structure of the Restura config file
+---
+
+import { Aside, Code } from '@astrojs/starlight/components';
+
+`restura.config.mjs` is the configuration file for the Restura Engine. Restura loads this file on startup from your project's root directory.
+
+The file uses ESM format (`.mjs`) and should export a default configuration object.
+
+## Structure
+
+The config has two sections:
+
+| Section   | Purpose                                         | Required |
+| --------- | ----------------------------------------------- | -------- |
+| `restura` | Restura engine settings (auth, paths, features) | Yes      |
+| `logger`  | Logging configuration                           | Yes      |
+
+### Example
+
+This is the most basic configuration file.
+
+export const basicConfigCode = `export default {
+	restura: {
+		authToken: 'my-secret-token'
+	},
+	logger: {
+		level: 'info'
+	}
+};`;
+
+<Code code={basicConfigCode} lang="javascript" title="restura.config.mjs" />
+
+export const jsdocConfigCode = `const config = {
+	/** @type {import('@restura/core').ResturaConfigSchema} */
+	restura: {
+		authToken: 'my-secret-token'
+	},
+	/** @type {import('@restura/core').LoggerConfigSchema} */
+	logger: {
+		level: 'info'
+	}
+};
+
+export default config;`;
+
+
+<Aside type="tip">
+You can add JSDoc type annotations to get autocomplete in your editor.
+
+<Code code={jsdocConfigCode} lang="javascript" title="restura.config.mjs" />
+</Aside>
+
+## restura
+
+Configuration for the Restura engine itself.
+
+```javascript
+restura: {
+  authToken: 'my-secret-token',
+  sendErrorStackTrace: false,
+  schemaFilePath: '/path/to/restura.schema.json',
+  customApiFolderPath: '/path/to/api',
+  generatedTypesPath: '/path/to/@types',
+  fileTempCachePath: '/tmp/uploads',
+  scratchDatabaseSuffix: 'dev'
+}
+```
+
+| Property                | Type      | Required | Default                             | Description                                                                                                                 |
+| ----------------------- | --------- | -------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `authToken`             | `string`  | Yes      | —                                   | Secret token for authenticating with Restura admin endpoints (`/restura/*`). Used by the Restura UI to push schema updates. |
+| `sendErrorStackTrace`   | `boolean` | No       | `false`                             | Include stack traces in error responses. Enable in development, disable in production.                                      |
+| `schemaFilePath`        | `string`  | No       | `{cwd}/restura.schema.json`         | Path to the schema file.                                                                                                    |
+| `customApiFolderPath`   | `string`  | No       | `{cwd}/src/api` or `{cwd}/dist/api` | Directory containing custom endpoint handlers. Restura auto-detects TypeScript vs compiled JS based on runtime.             |
+| `generatedTypesPath`    | `string`  | No       | `{cwd}/src/@types`                  | Directory where Restura writes generated TypeScript type definitions.                                                       |
+| `fileTempCachePath`     | `string`  | No       | —                                   | Temporary directory for file uploads. If not set, uploads use the system temp directory.                                    |
+| `scratchDatabaseSuffix` | `string`  | No       | —                                   | Suffix appended to database name for scratch/preview operations. Useful when multiple developers share a database server.   |
+
+### authToken
+
+The `authToken` secures the Restura admin API. The Restura UI sends this token when fetching or updating your schema. Keep this secret and use a strong value in production.
+
+```javascript
+restura: {
+	authToken: process.env.RESTURA_AUTH_TOKEN || 'dev-token'
+}
+```
+
+### scratchDatabaseSuffix
+
+When previewing schema changes, Restura can create a temporary "scratch" database to test migrations without affecting your real data. The suffix distinguishes scratch databases when multiple developers work on the same server.
+
+```javascript
+restura: {
+  authToken: 'secret',
+  scratchDatabaseSuffix: 'john'  // Creates scratch DB like: myapp_scratch_john
+}
+```
+
+## logger
+
+Logging configuration using [PinoJS](https://github.com/pinojs/pino) under the hood.
+
+```javascript
+logger: {
+	level: 'info'
+}
+```
+
+| Property      | Type                | Required | Default  | Description                           |
+| ------------- | ------------------- | -------- | -------- | ------------------------------------- |
+| `level`       | `string`            | No       | `'info'` | Minimum log level to output           |
+| `transports`  | `array`             | No       | —        | Pino transport targets for log output |
+| `serializers` | `object`            | No       | —        | Custom serializers for log data       |
+| `stream`      | `DestinationStream` | No       | —        | Custom output stream                  |
+
+### Log Levels
+
+From most to least severe:
+
+| Level             | Use Case                            |
+| ----------------- | ----------------------------------- |
+| `fatal`           | Unrecoverable errors, app must exit |
+| `error`           | Errors that need attention          |
+| `warn`            | Potential problems                  |
+| `info`            | General operational messages        |
+| `debug`           | Detailed debugging info             |
+| `trace` / `silly` | Very verbose tracing                |
+
+Set to `debug` or `silly` during development, `info` or `warn` in production.
+
+### Default Stream
+
+By default, Restura uses `pino-pretty` to format logs for console output:
+
+```typescript
+const defaultStream = pinoPretty({
+	colorize: true,
+	translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+	ignore: 'pid,hostname,_meta', // _meta allows a user to pass in metadata for JSON but not print it to the console
+	messageFormat: '{msg}',
+	levelFirst: true,
+	customColors: 'error:red,warn:yellow,info:green,debug:blue,trace:magenta',
+	destination: process.stdout
+});
+```
+
+### Default Serializers
+
+By default, Restura will serialize the following error types:
+
+- `Error`
+- `RsError`
+- `AxiosError`
+
+Any other error type will be serialized as a generic error object.
+
+## Complete Example
+
+A typical development configuration:
+
+```javascript
+const config = {
+	/** @type {import('@restura/core').ResturaConfigSchema} */
+	restura: {
+		authToken: process.env.RESTURA_AUTH_TOKEN || 'dev-secret',
+		sendErrorStackTrace: true,
+		scratchDatabaseSuffix: 'local'
+	},
+	/** @type {import('@restura/core').LoggerConfigSchema} */
+	logger: {
+		level: 'debug'
+	}
+};
+
+export default config;
+```
+
+A production configuration:
+
+```javascript
+const config = {
+	/** @type {import('@restura/core').ResturaConfigSchema} */
+	restura: {
+		authToken: process.env.RESTURA_AUTH_TOKEN,
+		sendErrorStackTrace: false,
+		fileTempCachePath: '/var/tmp/uploads'
+	},
+	/** @type {import('@restura/core').LoggerConfigSchema} */
+	logger: {
+		level: 'info'
+	}
+};
+
+export default config;
+```
+
+## Environment Variables
+
+You can reference environment variables for sensitive values:
+
+```javascript
+restura: {
+	authToken: process.env.RESTURA_AUTH_TOKEN
+}
+```
+
+Ensure required environment variables are set before starting the server. Restura will fail to start if `authToken` is missing or empty.
+
+## Troubleshooting
+
+**"Missing Restura Auth Token"**
+
+- `authToken` is required and must be a non-empty string.
+- Check that the environment variable is set if you're using one.
+
+**"Failed to load restura.config.mjs"**
+
+- File must be named exactly `restura.config.mjs` in your project root.
+- Must use ESM syntax (`export default`), not CommonJS (`module.exports`).
+- Check for syntax errors in the file.
+
+**Custom handlers not loading**
+
+- Verify `customApiFolderPath` points to the correct directory.
+- In development (ts-node/tsx), it defaults to `src/api`. In production, `dist/api`.
+- Ensure handler files match the expected naming convention.
+
+**Generated types not appearing**
+
+- Check `generatedTypesPath` is writable.
+- Restura generates types on schema update, not on startup.
+
+**File uploads failing**
+
+- If using `fileTempCachePath`, ensure the directory exists and is writable.
+- Check disk space if uploads fail silently.
+
+**Logs not showing**
+
+- Verify `level` is set low enough (e.g., `debug` shows more than `info`).
+- If using custom transports, check transport configuration.

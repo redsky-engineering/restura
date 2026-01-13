@@ -1,0 +1,278 @@
+---
+title: Response Configuration
+description: Configuring API responses and pagination in Restura
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Standard Route Responses
+
+Standard routes build responses by mapping database columns to output properties.
+
+| Term                  | Description                                                           |
+| --------------------- | --------------------------------------------------------------------- |
+| **Response property** | A field returned in the API response                                  |
+| **Selector**          | A column reference that maps a database column to a response property |
+
+### Selector Format
+
+| Source              | Format                 | Example                  |
+| ------------------- | ---------------------- | ------------------------ |
+| Base table column   | `{table}.{column}`     | `user.firstName`         |
+| Joined table column | `{joinAlias}.{column}` | `companyId_company.name` |
+| Custom expression   | Raw SQL expression     | `TRUE`, `COUNT(*)`       |
+
+**Example response configuration:**
+
+```
+Response Properties:
+  - id → user.id
+  - firstName → user.firstName
+  - lastName → user.lastName
+  - companyName → companyId_company.name
+  - isActive → TRUE
+```
+
+This generates a response like:
+
+```json
+{
+	"data": {
+		"id": 1,
+		"firstName": "John",
+		"lastName": "Doe",
+		"companyName": "Acme Corp",
+		"isActive": true
+	}
+}
+```
+
+---
+
+## Response Wrappers
+
+| Type                 | Description                                        | Format                          |
+| -------------------- | -------------------------------------------------- | ------------------------------- |
+| **Wrapped response** | Standard format that puts data inside a wrapper    | `{ "data": { ... } }`           |
+| **Paged response**   | Contains data array and total count for pagination | `{ "data": [...], "total": N }` |
+
+### ONE Route Response
+
+Returns a single object wrapped in a `data` property:
+
+```json
+{
+	"data": {
+		"id": 1,
+		"name": "John Doe",
+		"email": "john@example.com"
+	}
+}
+```
+
+### ARRAY Route Response
+
+Returns an array of objects wrapped in a `data` property:
+
+```json
+{
+	"data": [
+		{ "id": 1, "name": "John Doe" },
+		{ "id": 2, "name": "Jane Smith" }
+	]
+}
+```
+
+### PAGED Route Response
+
+Returns an array with a total count:
+
+```json
+{
+	"data": [
+		{ "id": 1, "name": "John Doe" },
+		{ "id": 2, "name": "Jane Smith" }
+	],
+	"total": 150
+}
+```
+
+### DELETE Route Response
+
+DELETE routes return a boolean success indicator:
+
+```json
+{
+	"data": true
+}
+```
+
+---
+
+## Pagination
+
+Paged routes (`PAGED` and `CUSTOM_PAGED`) automatically handle pagination.
+
+### Automatic Parameters
+
+When you select `PAGED` type, these parameters are added automatically:
+
+| Parameter   | Type     | Description                      | Default |
+| ----------- | -------- | -------------------------------- | ------- |
+| `page`      | `number` | Current page number (1-indexed)  | `1`     |
+| `perPage`   | `number` | Number of items per page         | `10`    |
+| `filter`    | `string` | Dynamic where condition string   | —       |
+| `sortBy`    | `string` | Column name to sort by           | —       |
+| `sortOrder` | `string` | Sort direction (`ASC` or `DESC`) | `ASC`   |
+
+### Example Request
+
+```
+GET /api/v1/users?page=2&perPage=20&sortBy=createdOn&sortOrder=DESC
+```
+
+### Paged Response Format
+
+```json
+{
+	"data": [
+		{ "id": 21, "name": "User 21" },
+		{ "id": 22, "name": "User 22" },
+		...
+		{ "id": 40, "name": "User 40" }
+	],
+	"total": 150
+}
+```
+
+The client can calculate:
+
+- Total pages: `Math.ceil(total / perPage)` = `Math.ceil(150 / 20)` = 8
+- Current page: 2
+- Has next page: `page < totalPages`
+- Has previous page: `page > 1`
+
+### Dynamic Filtering
+
+The `filter` parameter allows clients to pass dynamic where conditions:
+
+```
+GET /api/v1/users?filter=status='active' AND role='admin'
+```
+
+This is useful for building flexible search interfaces without creating multiple endpoints.
+
+<Aside type="caution">
+	When using the `filter` parameter in URLs, special characters must be URL encoded. For example, spaces should be encoded as `%20`, single quotes as `%27`, and equals signs as `%3D`. Most HTTP clients handle this automatically.
+	
+	Example with URL encoding:
+	```
+	GET /api/v1/users?filter=status%3D%27active%27%20AND%20role%3D%27admin%27
+	```
+</Aside>
+
+<Aside type="note">
+	The `filter` parameter uses SQL-like syntax. Learn more about [dynamic filtering](/reference/filter/advanced).
+</Aside>
+
+## Custom Route Responses
+
+Custom routes specify a response type instead of using selectors.
+
+| Option    | Description                                          |
+| --------- | ---------------------------------------------------- |
+| `boolean` | Returns a boolean value                              |
+| `string`  | Returns a string value                               |
+| `number`  | Returns a numeric value                              |
+| Custom    | Returns a custom TypeScript interface you've defined |
+
+### Using Custom Types
+
+Define custom TypeScript interfaces for complex response structures:
+
+```typescript
+export interface AuthResponse {
+	token: string;
+	tokenExp: string;
+	refreshToken: string;
+	refreshTokenExp: string;
+}
+```
+
+Then select this type as your custom route's response type.
+
+Learn more about [custom routes and types](/reference/endpoints/custom-routes/).
+
+---
+
+## Response Examples
+
+### User Profile (ONE)
+
+**Route:** `GET /api/v1/user/:id`
+
+**Response:**
+
+```json
+{
+	"data": {
+		"id": 1,
+		"firstName": "John",
+		"lastName": "Doe",
+		"email": "john@example.com",
+		"companyName": "Acme Corp",
+		"role": "ADMIN",
+		"createdOn": "2024-01-15T10:30:00Z"
+	}
+}
+```
+
+### User List (ARRAY)
+
+**Route:** `GET /api/v1/users`
+
+**Response:**
+
+```json
+{
+	"data": [
+		{
+			"id": 1,
+			"firstName": "John",
+			"lastName": "Doe",
+			"email": "john@example.com"
+		},
+		{
+			"id": 2,
+			"firstName": "Jane",
+			"lastName": "Smith",
+			"email": "jane@example.com"
+		}
+	]
+}
+```
+
+### Paginated Users (PAGED)
+
+**Route:** `GET /api/v1/users/paged?page=1&perPage=10&sortBy=lastName&sortOrder=ASC`
+
+**Response:**
+
+```json
+{
+	"data": [
+		{ "id": 5, "firstName": "Alice", "lastName": "Anderson" },
+		{ "id": 12, "firstName": "Bob", "lastName": "Brown" },
+		{ "id": 3, "firstName": "Charlie", "lastName": "Clark" }
+	],
+	"total": 47
+}
+```
+
+---
+
+## Next Steps
+
+- [Build SQL queries](/reference/endpoints/sql-queries/)
+- [Configure request parameters](/reference/endpoints/parameters/)
+- [Create custom routes](/reference/endpoints/custom-routes/)

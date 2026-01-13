@@ -1,0 +1,49 @@
+---
+title: Filter
+description: Filter parameter in Restura
+---
+
+The filter parameter enables dynamic server-side filtering of paginated results.
+
+## Quick Reference
+
+| Syntax Style      | Format                            | Example                                    |
+| ----------------- | --------------------------------- | ------------------------------------------ |
+| **New (compact)** | `(column,operator,value)`         | `(status,ne,DELETED)`                      |
+| **Old (verbose)** | `(column:name,value:val,type:op)` | `(column:status,value:DELETED,type:exact)` |
+
+Both syntaxes are supported. New syntax is recommended for readability and brevity.
+
+## Documentation Sections
+
+- **[New Syntax](/reference/filter/new-syntax/)** - Recommended compact syntax with operators, logical operations, and examples
+- **[Old Syntax](/reference/filter/old-syntax/)** - Deprecated verbose syntax for backwards compatibility
+- **[Advanced Topics](/reference/filter/advanced/)** - Value types, SQL injection prevention, and error handling
+
+## Quick Examples
+
+**Simple equality:**
+
+```
+(status,ACTIVE)
+```
+
+**With operator:**
+
+```
+(price,gt,100)
+```
+
+**Multiple conditions:**
+
+```
+(status,ACTIVE)and(price,gt,100)
+```
+
+**Complex grouping:**
+
+```
+((status,ACTIVE)or(status,PENDING))and(price,gt,100)
+```
+
+Get started with the [New Syntax](/reference/filter/new-syntax/) guide.
