@@ -377,7 +377,7 @@ Now let's create the database schema for our blog. We'll create two tables: `use
 First, let's create a table to store blog authors.
 
 1. In the Visual Editor, click on **"Database"** in the left sidebar
-2. Click the **"+ Add Table"** button
+2. Click the **"Add Table"** button
 3. Name your table `user`
 4. Click **"Create"**
 
@@ -386,55 +386,55 @@ First, let's create a table to store blog authors.
 Click on your new `user` table to open the table editor, then add these columns:
 
 1. **firstName** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `firstName`
     - Type: `VARCHAR`
     - Length: `150`
     - Nullable: ✗
 
 2. **lastName** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `lastName`
     - Type: `VARCHAR`
     - Length: `150`
     - Nullable: ✗
 
 3. **email** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `email`
     - Type: `VARCHAR`
     - Length: `255`
     - Nullable: ✗
 
 4. **bio** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `bio`
     - Type: `TEXT`
     - Nullable: ✓ (bio is optional)
 
 5. **role** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `role`
     - Type: `VARCHAR`
     - Length: `50`
     - Nullable: ✗
 
-<Aside type="note">`id`, `createdOn` and `modifiedOn` are auto-created by Restura.</Aside>
+<Aside type="note">The `id`, `createdOn` and `modifiedOn` columns are auto-created by Restura.</Aside>
 
 ### Add unique indexes
 
 1. In the table editor, scroll to the **"Indexes"** section
-2. Click **"+ Add Index"**
+2. Click the **"+"** button
     - Name: `user_email_unique_index`
     - Columns: Select `email`
     - Unique: ✓
-3. Click **"Save"** to save the user table
+3. Changes are automatically saved
 
 ### Create the Post table
 
 Now let's create a table for blog posts that references the user table.
 
-1. Click **"+ Add Table"** again
+1. Click **"Add Table"** again
 2. Name your table `post`
 3. Click **"Create"**
 
@@ -443,26 +443,26 @@ Now let's create a table for blog posts that references the user table.
 Click on your new `post` table and add these columns:
 
 1. **title** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `title`
     - Type: `VARCHAR`
     - Length: `200`
     - Nullable: ✗
 
 2. **content** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `content`
     - Type: `TEXT`
     - Nullable: ✗
 
 3. **authorId** column (foreign key to user):
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `authorId`
     - Type: `BIGINT`
     - Nullable: ✗
 
 4. **published** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `published`
     - Type: `BOOLEAN`
     - Default: `false`
@@ -475,11 +475,11 @@ Click on your new `post` table and add these columns:
 ### Add an index on authorId
 
 1. Scroll to the **"Indexes"** section
-2. Click **"+ Add Index"**
+2. Click the **"+"** button
 3. Name: `post_author_id_index`
 4. Columns: Select `authorId`
 5. Unique: ✗ (one author can have many posts)
-6. Click **"Save"**
+6. Changes are automatically saved
 
 ### Preview and update your database schema
 
@@ -543,7 +543,7 @@ Fill in the route details:
 
 In the **"Response"** section, add the fields you want to return:
 
-1. Click **"+ Add Field"** for each column:
+1. Click **"Add Property"** for each column:
     - Field name: `id`, Selector: `user.id`
     - Field name: `createdOn`, Selector: `user.createdOn`
     - Field name: `modifiedOn`, Selector: `user.modifiedOn`
@@ -553,15 +553,16 @@ In the **"Response"** section, add the fields you want to return:
     - Field name: `role`, Selector: `user.role`
 
 <Aside type="tip">
-	The Visual Editor has a shortcut: you can click **"Add All Columns"** to automatically add all fields from the
+	The Visual Editor has a shortcut: you can click **"Add All"** to automatically add all fields from the
 	selected table!
 </Aside>
 
 ### Save the endpoint
 
-1. Click **"Save"** in the top right
-2. The Visual Editor updates your `restura.schema.json` file
-3. Your Restura API automatically reloads and registers the new endpoint
+1. Click **"Preview Schema"** in the top right
+2. Click **"Submit"** to save the changes
+
+When you click **"Submit"**, the Visual Editor will update your `restura.schema.json` file and your Restura API will automatically reload and register the new endpoint.
 
 Check your API server terminal—you should now see:
 
@@ -632,8 +633,8 @@ Perfect! Your endpoint is working and returning the test user data.
 When you made the request:
 
 1. Restura received the GET request at `/api/v1/user/list`
-2. Your `authHandler` validated the request and assigned the 'user' role
-3. Restura checked that 'user' role has permission to access this endpoint (you configured this in the Visual Editor)
+2. Your `authHandler` validated the request and assigned the `user` role
+3. Restura checked that `user` role has permission to access this endpoint (you configured this in the Visual Editor)
 4. Restura automatically generated and executed this SQL query:
     ```sql
     SELECT id, "createdOn", "modifiedOn", "firstName", "lastName", email, role
@@ -666,7 +667,7 @@ Fill in the route details:
 
 In the **"Response"** section, add the fields you want to return:
 
-1. Click **"+ Add Field"** for each column:
+1. Click **"Add Property"** for each column:
     - Field name: `id`, Selector: `post.id`
     - Field name: `createdOn`, Selector: `post.createdOn`
     - Field name: `modifiedOn`, Selector: `post.modifiedOn`
@@ -677,8 +678,8 @@ In the **"Response"** section, add the fields you want to return:
 
 ### Save the endpoint
 
-1. Click **"Save"** in the top right
-2. Your Restura API automatically reloads and registers the new endpoint
+1. Click **"Preview Schema"** in the top right
+2. Click **"Submit"** to save the changes
 
 Check your API server terminal—you should now see:
 
@@ -727,7 +728,7 @@ Fill in the route details:
 
 In the **"Parameters"** section:
 
-1. Click **"+ Add Parameter"**
+1. Click **"Add"**
 2. **Name**: `id`
 3. **Type**: `BIGINT`
 4. **Required**: ✓
@@ -736,14 +737,14 @@ In the **"Parameters"** section:
 
 In the **"Response"** section, we'll add fields from both the `post` and `user` tables:
 
-1. **Post fields** - Click **"+ Add Field"** for each:
+1. **Post fields** - Click **"Add Property"** for each:
     - Field name: `id`, Selector: `post.id`
     - Field name: `createdOn`, Selector: `post.createdOn`
     - Field name: `title`, Selector: `post.title`
     - Field name: `content`, Selector: `post.content`
     - Field name: `published`, Selector: `post.published`
 
-2. **Author fields** - Click **"+ Add Field"** for each:
+2. **Author fields** - Click **"Add Property"** for each:
     - Field name: `authorFirstName`, Selector: `user.firstName`
     - Field name: `authorLastName`, Selector: `user.lastName`
     - Field name: `authorEmail`, Selector: `user.email`
@@ -752,10 +753,8 @@ In the **"Response"** section, we'll add fields from both the `post` and `user` 
 ### Add the JOIN
 
 1. Scroll to the **"Joins"** section
-2. Click **"+ Add Join"**
-3. **Type**: `INNER JOIN`
-4. **Table**: Select `user`
-5. **On Clause**: `post.authorId = user.id`
+2. Click **"Add Join"**
+3. Choose the `authorId` column
 
 <Aside type="tip">
 	Restura automatically handles the JOIN for you! You just specify which tables to join and how they relate. Restura
@@ -765,15 +764,16 @@ In the **"Response"** section, we'll add fields from both the `post` and `user` 
 ### Add the WHERE clause
 
 1. Scroll to the **"Where"** section
-2. Click **"+ Add Condition"**
+2. Click **"Add Statement"**
 3. **Field**: `post.id`
 4. **Operator**: `=`
-5. **Value**: `{{id}}` (this references the parameter we created)
+5. **Value**: `$id` (this references the parameter we created)
 
 ### Save the endpoint
 
-1. Click **"Save"** in the top right
-2. Your Restura API automatically reloads
+1. Click **"Preview Schema"** in the top right
+2. Click **"Submit"** to save the changes
+3. Your Restura API automatically reloads
 
 Check your API server terminal—you should now see:
 
@@ -806,7 +806,7 @@ Fill in the route details:
 
 In the **"Parameters"** section, add the following body parameters:
 
-1. Click **"+ Add Parameter"** for each:
+1. Click **"Add"** for each:
     - Name: `firstName`, Type: `VARCHAR`, Required: ✓
     - Name: `lastName`, Type: `VARCHAR`, Required: ✓
     - Name: `email`, Type: `VARCHAR`, Required: ✓
@@ -817,7 +817,7 @@ In the **"Parameters"** section, add the following body parameters:
 
 In the **"Response"** section, add the fields you want to return:
 
-1. Click **"+ Add Field"** for each column:
+1. Click **"Add Property"** for each column:
     - Field name: `id`, Selector: `user.id`
     - Field name: `createdOn`, Selector: `user.createdOn`
     - Field name: `firstName`, Selector: `user.firstName`
@@ -828,7 +828,8 @@ In the **"Response"** section, add the fields you want to return:
 
 ### Save the endpoint
 
-1. Click **"Save"** in the top right
+1. Click **"Preview Schema"** in the top right
+2. Click **"Submit"** to save the changes
 2. Your Restura API automatically reloads
 
 Check your API server terminal—you should now see:
@@ -862,7 +863,7 @@ Fill in the route details:
 
 In the **"Parameters"** section, add the following body parameters:
 
-1. Click **"+ Add Parameter"** for each:
+1. Click **"Add"** for each:
     - Name: `title`, Type: `VARCHAR`, Required: ✓
     - Name: `content`, Type: `TEXT`, Required: ✓
     - Name: `authorId`, Type: `BIGINT`, Required: ✓
@@ -872,7 +873,7 @@ In the **"Parameters"** section, add the following body parameters:
 
 In the **"Response"** section, add the fields you want to return:
 
-1. Click **"+ Add Field"** for each column:
+1. Click **"Add Property"** for each column:
     - Field name: `id`, Selector: `post.id`
     - Field name: `createdOn`, Selector: `post.createdOn`
     - Field name: `title`, Selector: `post.title`
@@ -882,7 +883,8 @@ In the **"Response"** section, add the fields you want to return:
 
 ### Save the endpoint
 
-1. Click **"Save"** in the top right
+1. Click **"Preview Schema"** in the top right
+2. Click **"Submit"** to save the changes
 2. Your Restura API automatically reloads
 
 Check your API server terminal—you should now see:
