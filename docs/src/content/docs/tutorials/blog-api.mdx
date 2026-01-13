@@ -1,24 +1,20 @@
 ---
-title: Build Your First API
-description: Build a complete blog REST API with users and posts using Restura
+title: Build a Blog REST API
+description: Use the Visual Editor to design database tables and REST API endpoints for a blog
 ---
 
 import { Aside, Code, TabItem, Tabs } from '@astrojs/starlight/components';
 
-This tutorial will walk you through building a complete blog REST API from scratch using Restura. You'll create a multi-table database with users and blog posts, along with API endpoints to manage them—**all using the Visual Editor**.
+This tutorial will walk you through building a complete blog REST API using the Restura Visual Editor. You'll create a multi-table database with users and blog posts, along with API endpoints to manage them—**all without writing SQL or endpoint handler code**.
 
 <Aside type="tip">
-	**Already have Express and PostgreSQL?** Follow the [QuickStart](../../quickstart) guide and then skip to [Step 7:
-	Setup the Visual Editor](#step-7-setup-the-visual-editor).
+	**New to Restura?** Complete the [Restura Setup From Scratch](../setup-from-scratch) guide first to set up Express, PostgreSQL, and the Visual Editor.
 </Aside>
 
 ## What You'll Build
 
 By the end of this tutorial, you'll have a complete blog API with:
 
-- An Express application with Restura integrated
-- A local PostgreSQL database running in Docker
-- The Restura Visual Editor running and connected to your API
 - A `user` table for blog authors
 - A `post` table with a foreign key relationship to users
 - REST API endpoints to:
@@ -30,345 +26,20 @@ By the end of this tutorial, you'll have a complete blog API with:
 
 ## What You'll Learn
 
-This tutorial teaches you the **real Restura workflow**:
+This tutorial teaches you the **Restura Visual Editor workflow**:
 
-1. Set up the infrastructure (Express, PostgreSQL, Restura)
-2. Use the Visual Editor to design database tables with relationships
-3. Use the Visual Editor to create API endpoints with JOINs
-4. Let Restura automatically generate SQL, types, and API handlers
+1. Use the Visual Editor to design database tables with relationships
+2. Use the Visual Editor to create API endpoints with JOINs
+3. Let Restura automatically generate SQL, types, and API handlers
+4. Test your API with real data
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 18+ installed
-- [Docker Compose](https://docs.docker.com/compose/) installed
-- [Git](https://git-scm.com/) installed
-- A terminal and text editor
-- Basic knowledge of JavaScript/TypeScript
-
-## Step 1: Create an Express Application
-
-First, let's create a new Express project.
-
-### Create a new project directory
-
-Run the following commands in your terminal:
-
-export const setupProjectNpmCode = `mkdir restura-demo
-cd restura-demo
-npm init -y
-npm install express`;
-
-export const setupProjectPnpmCode = `mkdir restura-demo
-cd restura-demo
-pnpm init
-pnpm add express`;
-
-export const setupProjectYarnCode = `mkdir restura-demo
-cd restura-demo
-yarn init -y
-yarn add express`;
-
-export const setupProjectBunCode = `mkdir restura-demo
-cd restura-demo
-bun init -y
-bun add express`;
-
-<Tabs>
-	<TabItem label="npm">
-		<Code code={setupProjectNpmCode} lang="bash" />
-	</TabItem>
-	<TabItem label="pnpm">
-		<Code code={setupProjectPnpmCode} lang="bash" />
-	</TabItem>
-	<TabItem label="yarn">
-		<Code code={setupProjectYarnCode} lang="bash" />
-	</TabItem>
-	<TabItem label="bun">
-		<Code code={setupProjectBunCode} lang="bash" />
-	</TabItem>
-</Tabs>
-
-### Install TypeScript (Optional but Recommended)
-
-If you want to use TypeScript, install it now:
-
-export const installTypescriptNpmCode = `npm install -D typescript @types/express @types/node
-npx tsc --init`;
-
-export const installTypescriptPnpmCode = `pnpm add -D typescript @types/express @types/node
-pnpx tsc --init`;
-
-export const installTypescriptYarnCode = `yarn add -D typescript @types/express @types/node
-yarn tsc --init`;
-
-export const installTypescriptBunCode = `bun add -D @types/express`;
-
-<Tabs>
-	<TabItem label="npm">
-		<Code code={installTypescriptNpmCode} lang="bash" />
-	</TabItem>
-	<TabItem label="pnpm">
-		<Code code={installTypescriptPnpmCode} lang="bash" />
-	</TabItem>
-	<TabItem label="yarn">
-		<Code code={installTypescriptYarnCode} lang="bash" />
-	</TabItem>
-	<TabItem label="bun">
-		<Code code={installTypescriptBunCode} lang="bash" />
-	</TabItem>
-</Tabs>
-
-<Aside type="note">Bun includes TypeScript support by default, so you only need to install type definitions.</Aside>
-
-### Create an entry file
-
-Create a file called `server.ts` (or `server.js` if not using TypeScript):
-
-We'll add content to this file after installing Restura.
-
-## Step 2: Install Restura
-
-Now install the Restura Engine:
-
-<Tabs>
-	<TabItem label="npm">
-		<Code code="npm install @restura/core" lang="bash" />
-	</TabItem>
-	<TabItem label="pnpm">
-		<Code code="pnpm add @restura/core" lang="bash" />
-	</TabItem>
-	<TabItem label="yarn">
-		<Code code="yarn add @restura/core" lang="bash" />
-	</TabItem>
-	<TabItem label="bun">
-		<Code code="bun add @restura/core" lang="bash" />
-	</TabItem>
-</Tabs>
-
-## Step 3: Initialize Restura in Your Express App
-
-Open your `server.ts` (or `server.js`) file and add the following code:
-
-export const expressTypescriptCode = `import { PsqlPool, restura, type OnValidAuthenticationCallback, type RsRequest, type RsResponse } from '@restura/core';
-import express from 'express';
-
-const app = express();
-
-// Create a PostgreSQL connection pool
-// We'll use these credentials with our Docker setup below
-const pool = new PsqlPool({
-host: "localhost",
-port: 5432,
-user: "postgres",
-password: "postgres",
-database: "restura",
-});
-
-// Define an authentication handler
-// For now, we'll allow all requests as the 'user' role
-const authHandler = async (req: RsRequest<unknown>, res: RsResponse<unknown>, onValid: OnValidAuthenticationCallback) => {
-onValid({ role: 'user', scopes: [] });
-};
-
-// Initialize Restura
-await restura.init(app, authHandler, pool);
-
-app.listen(3001, () => {
-console.log('Server is running on http://localhost:3001');
-});`;
-
-export const expressJavascriptCode = `const { PsqlPool, restura } = require('@restura/core');
-const express = require('express');
-
-const app = express();
-
-// Create a PostgreSQL connection pool
-// We'll use these credentials with our Docker setup below
-const pool = new PsqlPool({
-host: "localhost",
-port: 5432,
-user: "postgres",
-password: "postgres",
-database: "restura",
-});
-
-// Define an authentication handler
-// For now, we'll allow all requests as the 'user' role
-const authHandler = async (req, res, onValid) => {
-onValid({ role: 'user', scopes: [] });
-};
-
-// Initialize Restura
-(async () => {
-await restura.init(app, authHandler, pool);
-
-app.listen(3001, () => {
-console.log('Server is running on http://localhost:3001');
-});
-})();`;
-
-<Tabs>
-	<TabItem label="TypeScript">
-		<Code code={expressTypescriptCode} lang="typescript" title="server.ts" />
-	</TabItem>
-	<TabItem label="JavaScript">
-		<Code code={expressJavascriptCode} lang="javascript" title="server.js" />
-	</TabItem>
-</Tabs>
-
-<Aside type="note">
-	The authentication handler is called for every request. For this tutorial, we're allowing all requests as the 'user'
-	role. In production, you'd validate JWT tokens, API keys, or sessions here.
-</Aside>
-
-### Add a start script
-
-Update your `package.json` to add a start script:
-
-export const packageJsonTypescriptCode = `{
-  "type": "module",
-  "scripts": {
-    "start": "node server.ts"
-  }
-}`;
-
-export const packageJsonJavascriptCode = `{
-  "scripts": {
-    "start": "node server.js"
-  }
-}`;
-
-<Tabs>
-	<TabItem label="TypeScript">
-		<Code code={packageJsonTypescriptCode} lang="json" title="package.json" />
-	</TabItem>
-	<TabItem label="JavaScript">
-		<Code code={packageJsonJavascriptCode} lang="json" title="package.json" />
-	</TabItem>
-</Tabs>
-
-<Aside type="note">
-	**Node 23.6+:** You can run `node server.ts` directly.
-
-	**Node < 23.6:** Use `tsx server.ts` or compile with tsc first. You may need to install `tsx`: `npm install -D tsx` and change the script to `"start": "tsx server.ts"`
-</Aside>
-
-## Step 4: Create Configuration Files
-
-Restura needs two configuration files to work.
-
-### Create restura.config.mjs
-
-Create a `restura.config.mjs` file in your project root:
-
-export const resturaConfigCode = `export default {
-    logger: {
-        level: "info" // Options: "debug", "info", "warn", "error"
-    },
-    restura: {
-       authToken: "12345" // Used by the Visual Editor to connect to your API
-    }
-}`;
-
-<Code code={resturaConfigCode} lang="javascript" title="restura.config.mjs" />
-
-<Aside type="note">
-	The `authToken` is important! The Visual Editor will use this token to authenticate with your Restura API. You can
-	change it to any value you want, just remember it for later.
-</Aside>
-
-### Create an empty schema file
-
-Create a `restura.schema.json` file in your project root.
-
-Add the following content to the file:
-
-export const createSchemaCode = `{
-  "customTypes": [],
-  "database": [],
-  "endpoints": [
-    {
-      "baseUrl": "/api/v1",
-      "description": "V1 Endpoints",
-      "name": "V1",
-      "routes": []
-    }
-  ],
-  "globalParams": ["userId"],
-  "roles": ["user"],
-  "scopes": []
-}`;
-
-<Code code={createSchemaCode} title="restura.schema.json" lang="json" />
-
-This creates a minimal schema with an empty database and endpoint structure that the Visual Editor can work with.
-
-## Step 5: Setup a Local PostgreSQL Database
-
-For this tutorial, we'll use Docker Compose to run a local PostgreSQL database.
-
-Create a `docker-compose.yml` file in the root of your project with the following content:
-
-export const dockerComposeCode = `
-services:
-  postgres:
-    image: postgres:16
-    ports:
-      - 5432:5432
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: restura
-`;
-
-<Code code={dockerComposeCode} lang="yaml" title="docker-compose.yml" />
-
-export const dockerComposeUpCode = `
-docker compose up -d
-`;
-
-Then run the following command to start the local PostgreSQL database:
-
-<Code code={dockerComposeUpCode} lang="bash" />
-
-The database is now running in the background. The credentials in your `server.ts` file match this setup, so you're ready to go!
-
-## Step 6: Start Your Restura API
-
-Now let's start your API server. Open a terminal and run:
-
-```bash
-npm start # or pnpm start, yarn start, bun start, etc.
-```
-
-You should see output like:
-
-```bash
-INFO [2026-01-12 04:25:34.373]: Restura loaded (0) endpoint
-INFO [2026-01-12 04:25:34.379]: Restura Engine Initialized
-INFO [2026-01-12 04:25:34.495]: Successfully connected to database triggers
-INFO [2026-01-12 04:25:34.498]: Connected to PostgreSQL database
-Server is running on http://localhost:3001
-```
-
-<Aside type="note">
-	It shows 0 endpoints because we haven't created any yet! We'll do that next with the Visual Editor.
-</Aside>
-
-Keep this terminal running. Your API server needs to be running for the Visual Editor to connect to it.
-
-## Step 7: Setup the Visual Editor
-
-The Visual Editor is a web application that lets you visually design your database tables and API endpoints.
-
-<Aside type="note">
-	Follow the **[Visual Editor Setup Guide](../../visual-editor)** to clone, install, and start the Visual Editor. Then
-	come back here to continue the tutorial.
-</Aside>
-
-Once you've completed the Visual Editor setup and signed in, you should see an empty dashboard with options to create database tables and endpoints.
-
-## Step 8: Create Your Database Tables Using the Visual Editor
+- Complete the [Restura Setup From Scratch](../setup-from-scratch) guide
+- Have your Restura API server running
+- Have the Visual Editor open and connected to your API
+
+## Step 1: Create Your Database Tables Using the Visual Editor
 
 Now let's create the database schema for our blog. We'll create two tables: `user` (for authors) and `post` (for blog posts).
 
@@ -518,7 +189,7 @@ docker compose exec -T postgres psql -U postgres -d restura < ./data.sql`;
 
 You should see output confirming the tables were created and the test user was inserted.
 
-## Step 9: Create Your Endpoints Using the Visual Editor
+## Step 2: Create Your Endpoints Using the Visual Editor
 
 Now let's create an API endpoint to list all users.
 
@@ -570,7 +241,7 @@ Check your API server terminal—you should now see:
 INFO: Restura loaded (1) endpoint
 ```
 
-## Step 10: Examine the Generated Schema
+## Step 3: Examine the Generated Schema
 
 Let's take a look at what the Visual Editor created. Open your `restura.schema.json` file in your text editor.
 
@@ -598,7 +269,7 @@ Restura also generated TypeScript type definitions in `src/@types/`:
 
 Open `src/@types/api.d.ts` and you'll see type definitions for your new endpoint!
 
-## Step 11: Test Your API
+## Step 4: Test Your API
 
 Congratulations! Your API is now running. Let's test it.
 
@@ -642,7 +313,7 @@ When you made the request:
     ```
 5. The results were formatted as JSON and returned
 
-## Step 12: Create the List All Posts Endpoint
+## Step 5: Create the List All Posts Endpoint
 
 Now let's create an endpoint to list all blog posts.
 
@@ -703,7 +374,7 @@ Since we haven't added any posts yet, you should receive an empty array:
 
 Perfect! The endpoint is working, but there's no data yet. Let's add some!
 
-## Step 13: Create the Get Single Post with Author Endpoint
+## Step 6: Create the Get Single Post with Author Endpoint
 
 Before we add data, let's create an endpoint that demonstrates Restura's powerful JOIN capabilities. This endpoint will return a single post along with its author's information.
 
@@ -781,7 +452,7 @@ Check your API server terminal—you should now see:
 INFO: Restura loaded (3) endpoints
 ```
 
-## Step 14: Create the Add New User Endpoint
+## Step 7: Create the Add New User Endpoint
 
 Now let's create an endpoint to add new users to our blog.
 
@@ -830,7 +501,7 @@ In the **"Response"** section, add the fields you want to return:
 
 1. Click **"Preview Schema"** in the top right
 2. Click **"Submit"** to save the changes
-2. Your Restura API automatically reloads
+3. Your Restura API automatically reloads
 
 Check your API server terminal—you should now see:
 
@@ -838,7 +509,7 @@ Check your API server terminal—you should now see:
 INFO: Restura loaded (4) endpoints
 ```
 
-## Step 15: Create the Add New Post Endpoint
+## Step 8: Create the Add New Post Endpoint
 
 Finally, let's create an endpoint to add new blog posts.
 
@@ -885,7 +556,7 @@ In the **"Response"** section, add the fields you want to return:
 
 1. Click **"Preview Schema"** in the top right
 2. Click **"Submit"** to save the changes
-2. Your Restura API automatically reloads
+3. Your Restura API automatically reloads
 
 Check your API server terminal—you should now see:
 
@@ -893,7 +564,7 @@ Check your API server terminal—you should now see:
 INFO: Restura loaded (5) endpoints
 ```
 
-## Step 16: Test Your Complete API
+## Step 9: Test Your Complete API
 
 Now let's test all of our endpoints! We already have Jane Doe in our database from the test data we inserted. Let's create another user and some posts, then query them.
 
@@ -1149,9 +820,6 @@ No manual SQL queries. No endpoint handler code. No type definitions to maintain
 
 In this tutorial, you:
 
-- ✅ Set up an Express application with Restura
-- ✅ Created a local PostgreSQL database with Docker
-- ✅ Connected the Visual Editor to your Restura API
 - ✅ **Created two related database tables using the Visual Editor** (with foreign keys!)
 - ✅ **Created five REST API endpoints using the Visual Editor** (no code required!)
 - ✅ Built endpoints with JOINs to combine data from multiple tables
@@ -1161,16 +829,9 @@ In this tutorial, you:
 
 ## Next Steps
 
-Now that you've built a complete blog API, you can:
+Now that you've built a complete blog API with the Visual Editor, you can:
 
-1. **Add more endpoints**: Try creating update and delete endpoints for users and posts
-2. **Add filtering**: Create endpoints that filter posts by published status or search by title
-3. **Add pagination**: Modify your list endpoints to support pagination with limit and offset
-4. **Secure your API**: Implement proper authentication with JWT tokens or API keys
-5. **Deploy your API**: Deploy your Restura API to a cloud provider like AWS, Azure, or Google Cloud
-
-## Need Help?
-
-- Check out the [Reference Documentation](/reference/config/) for detailed configuration options
-- Visit the [FAQ](/faq/) for common questions
-- Join our community to get help and share your projects
+- Learn how to create [custom endpoints](/guides/custom-endpoint) for complex business logic
+- Explore [database relationships](/reference/database/relationships) in depth
+- Learn about [filtering and sorting](/reference/filter) data in your endpoints
+- Set up proper authentication in your [authentication handler](/reference/config#authentication)
