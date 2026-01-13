@@ -28,7 +28,10 @@ export default defineConfig({
 				},
 				{
 					label: 'Tutorials',
-					autogenerate: { directory: 'tutorials' }
+					items: [
+						{ label: 'Restura Setup From Scratch', slug: 'tutorials/setup-from-scratch' },
+						{ label: 'Build a Blog REST API', slug: 'tutorials/blog-api' }
+					]
 				},
 				{
 					label: 'Guides',
