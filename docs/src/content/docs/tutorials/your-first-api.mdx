@@ -1,5 +1,5 @@
 ---
-title: Build Your First API - Blog REST API
+title: Build Your First API
 description: Build a complete blog REST API with users and posts using Restura
 ---
 
@@ -24,7 +24,6 @@ By the end of this tutorial, you'll have a complete blog API with:
 - REST API endpoints to:
     - List all users
     - List all posts
-    - Get posts by a specific author
     - Get a single post with author information (using JOINs)
     - Add a new post
     - Add a new user
@@ -250,6 +249,7 @@ export const packageJsonJavascriptCode = `{
 
 <Aside type="note">
 	**Node 23.6+:** You can run `node server.ts` directly.
+
 	**Node < 23.6:** Use `tsx server.ts` or compile with tsc first. You may need to install `tsx`: `npm install -D tsx` and change the script to `"start": "tsx server.ts"`
 </Aside>
 
@@ -295,8 +295,8 @@ export const createSchemaCode = `{
     }
   ],
   "globalParams": ["userId"],
-  "roles": ["anonymous", "user", "admin"],
-  "scopes": ["read:user", "write:user"]
+  "roles": ["user"],
+  "scopes": []
 }`;
 
 <Code code={createSchemaCode} title="restura.schema.json" lang="json" />
@@ -377,7 +377,7 @@ Now let's create the database schema for our blog. We'll create two tables: `use
 First, let's create a table to store blog authors.
 
 1. In the Visual Editor, click on **"Database"** in the left sidebar
-2. Click the **"+ Add Table"** button
+2. Click the **"Add Table"** button
 3. Name your table `user`
 4. Click **"Create"**
 
@@ -386,55 +386,55 @@ First, let's create a table to store blog authors.
 Click on your new `user` table to open the table editor, then add these columns:
 
 1. **firstName** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `firstName`
     - Type: `VARCHAR`
     - Length: `150`
     - Nullable: ✗
 
 2. **lastName** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `lastName`
     - Type: `VARCHAR`
     - Length: `150`
     - Nullable: ✗
 
 3. **email** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `email`
     - Type: `VARCHAR`
     - Length: `255`
     - Nullable: ✗
 
 4. **bio** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `bio`
     - Type: `TEXT`
     - Nullable: ✓ (bio is optional)
 
 5. **role** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `role`
     - Type: `VARCHAR`
     - Length: `50`
     - Nullable: ✗
 
-<Aside type="note">`id`, `createdOn` and `modifiedOn` are auto-created by Restura.</Aside>
+<Aside type="note">The `id`, `createdOn` and `modifiedOn` columns are auto-created by Restura.</Aside>
 
 ### Add unique indexes
 
 1. In the table editor, scroll to the **"Indexes"** section
-2. Click **"+ Add Index"**
+2. Click the **"+"** button
     - Name: `user_email_unique_index`
     - Columns: Select `email`
     - Unique: ✓
-3. Click **"Save"** to save the user table
+3. Changes are automatically saved
 
 ### Create the Post table
 
 Now let's create a table for blog posts that references the user table.
 
-1. Click **"+ Add Table"** again
+1. Click **"Add Table"** again
 2. Name your table `post`
 3. Click **"Create"**
 
@@ -443,26 +443,26 @@ Now let's create a table for blog posts that references the user table.
 Click on your new `post` table and add these columns:
 
 1. **title** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `title`
     - Type: `VARCHAR`
     - Length: `200`
     - Nullable: ✗
 
 2. **content** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `content`
     - Type: `TEXT`
     - Nullable: ✗
 
 3. **authorId** column (foreign key to user):
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `authorId`
     - Type: `BIGINT`
     - Nullable: ✗
 
 4. **published** column:
-    - Click **"+ Add Column"**
+    - Click the **"+"** button
     - Name: `published`
     - Type: `BOOLEAN`
     - Default: `false`
@@ -475,69 +475,50 @@ Click on your new `post` table and add these columns:
 ### Add an index on authorId
 
 1. Scroll to the **"Indexes"** section
-2. Click **"+ Add Index"**
+2. Click the **"+"** button
 3. Name: `post_author_id_index`
 4. Columns: Select `authorId`
 5. Unique: ✗ (one author can have many posts)
-6. Click **"Save"**
+6. Changes are automatically saved
 
-### Save and apply the schema
+### Preview and update your database schema
 
-1. Click **"Save"** in the top right of the Visual Editor
-2. The Visual Editor will update your `restura.schema.json` file automatically
-3. Your Restura API will detect the change and reload
+1. Click **"Preview"** in the top right of the Visual Editor
+2. Click the back arrow to expose the SQL statements
+3. Copy the SQL statements
+4. Paste the SQL statements into a file called `schema.sql` in your project root
+5. Click **"Submit"** to update the schema file.
 
-<Aside type="note">
-	The Visual Editor only updates the `restura.schema.json` file. To actually create the table in PostgreSQL, you need
-	to apply the schema to your database. The Visual Editor can generate the SQL for you!
+<Aside type="tip">
+  When you click **"Preview"**, Restura will update a database called `<database-name>_scratch_<suffix>` with the SQL statements. An alternative way to update your database schema is to use a schema comparison tool between the scratch and the non-scratch database.
+
+  See: [scratchDatabaseSuffix](/reference/config/#scratchdatabasesuffix) for more information.
 </Aside>
 
-### Generate and apply the SQL
+### Add test data
 
-1. In the Visual Editor, go to **"Database"** → **"Generate SQL"**
-2. Copy the generated SQL
-3. In your project terminal, create a file called `schema.sql` and paste the SQL
-4. Run this command to apply it:
+Before applying the schema, let's add some test data. Create a file called `data.sql` in your project root with the following content:
 
-export const applySchemaSqlCode = `docker compose exec -T postgres psql -U postgres -d restura < ./schema.sql`;
+export const testDataSqlCode = `-- Insert a test user
+INSERT INTO "user" ("firstName", "lastName", email, bio, role)
+VALUES ('Jane', 'Doe', 'jane@example.com', 'Software engineer and tech blogger', 'user');`;
+
+<Code code={testDataSqlCode} lang="sql" title="data.sql" />
+
+This will create a test user that we can query in the next step.
+
+### Apply the schema and data to your database
+
+Now run the following commands to apply the schema and insert the test data:
+
+export const applySchemaSqlCode = `docker compose exec -T postgres psql -U postgres -d restura < ./schema.sql
+docker compose exec -T postgres psql -U postgres -d restura < ./data.sql`;
 
 <Code code={applySchemaSqlCode} lang="bash" />
 
-### Add sample data
+You should see output confirming the tables were created and the test user was inserted.
 
-Let's add a sample user to test with. Run this command:
-
-export const insertUserCode = `docker compose exec -T postgres psql -U postgres -d restura -c "
-INSERT INTO public.\\"user\\" (
-  \\"firstName\\", 
-  \\"lastName\\", 
-  email,
-  role
-) VALUES (
-  'Test', 
-  'User', 
-  'test@restura.io', 
-  'user'
-);"`;
-
-<Code code={insertUserCode} lang="bash" />
-
-Now let's add a sample blog post. Run this command:
-
-export const insertPostCode = `docker compose exec -T postgres psql -U postgres -d restura -c "
-INSERT INTO public.post (
-  title, 
-  content, 
-  \\"authorId\\"
-) VALUES (
-  'Welcome to My Blog', 
-  'This is my first blog post using Restura! It''s amazing how easy it is to build APIs without writing SQL queries or endpoint handlers.', 
-  1
-);"`;
-
-<Code code={insertPostCode} lang="bash" />
-
-## Step 9: Create Your First API Endpoint
+## Step 9: Create Your Endpoints Using the Visual Editor
 
 Now let's create an API endpoint to list all users.
 
@@ -562,7 +543,7 @@ Fill in the route details:
 
 In the **"Response"** section, add the fields you want to return:
 
-1. Click **"+ Add Field"** for each column:
+1. Click **"Add Property"** for each column:
     - Field name: `id`, Selector: `user.id`
     - Field name: `createdOn`, Selector: `user.createdOn`
     - Field name: `modifiedOn`, Selector: `user.modifiedOn`
@@ -572,15 +553,16 @@ In the **"Response"** section, add the fields you want to return:
     - Field name: `role`, Selector: `user.role`
 
 <Aside type="tip">
-	The Visual Editor has a shortcut: you can click **"Add All Columns"** to automatically add all fields from the
+	The Visual Editor has a shortcut: you can click **"Add All"** to automatically add all fields from the
 	selected table!
 </Aside>
 
 ### Save the endpoint
 
-1. Click **"Save"** in the top right
-2. The Visual Editor updates your `restura.schema.json` file
-3. Your Restura API automatically reloads and registers the new endpoint
+1. Click **"Preview Schema"** in the top right
+2. Click **"Submit"** to save the changes
+
+When you click **"Submit"**, the Visual Editor will update your `restura.schema.json` file and your Restura API will automatically reload and register the new endpoint.
 
 Check your API server terminal—you should now see:
 
@@ -628,31 +610,31 @@ export const curlTestCode = `curl -X GET http://localhost:3001/api/v1/user/list`
 
 <Code code={curlTestCode} lang="bash" />
 
-You should receive a JSON response with your user data:
+You should receive a JSON response with the test user you inserted:
 
 ```json
 [
 	{
 		"id": 1,
-		"createdOn": "2026-01-12T12:00:00.000Z",
-		"modifiedOn": "2026-01-12T12:00:00.000Z",
-		"firstName": "Test",
-		"lastName": "User",
-		"email": "test@restura.io",
+		"createdOn": "2026-01-13T12:00:00.000Z",
+		"modifiedOn": "2026-01-13T12:00:00.000Z",
+		"firstName": "Jane",
+		"lastName": "Doe",
+		"email": "jane@example.com",
 		"role": "user"
 	}
 ]
 ```
 
-🎉 **It works!** You just built a complete REST API without writing any SQL queries or endpoint handler code!
+Perfect! Your endpoint is working and returning the test user data.
 
 ### Understanding what happened
 
 When you made the request:
 
 1. Restura received the GET request at `/api/v1/user/list`
-2. Your `authHandler` validated the request and assigned the 'user' role
-3. Restura checked that 'user' role has permission to access this endpoint (you configured this in the Visual Editor)
+2. Your `authHandler` validated the request and assigned the `user` role
+3. Restura checked that `user` role has permission to access this endpoint (you configured this in the Visual Editor)
 4. Restura automatically generated and executed this SQL query:
     ```sql
     SELECT id, "createdOn", "modifiedOn", "firstName", "lastName", email, role
@@ -660,13 +642,497 @@ When you made the request:
     ```
 5. The results were formatted as JSON and returned
 
-### Finish the API
+## Step 12: Create the List All Posts Endpoint
 
-Now that you've built your first endpoint, try adding these features using the Visual Editor:
+Now let's create an endpoint to list all blog posts.
 
-1. **Create a GET endpoint** at `/post/list` that returns all posts
-2. **Create a GET endpoint** at `/post/by-author` that filters posts by author
-3. **Create a GET endpoint** at `/post/by-id` that returns a single post by ID
+### Create the endpoint
+
+1. In the Visual Editor, click on **"API"** in the left sidebar
+2. Click **"New"**
+
+### Configure the endpoint
+
+Fill in the route details:
+
+1. **Name**: `Get Posts`
+2. **Description**: `Gets all posts`
+3. **Method**: `GET`
+4. **Path**: `/post/list`
+5. **Type**: `ARRAY` (returns an array of results)
+6. **Table**: Select `post`
+7. **Roles**: Select `user` (who can access this endpoint)
+
+### Configure the response
+
+In the **"Response"** section, add the fields you want to return:
+
+1. Click **"Add Property"** for each column:
+    - Field name: `id`, Selector: `post.id`
+    - Field name: `createdOn`, Selector: `post.createdOn`
+    - Field name: `modifiedOn`, Selector: `post.modifiedOn`
+    - Field name: `title`, Selector: `post.title`
+    - Field name: `content`, Selector: `post.content`
+    - Field name: `authorId`, Selector: `post.authorId`
+    - Field name: `published`, Selector: `post.published`
+
+### Save the endpoint
+
+1. Click **"Preview Schema"** in the top right
+2. Click **"Submit"** to save the changes
+
+Check your API server terminal—you should now see:
+
+```bash
+INFO: Restura loaded (2) endpoints
+```
+
+### Test the endpoint
+
+Open a new terminal and run:
+
+export const curlPostListCode = `curl -X GET http://localhost:3001/api/v1/post/list`;
+
+<Code code={curlPostListCode} lang="bash" />
+
+Since we haven't added any posts yet, you should receive an empty array:
+
+```json
+[]
+```
+
+Perfect! The endpoint is working, but there's no data yet. Let's add some!
+
+## Step 13: Create the Get Single Post with Author Endpoint
+
+Before we add data, let's create an endpoint that demonstrates Restura's powerful JOIN capabilities. This endpoint will return a single post along with its author's information.
+
+### Create the endpoint
+
+1. In the Visual Editor, click on **"API"** in the left sidebar
+2. Click **"New"**
+
+### Configure the endpoint
+
+Fill in the route details:
+
+1. **Name**: `Get Post By ID`
+2. **Description**: `Gets a single post with author information`
+3. **Method**: `GET`
+4. **Path**: `/post/by-id`
+5. **Type**: `OBJECT` (returns a single result)
+6. **Table**: Select `post`
+7. **Roles**: Select `user`
+
+### Add the ID parameter
+
+In the **"Parameters"** section:
+
+1. Click **"Add"**
+2. **Name**: `id`
+3. **Type**: `BIGINT`
+4. **Required**: ✓
+
+### Configure the response with JOIN
+
+In the **"Response"** section, we'll add fields from both the `post` and `user` tables:
+
+1. **Post fields** - Click **"Add Property"** for each:
+    - Field name: `id`, Selector: `post.id`
+    - Field name: `createdOn`, Selector: `post.createdOn`
+    - Field name: `title`, Selector: `post.title`
+    - Field name: `content`, Selector: `post.content`
+    - Field name: `published`, Selector: `post.published`
+
+2. **Author fields** - Click **"Add Property"** for each:
+    - Field name: `authorFirstName`, Selector: `user.firstName`
+    - Field name: `authorLastName`, Selector: `user.lastName`
+    - Field name: `authorEmail`, Selector: `user.email`
+    - Field name: `authorBio`, Selector: `user.bio`
+
+### Add the JOIN
+
+1. Scroll to the **"Joins"** section
+2. Click **"Add Join"**
+3. Choose the `authorId` column
+
+<Aside type="tip">
+	Restura automatically handles the JOIN for you! You just specify which tables to join and how they relate. Restura
+	generates the optimized SQL query.
+</Aside>
+
+### Add the WHERE clause
+
+1. Scroll to the **"Where"** section
+2. Click **"Add Statement"**
+3. **Field**: `post.id`
+4. **Operator**: `=`
+5. **Value**: `$id` (this references the parameter we created)
+
+### Save the endpoint
+
+1. Click **"Preview Schema"** in the top right
+2. Click **"Submit"** to save the changes
+3. Your Restura API automatically reloads
+
+Check your API server terminal—you should now see:
+
+```bash
+INFO: Restura loaded (3) endpoints
+```
+
+## Step 14: Create the Add New User Endpoint
+
+Now let's create an endpoint to add new users to our blog.
+
+### Create the endpoint
+
+1. In the Visual Editor, click on **"API"** in the left sidebar
+2. Click **"New"**
+
+### Configure the endpoint
+
+Fill in the route details:
+
+1. **Name**: `Create User`
+2. **Description**: `Creates a new user`
+3. **Method**: `POST`
+4. **Path**: `/user/create`
+5. **Type**: `OBJECT` (returns the created user)
+6. **Table**: Select `user`
+7. **Roles**: Select `user`
+
+### Add body parameters
+
+In the **"Parameters"** section, add the following body parameters:
+
+1. Click **"Add"** for each:
+    - Name: `firstName`, Type: `VARCHAR`, Required: ✓
+    - Name: `lastName`, Type: `VARCHAR`, Required: ✓
+    - Name: `email`, Type: `VARCHAR`, Required: ✓
+    - Name: `bio`, Type: `TEXT`, Required: ✗
+    - Name: `role`, Type: `VARCHAR`, Required: ✓
+
+### Configure the response
+
+In the **"Response"** section, add the fields you want to return:
+
+1. Click **"Add Property"** for each column:
+    - Field name: `id`, Selector: `user.id`
+    - Field name: `createdOn`, Selector: `user.createdOn`
+    - Field name: `firstName`, Selector: `user.firstName`
+    - Field name: `lastName`, Selector: `user.lastName`
+    - Field name: `email`, Selector: `user.email`
+    - Field name: `bio`, Selector: `user.bio`
+    - Field name: `role`, Selector: `user.role`
+
+### Save the endpoint
+
+1. Click **"Preview Schema"** in the top right
+2. Click **"Submit"** to save the changes
+2. Your Restura API automatically reloads
+
+Check your API server terminal—you should now see:
+
+```bash
+INFO: Restura loaded (4) endpoints
+```
+
+## Step 15: Create the Add New Post Endpoint
+
+Finally, let's create an endpoint to add new blog posts.
+
+### Create the endpoint
+
+1. In the Visual Editor, click on **"API"** in the left sidebar
+2. Click **"New"**
+
+### Configure the endpoint
+
+Fill in the route details:
+
+1. **Name**: `Create Post`
+2. **Description**: `Creates a new blog post`
+3. **Method**: `POST`
+4. **Path**: `/post/create`
+5. **Type**: `OBJECT` (returns the created post)
+6. **Table**: Select `post`
+7. **Roles**: Select `user`
+
+### Add body parameters
+
+In the **"Parameters"** section, add the following body parameters:
+
+1. Click **"Add"** for each:
+    - Name: `title`, Type: `VARCHAR`, Required: ✓
+    - Name: `content`, Type: `TEXT`, Required: ✓
+    - Name: `authorId`, Type: `BIGINT`, Required: ✓
+    - Name: `published`, Type: `BOOLEAN`, Required: ✗
+
+### Configure the response
+
+In the **"Response"** section, add the fields you want to return:
+
+1. Click **"Add Property"** for each column:
+    - Field name: `id`, Selector: `post.id`
+    - Field name: `createdOn`, Selector: `post.createdOn`
+    - Field name: `title`, Selector: `post.title`
+    - Field name: `content`, Selector: `post.content`
+    - Field name: `authorId`, Selector: `post.authorId`
+    - Field name: `published`, Selector: `post.published`
+
+### Save the endpoint
+
+1. Click **"Preview Schema"** in the top right
+2. Click **"Submit"** to save the changes
+2. Your Restura API automatically reloads
+
+Check your API server terminal—you should now see:
+
+```bash
+INFO: Restura loaded (5) endpoints
+```
+
+## Step 16: Test Your Complete API
+
+Now let's test all of our endpoints! We already have Jane Doe in our database from the test data we inserted. Let's create another user and some posts, then query them.
+
+### Create a second user
+
+Open a new terminal and run:
+
+export const curlCreateUser2Code = `curl -X POST http://localhost:3001/api/v1/user/create \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "firstName": "John",
+    "lastName": "Smith",
+    "email": "john@example.com",
+    "bio": "Full-stack developer and open source enthusiast",
+    "role": "user"
+  }'`;
+
+<Code code={curlCreateUser2Code} lang="bash" />
+
+You should receive:
+
+```json
+{
+	"id": 2,
+	"createdOn": "2026-01-13T12:01:00.000Z",
+	"firstName": "John",
+	"lastName": "Smith",
+	"email": "john@example.com",
+	"bio": "Full-stack developer and open source enthusiast",
+	"role": "user"
+}
+```
+
+Great! Now we have two users in our database: Jane (ID 1) and John (ID 2).
+
+### Create your first blog post
+
+Now let's create a blog post by Jane (user ID 1):
+
+export const curlCreatePost1Code = `curl -X POST http://localhost:3001/api/v1/post/create \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "title": "Getting Started with Restura",
+    "content": "Restura is an amazing framework for building REST APIs quickly. In this post, I will show you how to get started...",
+    "authorId": 1,
+    "published": true
+  }'`;
+
+<Code code={curlCreatePost1Code} lang="bash" />
+
+You should receive:
+
+```json
+{
+	"id": 1,
+	"createdOn": "2026-01-13T12:05:00.000Z",
+	"title": "Getting Started with Restura",
+	"content": "Restura is an amazing framework for building REST APIs quickly. In this post, I will show you how to get started...",
+	"authorId": 1,
+	"published": true
+}
+```
+
+### Create a second blog post
+
+Let's create another post by John (user ID 2):
+
+export const curlCreatePost2Code = `curl -X POST http://localhost:3001/api/v1/post/create \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "title": "Building Scalable APIs",
+    "content": "When building APIs at scale, there are several key considerations to keep in mind. Let me share my experience...",
+    "authorId": 2,
+    "published": true
+  }'`;
+
+<Code code={curlCreatePost2Code} lang="bash" />
+
+You should receive:
+
+```json
+{
+	"id": 2,
+	"createdOn": "2026-01-13T12:06:00.000Z",
+	"title": "Building Scalable APIs",
+	"content": "When building APIs at scale, there are several key considerations to keep in mind. Let me share my experience...",
+	"authorId": 2,
+	"published": true
+}
+```
+
+### Create a draft post
+
+Let's create one more post that's not published yet:
+
+export const curlCreatePost3Code = `curl -X POST http://localhost:3001/api/v1/post/create \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "title": "Advanced Restura Techniques",
+    "content": "This post is still being written...",
+    "authorId": 1,
+    "published": false
+  }'`;
+
+<Code code={curlCreatePost3Code} lang="bash" />
+
+### List all users
+
+Now let's query all users:
+
+export const curlListUsersCode = `curl -X GET http://localhost:3001/api/v1/user/list`;
+
+<Code code={curlListUsersCode} lang="bash" />
+
+You should receive:
+
+```json
+[
+	{
+		"id": 1,
+		"createdOn": "2026-01-13T12:00:00.000Z",
+		"modifiedOn": "2026-01-13T12:00:00.000Z",
+		"firstName": "Jane",
+		"lastName": "Doe",
+		"email": "jane@example.com",
+		"role": "user"
+	},
+	{
+		"id": 2,
+		"createdOn": "2026-01-13T12:00:00.000Z",
+		"modifiedOn": "2026-01-13T12:00:00.000Z",
+		"firstName": "John",
+		"lastName": "Smith",
+		"email": "john@example.com",
+		"role": "user"
+	}
+]
+```
+
+### List all posts
+
+Let's query all posts:
+
+export const curlListPostsCode = `curl -X GET http://localhost:3001/api/v1/post/list`;
+
+<Code code={curlListPostsCode} lang="bash" />
+
+You should receive:
+
+```json
+[
+	{
+		"id": 1,
+		"createdOn": "2026-01-13T12:05:00.000Z",
+		"modifiedOn": "2026-01-13T12:05:00.000Z",
+		"title": "Getting Started with Restura",
+		"content": "Restura is an amazing framework for building REST APIs quickly. In this post, I will show you how to get started...",
+		"authorId": 1,
+		"published": true
+	},
+	{
+		"id": 2,
+		"createdOn": "2026-01-13T12:06:00.000Z",
+		"modifiedOn": "2026-01-13T12:06:00.000Z",
+		"title": "Building Scalable APIs",
+		"content": "When building APIs at scale, there are several key considerations to keep in mind. Let me share my experience...",
+		"authorId": 2,
+		"published": true
+	},
+	{
+		"id": 3,
+		"createdOn": "2026-01-13T12:07:00.000Z",
+		"modifiedOn": "2026-01-13T12:07:00.000Z",
+		"title": "Advanced Restura Techniques",
+		"content": "This post is still being written...",
+		"authorId": 1,
+		"published": false
+	}
+]
+```
+
+### Get a single post with author information
+
+Now let's use our JOIN endpoint to get a post with its author's information:
+
+export const curlGetPostByIdCode = `curl -X GET "http://localhost:3001/api/v1/post/by-id?id=1"`;
+
+<Code code={curlGetPostByIdCode} lang="bash" />
+
+You should receive:
+
+```json
+{
+	"id": 1,
+	"createdOn": "2026-01-13T12:05:00.000Z",
+	"title": "Getting Started with Restura",
+	"content": "Restura is an amazing framework for building REST APIs quickly. In this post, I will show you how to get started...",
+	"published": true,
+	"authorFirstName": "Jane",
+	"authorLastName": "Doe",
+	"authorEmail": "jane@example.com",
+	"authorBio": "Software engineer and tech blogger"
+}
+```
+
+<Aside type="tip">
+	Notice how the response includes both post data and author data in a single query! Restura automatically handled the
+	JOIN between the `post` and `user` tables based on the configuration you created in the Visual Editor.
+</Aside>
+
+### Try getting the second post
+
+export const curlGetPost2ByIdCode = `curl -X GET "http://localhost:3001/api/v1/post/by-id?id=2"`;
+
+<Code code={curlGetPost2ByIdCode} lang="bash" />
+
+You should receive:
+
+```json
+{
+	"id": 2,
+	"createdOn": "2026-01-13T12:06:00.000Z",
+	"title": "Building Scalable APIs",
+	"content": "When building APIs at scale, there are several key considerations to keep in mind. Let me share my experience...",
+	"published": true,
+	"authorFirstName": "John",
+	"authorLastName": "Smith",
+	"authorEmail": "john@example.com",
+	"authorBio": "Full-stack developer and open source enthusiast"
+}
+```
+
+Perfect! Your complete blog API is now working with all five endpoints:
+
+1. ✅ `GET /api/v1/user/list` - List all users
+2. ✅ `GET /api/v1/post/list` - List all posts
+3. ✅ `GET /api/v1/post/by-id` - Get a single post with author information (with JOIN)
+4. ✅ `POST /api/v1/user/create` - Create a new user
+5. ✅ `POST /api/v1/post/create` - Create a new post
 
 ## The Restura Workflow
 
@@ -685,8 +1151,26 @@ In this tutorial, you:
 
 - ✅ Set up an Express application with Restura
 - ✅ Created a local PostgreSQL database with Docker
-- ✅ Connected the Visual Editor to Restura
-- ✅ **Created a database table using the Visual Editor** (no manual JSON editing!)
-- ✅ **Created a REST API endpoint using the Visual Editor** (no code required!)
+- ✅ Connected the Visual Editor to your Restura API
+- ✅ **Created two related database tables using the Visual Editor** (with foreign keys!)
+- ✅ **Created five REST API endpoints using the Visual Editor** (no code required!)
+- ✅ Built endpoints with JOINs to combine data from multiple tables
+- ✅ Created both GET and POST endpoints for reading and writing data
 - ✅ Examined the automatically generated schema and TypeScript types
-- ✅ Tested your endpoint and saw it work
+- ✅ Tested your complete API with real data
+
+## Next Steps
+
+Now that you've built a complete blog API, you can:
+
+1. **Add more endpoints**: Try creating update and delete endpoints for users and posts
+2. **Add filtering**: Create endpoints that filter posts by published status or search by title
+3. **Add pagination**: Modify your list endpoints to support pagination with limit and offset
+4. **Secure your API**: Implement proper authentication with JWT tokens or API keys
+5. **Deploy your API**: Deploy your Restura API to a cloud provider like AWS, Azure, or Google Cloud
+
+## Need Help?
+
+- Check out the [Reference Documentation](/reference/config/) for detailed configuration options
+- Visit the [FAQ](/faq/) for common questions
+- Join our community to get help and share your projects
