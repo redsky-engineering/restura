@@ -138,7 +138,8 @@ Now install the Restura Engine:
 
 Open your `server.ts` (or `server.js`) file and add the following code:
 
-export const expressTypescriptCode = `import { PsqlPool, restura, type OnValidAuthenticationCallback, type RsRequest, type RsResponse } from '@restura/core';
+export const expressTypescriptCode = `
+import { PsqlPool, restura, type OnValidAuthenticationCallback, type RsRequest, type RsResponse } from '@restura/core';
 import express from 'express';
 
 const app = express();
@@ -146,27 +147,28 @@ const app = express();
 // Create a PostgreSQL connection pool
 // We'll use these credentials with our Docker setup below
 const pool = new PsqlPool({
-host: "localhost",
-port: 5432,
-user: "postgres",
-password: "postgres",
-database: "restura",
+	host: "localhost",
+	port: 5432,
+	user: "postgres",
+	password: "postgres",
+	database: "restura",
 });
 
 // Define an authentication handler
 // For now, we'll allow all requests as the 'user' role
 const authHandler = async (req: RsRequest<unknown>, res: RsResponse<unknown>, onValid: OnValidAuthenticationCallback) => {
-onValid({ role: 'user', scopes: [] });
+	onValid({ role: 'user', scopes: [] });
 };
 
 // Initialize Restura
 await restura.init(app, authHandler, pool);
 
 app.listen(3001, () => {
-console.log('Server is running on http://localhost:3001');
+	console.log('Server is running on http://localhost:3001');
 });`;
 
-export const expressJavascriptCode = `const { PsqlPool, restura } = require('@restura/core');
+export const expressJavascriptCode = `
+const { PsqlPool, restura } = require('@restura/core');
 const express = require('express');
 
 const app = express();
@@ -174,26 +176,26 @@ const app = express();
 // Create a PostgreSQL connection pool
 // We'll use these credentials with our Docker setup below
 const pool = new PsqlPool({
-host: "localhost",
-port: 5432,
-user: "postgres",
-password: "postgres",
-database: "restura",
+	host: "localhost",
+	port: 5432,
+	user: "postgres",
+	password: "postgres",
+	database: "restura",
 });
 
 // Define an authentication handler
 // For now, we'll allow all requests as the 'user' role
 const authHandler = async (req, res, onValid) => {
-onValid({ role: 'user', scopes: [] });
+	onValid({ role: 'user', scopes: [] });
 };
 
 // Initialize Restura
 (async () => {
-await restura.init(app, authHandler, pool);
+	await restura.init(app, authHandler, pool);
 
-app.listen(3001, () => {
-console.log('Server is running on http://localhost:3001');
-});
+	app.listen(3001, () => {
+		console.log('Server is running on http://localhost:3001');
+	});
 })();`;
 
 <Tabs>
@@ -285,7 +287,7 @@ export const createSchemaCode = `{
   ],
   "globalParams": ["userId"],
   "roles": ["user"],
-  "scopes": []
+  "scopes": ["read:user", "write:user"]
 }`;
 
 <Code code={createSchemaCode} title="restura.schema.json" lang="json" />
