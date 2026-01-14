@@ -43,7 +43,12 @@ import { Aside } from '@astrojs/starlight/components';
 </Aside>
 
 <Aside type="caution" title="BIGINT Precision Warning">
-	**BIGINT and BIGSERIAL are mapped to JavaScript `number`, which can lose precision for values outside ±9,007,199,254,740,991 (±2^53-1).** PostgreSQL BIGINT supports values up to ±9,223,372,036,854,775,807 (±2^63-1). For most applications using auto-incrementing IDs, this is not an issue until you exceed ~9 quadrillion records. However, if you're storing large integers from external systems or need guaranteed precision for all BIGINT values, be aware that precision loss can occur silently. Consider using DECIMAL/NUMERIC (returned as `string`) if you need to preserve exact values beyond JavaScript's safe integer range.
+	**BIGINT and BIGSERIAL are mapped to JavaScript `number`, which can lose precision for values outside
+	±9,007,199,254,740,991 (±2^53-1).** PostgreSQL BIGINT supports values up to ±9,223,372,036,854,775,807 (±2^63-1).
+	For most applications using auto-incrementing IDs, this is not an issue until you exceed ~9 quadrillion records.
+	However, if you're storing large integers from external systems or need guaranteed precision for all BIGINT values,
+	be aware that precision loss can occur silently. Consider using DECIMAL/NUMERIC (returned as `string`) if you need
+	to preserve exact values beyond JavaScript's safe integer range.
 </Aside>
 
 ### When to Use Each Type
@@ -138,21 +143,6 @@ phone: VARCHAR(20)
 zipCode: VARCHAR(10)
 ```
 
-### MariaDB String Types
-
-| Type         | Max Size | Description          |
-| ------------ | -------- | -------------------- |
-| `TINYTEXT`   | 255 B    | Small text           |
-| `TEXT`       | 64 KB    | Standard text        |
-| `MEDIUMTEXT` | 16 MB    | Medium text          |
-| `LONGTEXT`   | ~2 GB    | Large text           |
-| `TINYBLOB`   | 255 B    | Small binary data    |
-| `BLOB`       | 64 KB    | Standard binary data |
-| `MEDIUMBLOB` | 16 MB    | Medium binary data   |
-| `LONGBLOB`   | ~2 GB    | Large binary data    |
-
----
-
 ## Date/Time Types
 
 | Type          | Description                                      | TypeScript |
@@ -162,7 +152,6 @@ zipCode: VARCHAR(10)
 | `TIMESTAMP`   | Date and time (without time zone)                | `string`   |
 | `TIMESTAMPTZ` | Date and time (with time zone) - **recommended** | `string`   |
 | `INTERVAL`    | Time span                                        | `string`   |
-| `DATETIME`    | Date and time (MariaDB, mapped to TIMESTAMPTZ)   | `string`   |
 
 <Aside type="tip">
 	Use `TIMESTAMPTZ` (timestamp with time zone) for most date/time fields to avoid timezone issues.
@@ -305,19 +294,19 @@ Column Value: 'LOW','MEDIUM','HIGH','URGENT'
 
 Restura automatically maps database types to TypeScript types:
 
-| Database Type                 | TypeScript Type                        | Notes                                      |
-| ----------------------------- | -------------------------------------- | ------------------------------------------ |
-| BOOLEAN, TINYINT(1)           | `boolean`                              |                                            |
-| SMALLINT, INTEGER             | `number`                               |                                            |
+| Database Type                 | TypeScript Type                        | Notes                                     |
+| ----------------------------- | -------------------------------------- | ----------------------------------------- |
+| BOOLEAN                       | `boolean`                              |                                           |
+| SMALLINT, INTEGER             | `number`                               |                                           |
 | BIGINT, BIGSERIAL             | `number`                               | ⚠️ Precision loss possible beyond ±2^53-1 |
-| SERIAL                        | `number`                               |                                            |
-| REAL, DOUBLE PRECISION, FLOAT | `number`                               |                                            |
-| DECIMAL, NUMERIC              | `string` (for precision)               |                                            |
-| CHAR, VARCHAR, TEXT           | `string`                               |                                            |
-| DATE, TIME, TIMESTAMP         | `string`                               |                                            |
-| JSON, JSONB                   | `object` (or custom type if specified) |                                            |
-| ENUM                          | String union type                      |                                            |
-| BYTEA, BLOB                   | `string`                               |                                            |
+| SERIAL                        | `number`                               |                                           |
+| REAL, DOUBLE PRECISION, FLOAT | `number`                               |                                           |
+| DECIMAL, NUMERIC              | `string` (for precision)               |                                           |
+| CHAR, VARCHAR, TEXT           | `string`                               |                                           |
+| DATE, TIME, TIMESTAMP         | `string`                               |                                           |
+| JSON, JSONB                   | `object` (or custom type if specified) |                                           |
+| ENUM                          | String union type                      |                                           |
+| BYTEA, BLOB                   | `string`                               |                                           |
 
 ---
 
@@ -384,7 +373,9 @@ modifiedOn: TIMESTAMPTZ, default: now()
 5. **Use ENUM for fixed sets** – Enforces valid values at the database level
 
 <Aside type="tip">
-	For INTEGER vs BIGINT: Use `INTEGER` (max ~2.1 billion) for most auto-incrementing IDs unless you expect extremely high volume. Use `BIGINT` for tables that may exceed 2 billion records or when storing large integers from external systems. Be aware that BIGINT values beyond JavaScript's safe integer range (±2^53-1) may lose precision.
+	For INTEGER vs BIGINT: Use `INTEGER` (max ~2.1 billion) for most auto-incrementing IDs unless you expect extremely
+	high volume. Use `BIGINT` for tables that may exceed 2 billion records or when storing large integers from external
+	systems. Be aware that BIGINT values beyond JavaScript's safe integer range (±2^53-1) may lose precision.
 </Aside>
 
 ### Nullability
