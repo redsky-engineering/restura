@@ -47,23 +47,23 @@ const app = express();
 
 // Create a PostgreSQL connection pool
 const pool = new PsqlPool({
-host: "<host>", // Replace with your database host
-port: 5432, // Replace with your database port (typically 5432)
-user: "<user>", // Replace with your database user
-password: "<password>", // Replace with your database password
-database: "<database>", // Replace with your database name
+	host: "<host>", // Replace with your database host
+	port: 5432, // Replace with your database port (typically 5432)
+	user: "<user>", // Replace with your database user
+	password: "<password>", // Replace with your database password
+	database: "<database>", // Replace with your database name
 });
 
 // Define an authentication handler
 const authHandler = async (req: RsRequest<unknown>, res: RsResponse<unknown>, onValid: OnValidAuthenticationCallback) => {
-onValid({ role: 'user', scopes: [] });
+	onValid({ role: 'user', scopes: [] });
 };
 
 // Initialize Restura
 await restura.init(app, authHandler, pool);
 
 app.listen(3001, () => { // This is the default port for the Restura Engine
-console.log('Server is running on port 3001');
+	console.log('Server is running on port 3001');
 });
 `;
 
@@ -75,25 +75,25 @@ const app = express();
 
 // Create a PostgreSQL connection pool
 const pool = new PsqlPool({
-host: "<host>", // Replace with your database host
-port: 5432, // Replace with your database port (typically 5432)
-user: "<user>", // Replace with your database user
-password: "<password>", // Replace with your database password
-database: "<database>", // Replace with your database name
+	host: "<host>", // Replace with your database host
+	port: 5432, // Replace with your database port (typically 5432)
+	user: "<user>", // Replace with your database user
+	password: "<password>", // Replace with your database password
+	database: "<database>", // Replace with your database name
 });
 
 // Define an authentication handler
 const authHandler = async (req, res, onValid) => {
-onValid({ role: 'user', scopes: [] });
+	onValid({ role: 'user', scopes: [] });
 };
 
 // Initialize Restura
 (async () => {
-await restura.init(app, authHandler, pool);
+	await restura.init(app, authHandler, pool);
 
-app.listen(3001, () => { // This is the default port for the Restura Engine
-console.log('Server is running on port 3001');
-});
+	app.listen(3001, () => { // This is the default port for the Restura Engine
+		console.log('Server is running on port 3001');
+	});
 })();
 `;
 
