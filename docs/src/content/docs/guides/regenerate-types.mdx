@@ -1,0 +1,123 @@
+---
+title: Regenerate Types Without Starting the Server
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Sometimes you encounter a chicken-and-egg scenario: the `restura.schema.json` file was updated, but you can't start the server because one of the generated types is incorrect. This guide shows you how to regenerate types directly from your schema file without starting the server.
+
+---
+
+## The Problem
+
+When you modify `restura.schema.json` (either manually or after a merge conflict), the TypeScript type definitions may become out of sync. Normally, the types are regenerated when the server starts—but if the types are broken, the server won't compile.
+
+**Common symptoms:**
+
+- TypeScript errors referencing generated types in `api.d.ts` or `models.d.ts`
+- Server fails to start due to type mismatches
+- IDE showing errors in files that reference `Api.*` or model types
+
+---
+
+## The Solution
+
+Use this standalone script to regenerate types directly from your schema file, bypassing the server entirely.
+
+### Step 1: Create the Script
+
+Create a file called `regenerate-types.mjs` in your project root:
+
+```javascript
+import { apiGenerator, modelGenerator, resturaGlobalTypesGenerator } from '@restura/core';
+import fs from 'fs/promises';
+import path from 'path';
+
+// Get command line arguments
+const [, , schemaPath, outputDir] = process.argv;
+
+if (!schemaPath || !outputDir) {
+	console.error('Usage: node regenerate-types.mjs <schema-path> <output-directory>');
+	process.exit(1);
+}
+
+async function generateTypes() {
+	try {
+		// Read and parse schema file
+		const schemaContent = await fs.readFile(schemaPath, 'utf-8');
+		const schema = JSON.parse(schemaContent);
+
+		// Ensure output directory exists
+		await fs.mkdir(outputDir, { recursive: true });
+
+		// Generate type definitions
+		await fs.writeFile(path.join(outputDir, 'api.d.ts'), await apiGenerator(schema), 'utf-8');
+		await fs.writeFile(path.join(outputDir, 'models.d.ts'), await modelGenerator(schema), 'utf-8');
+		await fs.writeFile(path.join(outputDir, 'restura.d.ts'), resturaGlobalTypesGenerator(), 'utf-8');
+
+		console.log('Type definitions generated successfully!');
+	} catch (error) {
+		console.error('Error generating type definitions:', error.message);
+		process.exit(1);
+	}
+}
+
+generateTypes();
+```
+
+### Step 2: Run the Script
+
+Execute the script with your schema path and output directory:
+
+```bash
+node regenerate-types.mjs ./restura.schema.json ./src/@types
+```
+
+<Aside type="tip">
+	Adjust the paths based on your project structure: - **Schema path:** Where your `restura.schema.json` file is
+	located - **Output directory:** Where your generated type files should go (typically `src/@types` or similar)
+</Aside>
+
+### Step 3: Verify and Restart
+
+After the script runs successfully:
+
+1. Check that `api.d.ts`, `models.d.ts`, and `restura.d.ts` were updated
+2. Your IDE should now show the correct types
+3. Try starting your server again
+
+---
+
+## When to Use This
+
+Use this script when:
+
+- You've edited `restura.schema.json` manually and need fresh types
+- After resolving merge conflicts in the schema file
+- When the server won't start due to type definition errors
+- During development when you need to quickly regenerate types
+
+<Aside type="caution">
+	This script only regenerates type definitions. It does **not** validate your schema or apply database migrations.
+	After fixing the types, you should still run the full server to ensure everything is in sync.
+</Aside>
+
+---
+
+## Adding to package.json (Optional)
+
+For convenience, add a script to your `package.json`:
+
+```json
+{
+	"scripts": {
+		"regenerate-types": "node regenerate-types.mjs ./restura.schema.json ./src/@types"
+	}
+}
+```
+
+Then you can simply run:
+
+```bash
+npm run regenerate-types
+```
