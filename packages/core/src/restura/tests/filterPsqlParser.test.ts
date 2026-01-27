@@ -392,6 +392,150 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		});
 	});
 
+	describe('Column Type Casting', function () {
+		it('Should parse all 8 supported types with equality operator', function (done: Done) {
+			test('(orderNumber::text,1230)', `("orderNumber"::text = 1230)`);
+			test('(age::int,25)', `("age"::int = 25)`);
+			test('(userId::bigint,123456789)', `("userId"::bigint = 123456789)`);
+			test('(price::numeric,99.99)', `("price"::numeric = 99.99)`);
+			test('(active::boolean,true)', `("active"::boolean = 'true')`);
+			test('(birthDate::date,1990-01-15)', `("birthDate"::date = '1990-01-15')`);
+			test('(createdAt::timestamp,2024-01-15T10:30:00)', `("createdAt"::timestamp = '2024-01-15T10:30:00')`);
+			test(
+				'(eventTime::timestamptz,2024-01-15T10:30:00Z)',
+				`("eventTime"::timestamptz = '2024-01-15T10:30:00Z')`
+			);
+			done();
+		});
+
+		it('Should parse column casting with comparison operators', function (done: Done) {
+			test('(stringId::int,gt,100)', `("stringId"::int > 100)`);
+			test('(code::numeric,gte,50.5)', `("code"::numeric >= 50.5)`);
+			test('(value::bigint,lt,1000000)', `("value"::bigint < 1000000)`);
+			test('(score::int,lte,100)', `("score"::int <= 100)`);
+			test('(status::text,ne,deleted)', `("status"::text <> 'deleted')`);
+			done();
+		});
+
+		it('Should parse column casting with string operators (primary use case)', function (done: Done) {
+			test('(orderNumber::text,has,23)', `("orderNumber"::text ILIKE '%23%')`);
+			test('(id::text,has,456)', `("id"::text ILIKE '%456%')`);
+			test('(code::text,sw,PRE)', `("code"::text ILIKE 'PRE%')`);
+			test('(phoneNumber::text,ew,5678)', `("phoneNumber"::text ILIKE '%5678')`);
+			done();
+		});
+
+		it('Should parse column casting with IN operator', function (done: Done) {
+			test('(status::text,in,1|2|3)', `("status"::text IN (1, 2, 3))`);
+			test('(code::int,in,100|200|300)', `("code"::int IN (100, 200, 300))`);
+			test('(id::bigint,in,1000000|2000000)', `("id"::bigint IN (1000000, 2000000))`);
+			done();
+		});
+
+		it('Should parse column casting with null operators', function (done: Done) {
+			test('(value::int,null)', `("value"::int IS NULL)`);
+			test('(code::text,notnull)', `("code"::text IS NOT NULL)`);
+			test('(score::numeric,null)', `("score"::numeric IS NULL)`);
+			done();
+		});
+
+		it('Should be case-insensitive for column cast types', function (done: Done) {
+			test('(col::TEXT,val)', `("col"::text = 'val')`);
+			test('(col::Text,val)', `("col"::text = 'val')`);
+			test('(num::INT,42)', `("num"::int = 42)`);
+			test('(num::Int,42)', `("num"::int = 42)`);
+			test('(flag::BOOLEAN,true)', `("flag"::boolean = 'true')`);
+			test('(date::DATE,2024-01-15)', `("date"::date = '2024-01-15')`);
+			test('(amount::Numeric,100.50)', `("amount"::numeric = 100.50)`);
+			test('(bigId::BigInt,999999)', `("bigId"::bigint = 999999)`);
+			test('(time::Timestamp,2024-01-15T10:30:00)', `("time"::timestamp = '2024-01-15T10:30:00')`);
+			test('(time::TimestampTZ,2024-01-15T10:30:00Z)', `("time"::timestamptz = '2024-01-15T10:30:00Z')`);
+			done();
+		});
+
+		it('Should parse column paths with casting - single column', function (done: Done) {
+			test('(orderNumber::text,has,23)', `("orderNumber"::text ILIKE '%23%')`);
+			test('(userId::int,gt,100)', `("userId"::int > 100)`);
+			done();
+		});
+
+		it('Should parse column paths with casting - two-part (table.column)', function (done: Done) {
+			test('(order.total::numeric,gt,100)', `("order"."total"::numeric > 100)`);
+			test('(user.age::int,gte,18)', `("user"."age"::int >= 18)`);
+			test('(product.code::text,has,ABC)', `("product"."code"::text ILIKE '%ABC%')`);
+			done();
+		});
+
+		it('Should parse column paths with casting - three-part (JSON field)', function (done: Done) {
+			test('(user.metadata.age::int,gte,18)', `("user"."metadata"->>'age'::int >= 18)`);
+			test('(order.details.total::numeric,gt,99.99)', `("order"."details"->>'total'::numeric > 99.99)`);
+			test('(config.settings.count::text,has,5)', `("config"."settings"->>'count'::text ILIKE '%5%')`);
+			done();
+		});
+
+		it('Should parse combined column and value casting', function (done: Done) {
+			// Equality with matching types
+			test('(code::int,100::int)', `("code"::int = 100::int)`);
+			test('(stringId::text,123::text)', `("stringId"::text = 123::text)`);
+			test('(flag::boolean,true::boolean)', `("flag"::boolean = 'true'::boolean)`);
+			test('(date::date,2024-01-15::date)', `("date"::date = '2024-01-15'::date)`);
+
+			// Comparison operators with both casts
+			test('(amount::numeric,gt,50.5::numeric)', `("amount"::numeric > 50.5::numeric)`);
+			test('(value::bigint,gte,1000000::bigint)', `("value"::bigint >= 1000000::bigint)`);
+			test('(score::int,lt,100::int)', `("score"::int < 100::int)`);
+			test('(price::numeric,lte,99.99::numeric)', `("price"::numeric <= 99.99::numeric)`);
+			test('(status::text,ne,active::text)', `("status"::text <> 'active'::text)`);
+
+			// String operators with both casts
+			test('(id::text,has,123::text)', `("id"::text ILIKE '%123%'::text)`);
+			test('(code::text,sw,PRE::text)', `("code"::text ILIKE 'PRE%'::text)`);
+			test('(email::text,ew,@test.com::text)', `("email"::text ILIKE '%@test.com'::text)`);
+
+			// Different types on column vs value (type coercion scenarios)
+			test('(numericString::int,100::bigint)', `("numericString"::int = 100::bigint)`);
+			test('(timestamp::date,2024-01-15::timestamp)', `("timestamp"::date = '2024-01-15'::timestamp)`);
+
+			// With qualified column names
+			test('(order.total::numeric,100.50::numeric)', `("order"."total"::numeric = 100.50::numeric)`);
+			test('(user.age::int,gt,18::int)', `("user"."age"::int > 18::int)`);
+
+			// With JSON fields
+			test(
+				'(user.metadata.score::numeric,gte,95.5::numeric)',
+				`("user"."metadata"->>'score'::numeric >= 95.5::numeric)`
+			);
+			test('(config.settings.count::int,10::int)', `("config"."settings"->>'count'::int = 10::int)`);
+			done();
+		});
+
+		it('Should parse column casting with negation', function (done: Done) {
+			test('!(orderNumber::text,has,23)', `NOT ("orderNumber"::text ILIKE '%23%')`);
+			test('!(status::int,1)', `NOT ("status"::int = 1)`);
+			test('!(value::numeric,gt,100)', `NOT ("value"::numeric > 100)`);
+			done();
+		});
+
+		it('Should parse column casting with logical operators', function (done: Done) {
+			test('(id::text,has,23)and(status,ACTIVE)', `("id"::text ILIKE '%23%') AND ("status" = 'ACTIVE')`);
+			test('(code::int,gt,100)or(code::int,lt,10)', `("code"::int > 100) OR ("code"::int < 10)`);
+			test(
+				'(orderNumber::text,has,23)and(total::numeric,gte,50.00)',
+				`("orderNumber"::text ILIKE '%23%') AND ("total"::numeric >= 50.00)`
+			);
+			done();
+		});
+
+		it('Should parse column casting with grouping', function (done: Done) {
+			test('((id::text,has,23)or(id::text,has,45))', `(("id"::text ILIKE '%23%') OR ("id"::text ILIKE '%45%'))`);
+			test(
+				'((code::int,gt,100)and(code::int,lt,200))or(status,ACTIVE)',
+				`(("code"::int > 100) AND ("code"::int < 200)) OR ("status" = 'ACTIVE')`
+			);
+			done();
+		});
+	});
+
 	describe('Mixed Old and New Syntax (Transition Period)', function () {
 		it('Should still parse old syntax', function (done: Done) {
 			// Verify old verbose syntax still works alongside new compact syntax

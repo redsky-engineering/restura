@@ -16,7 +16,11 @@ Values are automatically typed based on content:
 
 ## Type Casting
 
-When PostgreSQL cannot compare values of different types, you can explicitly cast values using the `::` operator followed by a type name.
+Type casting allows you to explicitly convert columns or values to different PostgreSQL types using the `::` operator. This is useful when PostgreSQL cannot automatically compare values of different types.
+
+### Value Type Casting
+
+You can cast values (the right side of comparisons) using the `::` operator followed by a type name.
 
 ### Supported Cast Types
 
@@ -160,6 +164,139 @@ Type casting works with all comparison operators:
 ```sql
 "code" IN ('A1'::text, 'B2'::text, 'C3'::text)
 ```
+
+### Column Type Casting
+
+You can also cast columns (the left side of comparisons) using the same `::type` syntax. This is particularly useful for pattern matching on integer columns or comparing columns of different types.
+
+**Common use case:** Casting integer columns to text enables pattern matching with `has`, `sw`, and `ew` operators.
+
+#### Supported Cast Types
+
+Column casting supports the same types as value casting:
+
+| Cast Operator   | PostgreSQL Type | Common Use Case                        |
+| --------------- | --------------- | -------------------------------------- |
+| `::text`        | `TEXT`          | Pattern matching on numeric columns    |
+| `::int`         | `INTEGER`       | Comparing text columns as integers     |
+| `::bigint`      | `BIGINT`        | Large integer comparisons              |
+| `::numeric`     | `NUMERIC`       | Precise decimal comparisons            |
+| `::boolean`     | `BOOLEAN`       | Boolean comparisons on text fields     |
+| `::date`        | `DATE`          | Date comparisons without time          |
+| `::timestamp`   | `TIMESTAMP`     | Timestamp comparisons without timezone |
+| `::timestamptz` | `TIMESTAMPTZ`   | Timestamp comparisons with timezone    |
+
+#### Examples
+
+**Example 1 - Pattern matching on integer column:**
+
+```
+(orderNumber::text,has,23)
+```
+
+**SQL:**
+
+```sql
+"orderNumber"::text ILIKE '%23%'
+```
+
+**Explanation:** Cast the integer `orderNumber` column to text to search for orders containing "23" anywhere in the number (e.g., 1230, 2300, 5231).
+
+---
+
+**Example 2 - Comparing text column as integer:**
+
+```
+(stringId::int,gt,100)
+```
+
+**SQL:**
+
+```sql
+"stringId"::int > 100
+```
+
+**Explanation:** Cast a text column containing numeric values to integer for proper numeric comparison.
+
+---
+
+**Example 3 - JSON field casting:**
+
+```
+(user.metadata.age::int,gte,18)
+```
+
+**SQL:**
+
+```sql
+"user"."metadata"->>'age'::int >= 18
+```
+
+**Explanation:** JSON fields are extracted as text, so cast to integer for numeric comparison.
+
+---
+
+**Example 4 - Combining column and value casting:**
+
+```
+(code::int,100::int)
+```
+
+**SQL:**
+
+```sql
+"code"::int = 100::int
+```
+
+**Explanation:** Both sides can be cast when needed for type compatibility.
+
+---
+
+**Example 5 - Column casting with IN operator:**
+
+```
+(status::text,in,1|2|3)
+```
+
+**SQL:**
+
+```sql
+"status"::text IN ('1', '2', '3')
+```
+
+**Explanation:** Cast an integer status column to text to match against text values.
+
+---
+
+**Example 6 - Timestamp to date comparison:**
+
+```
+(createdAt::date,2024-01-15)
+```
+
+**SQL:**
+
+```sql
+"createdAt"::date = '2024-01-15'
+```
+
+**Explanation:** Cast a timestamp column to date to compare only the date part, ignoring time.
+
+---
+
+**Example 7 - Multiple casted columns with logical operators:**
+
+```
+(orderNumber::text,has,23)and(total::numeric,gte,50.00)
+```
+
+**SQL:**
+
+```sql
+"orderNumber"::text ILIKE '%23%' AND "total"::numeric >= 50.00
+```
+
+**Explanation:** Combine multiple column casts in complex filter expressions.
 
 ## SQL Injection Prevention
 

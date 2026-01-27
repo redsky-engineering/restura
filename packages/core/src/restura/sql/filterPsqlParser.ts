@@ -77,6 +77,11 @@ const initializers = `
         });
         return column + ' IN (' + literals.join(', ') + ')';
     }
+
+    // Format column with optional cast
+    function formatColumn(col) {
+        return col.cast ? col.sql + '::' + col.cast : col.sql;
+    }
 `;
 
 const entryGrammar = `
@@ -198,10 +203,10 @@ SimpleExpr
     / negate:"!"? _ "(" _ col:Column _ "," _ op:NullOperator _ ")" _
         { return (negate ? 'NOT ' : '') + '(' + op(col) + ')'; }
     / negate:"!"? _ "(" _ col:Column _ "," _ val:CastedValue _ ")" _
-        { return (negate ? 'NOT ' : '') + '(' + col + ' = ' + formatValueWithCast(val.value, val.cast) + ')'; }
+        { return (negate ? 'NOT ' : '') + '(' + formatColumn(col) + ' = ' + formatValueWithCast(val.value, val.cast) + ')'; }
 
 Column
-    = first:ColPart rest:("." ColPart)* {
+    = first:ColPart rest:("." ColPart)* cast:TypeCast? {
         const partsArray = [first];
         if (rest && rest.length > 0) {
             partsArray.push(...rest.map(item => item[1]));
@@ -211,38 +216,42 @@ Column
             throw new SyntaxError('Column path cannot have more than 3 parts (table.column.jsonField)');
         }
         
+        var sql;
         if (partsArray.length === 1) {
-            return quoteSqlIdentity(partsArray[0]);
+            sql = quoteSqlIdentity(partsArray[0]);
+        } else {
+            const tableName = quoteSqlIdentity(partsArray[0]);
+            
+            if (partsArray.length === 2) {
+                sql = tableName + '.' + quoteSqlIdentity(partsArray[1]);
+            } else {
+                const jsonColumn = quoteSqlIdentity(partsArray[1]);
+                const lastPart = partsArray[partsArray.length - 1];
+                const escapedLast = lastPart.replace(/'/g, "''");
+                sql = tableName + '.' + jsonColumn + "->>'" + escapedLast + "'";
+            }
         }
-        const tableName = quoteSqlIdentity(partsArray[0]);
         
-        if (partsArray.length === 2) {
-            return tableName + '.' + quoteSqlIdentity(partsArray[1]);
-        }
-        
-        const jsonColumn = quoteSqlIdentity(partsArray[1]);
-        const lastPart = partsArray[partsArray.length - 1];
-        const escapedLast = lastPart.replace(/'/g, "''");
-        return tableName + '.' + jsonColumn + "->>'" + escapedLast + "'";
+        return { sql: sql, cast: cast };
     }
 
 ColPart
     = chars:[a-zA-Z0-9_]+ { return chars.join(''); }
 
 NullOperator
-    = "notnull"i { return function(col) { return col + ' IS NOT NULL'; }; }
-    / "null"i { return function(col) { return col + ' IS NULL'; }; }
+    = "notnull"i { return function(col) { return formatColumn(col) + ' IS NOT NULL'; }; }
+    / "null"i { return function(col) { return formatColumn(col) + ' IS NULL'; }; }
 
 OperatorWithValue
-    = "in"i _ "," _ val:CastedValueWithPipes { return function(col) { return buildInClauseWithCast(col, val.value, val.cast); }; }
-    / "ne"i _ "," _ val:CastedValue { return function(col) { return col + ' <> ' + formatValueWithCast(val.value, val.cast); }; }
-    / "gte"i _ "," _ val:CastedValue { return function(col) { return col + ' >= ' + formatValueWithCast(val.value, val.cast); }; }
-    / "gt"i _ "," _ val:CastedValue { return function(col) { return col + ' > ' + formatValueWithCast(val.value, val.cast); }; }
-    / "lte"i _ "," _ val:CastedValue { return function(col) { return col + ' <= ' + formatValueWithCast(val.value, val.cast); }; }
-    / "lt"i _ "," _ val:CastedValue { return function(col) { return col + ' < ' + formatValueWithCast(val.value, val.cast); }; }
-    / "has"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value) + '%'); return col + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
-    / "sw"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal(unescapeValue(val.value) + '%'); return col + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
-    / "ew"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value)); return col + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
+    = "in"i _ "," _ val:CastedValueWithPipes { return function(col) { return buildInClauseWithCast(formatColumn(col), val.value, val.cast); }; }
+    / "ne"i _ "," _ val:CastedValue { return function(col) { return formatColumn(col) + ' <> ' + formatValueWithCast(val.value, val.cast); }; }
+    / "gte"i _ "," _ val:CastedValue { return function(col) { return formatColumn(col) + ' >= ' + formatValueWithCast(val.value, val.cast); }; }
+    / "gt"i _ "," _ val:CastedValue { return function(col) { return formatColumn(col) + ' > ' + formatValueWithCast(val.value, val.cast); }; }
+    / "lte"i _ "," _ val:CastedValue { return function(col) { return formatColumn(col) + ' <= ' + formatValueWithCast(val.value, val.cast); }; }
+    / "lt"i _ "," _ val:CastedValue { return function(col) { return formatColumn(col) + ' < ' + formatValueWithCast(val.value, val.cast); }; }
+    / "has"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value) + '%'); return formatColumn(col) + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
+    / "sw"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal(unescapeValue(val.value) + '%'); return formatColumn(col) + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
+    / "ew"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value)); return formatColumn(col) + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
 
 CastedValue
     = val:Value cast:TypeCast? { return { value: val, cast: cast }; }
