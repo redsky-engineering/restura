@@ -229,10 +229,10 @@ Column casting supports the same types as value casting:
 **SQL:**
 
 ```sql
-"user"."metadata"->>'age'::int >= 18
+("user"."metadata"->>'age')::int >= 18
 ```
 
-**Explanation:** JSON fields are extracted as text, so cast to integer for numeric comparison.
+**Explanation:** JSON fields are extracted as text, so cast to integer for numeric comparison. The JSON extraction is wrapped in parentheses because the `::` cast operator has higher precedence than the `->>` operator in PostgreSQL.
 
 ---
 
@@ -261,7 +261,7 @@ Column casting supports the same types as value casting:
 **SQL:**
 
 ```sql
-"status"::text IN ('1', '2', '3')
+"status"::text IN (1, 2, 3)
 ```
 
 **Explanation:** Cast an integer status column to text to match against text values.

@@ -80,7 +80,15 @@ const initializers = `
 
     // Format column with optional cast
     function formatColumn(col) {
-        return col.cast ? col.sql + '::' + col.cast : col.sql;
+        if (!col.cast) {
+            return col.sql;
+        }
+        // Wrap JSON field extractions in parentheses when casting
+        // because :: has higher precedence than ->>
+        if (col.isJsonField) {
+            return '(' + col.sql + ')::' + col.cast;
+        }
+        return col.sql + '::' + col.cast;
     }
 `;
 
@@ -217,6 +225,7 @@ Column
         }
         
         var sql;
+        var isJsonField = false;
         if (partsArray.length === 1) {
             sql = quoteSqlIdentity(partsArray[0]);
         } else {
@@ -229,10 +238,11 @@ Column
                 const lastPart = partsArray[partsArray.length - 1];
                 const escapedLast = lastPart.replace(/'/g, "''");
                 sql = tableName + '.' + jsonColumn + "->>'" + escapedLast + "'";
+                isJsonField = true;
             }
         }
         
-        return { sql: sql, cast: cast };
+        return { sql: sql, cast: cast, isJsonField: isJsonField };
     }
 
 ColPart

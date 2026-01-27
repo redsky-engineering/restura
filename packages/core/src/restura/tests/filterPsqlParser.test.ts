@@ -467,9 +467,9 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 		});
 
 		it('Should parse column paths with casting - three-part (JSON field)', function (done: Done) {
-			test('(user.metadata.age::int,gte,18)', `("user"."metadata"->>'age'::int >= 18)`);
-			test('(order.details.total::numeric,gt,99.99)', `("order"."details"->>'total'::numeric > 99.99)`);
-			test('(config.settings.count::text,has,5)', `("config"."settings"->>'count'::text ILIKE '%5%')`);
+			test('(user.metadata.age::int,gte,18)', `(("user"."metadata"->>'age')::int >= 18)`);
+			test('(order.details.total::numeric,gt,99.99)', `(("order"."details"->>'total')::numeric > 99.99)`);
+			test('(config.settings.count::text,has,5)', `(("config"."settings"->>'count')::text ILIKE '%5%')`);
 			done();
 		});
 
@@ -503,9 +503,9 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 			// With JSON fields
 			test(
 				'(user.metadata.score::numeric,gte,95.5::numeric)',
-				`("user"."metadata"->>'score'::numeric >= 95.5::numeric)`
+				`(("user"."metadata"->>'score')::numeric >= 95.5::numeric)`
 			);
-			test('(config.settings.count::int,10::int)', `("config"."settings"->>'count'::int = 10::int)`);
+			test('(config.settings.count::int,10::int)', `(("config"."settings"->>'count')::int = 10::int)`);
 			done();
 		});
 
