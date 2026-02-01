@@ -306,6 +306,13 @@
 					"roles": [],
 					"scopes": [],
 					"type": "JSON"
+				},
+				{
+					"isNullable": true,
+					"name": "birthDate",
+					"roles": [],
+					"scopes": [],
+					"type": "DATE"
 				}
 			],
 			"foreignKeys": [
