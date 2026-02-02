@@ -1796,6 +1796,40 @@ describe('validateRequestParams', () => {
 			}
 		});
 
+		it('should format oneOf validation error message for shippingMethod (not raw subschema text)', () => {
+			const req = {
+				method: 'GET',
+				query: {
+					'items[]': '{"productId":8,"quantity":1,"subscriptionIntervalUnit":"MONTH"}',
+					shippingAddress:
+						'{"city":"Spanish Fork","countryCode":"US","stateProvince":"UT","postalCode":"84660"}',
+					shippingMethod: 'express',
+					customerUserId: '31'
+				}
+			} as unknown as RsRequest<unknown>;
+
+			try {
+				requestValidator(req, orderSummaryRouteData, orderSummaryValidationSchema, standardValidationSchema);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+					expect(error.msg).to.include('shippingMethod');
+					// formatValidationErrorMessage should replace raw "[subschema 0],[subschema 1]" with a readable summary
+					expect(error.msg).to.include('must be one of:');
+					expect(error.msg).to.include("type: 'CUSTOM'");
+					expect(error.msg).to.include('name');
+					expect(error.msg).to.include('price');
+					expect(error.msg).to.include("type: 'ID'");
+					expect(error.msg).to.include('shippingMethodId');
+					expect(error.msg).to.not.include('[subschema 0]');
+					expect(error.msg).to.not.include('[subschema 1]');
+				}
+			}
+		});
+
 		it('should validate PATCH order/summary with items, shippingAddress, shippingMethod, customerUserId in body', () => {
 			const patchOrderSummaryRouteData: RouteData = {
 				...orderSummaryRouteData,

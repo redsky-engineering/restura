@@ -77,7 +77,9 @@ function resolveSchemaRef(schema: Schema, definitions: { [key: string]: Schema }
 	return deepResolveSchemaRefs(schema, definitions);
 }
 
-/** Summarize a subSchema (e.g. oneOf item) for a friendlier error message. */
+/**
+ * Summarize a subSchema (e.g. oneOf item) for a friendlier error message.
+ */
 function summarizeSubSchema(sub: Schema): string {
 	if (!sub || typeof sub !== 'object') return 'unknown';
 	if (sub.type === 'object' && sub.properties && typeof sub.properties === 'object') {
@@ -96,7 +98,9 @@ function summarizeSubSchema(sub: Schema): string {
 	return 'object';
 }
 
-/** Format validation error message; replace generic oneOf/anyOf "subschema" text with a clearer description. */
+/**
+ * Format validation error message; replace generic oneOf/anyOf "subSchema" text with a clearer description.
+ */
 function formatValidationErrorMessage(message: string, errSchema: unknown): string {
 	const schema = errSchema as { oneOf?: Schema[]; anyOf?: Schema[] } | null;
 	const options = schema?.oneOf ?? schema?.anyOf;
@@ -237,6 +241,20 @@ function coerceValue(value: unknown, propertySchema: Schema): unknown {
 		return targetType === 'string' ? '' : undefined;
 	}
 
+	// $ref / oneOf / anyOf: parse only JSON-looking payloads before switch so scalar strings (e.g. "true", "1") are preserved for string unions
+	const isRefOrUnion =
+		propertySchema.$ref != null || Array.isArray(propertySchema.oneOf) || Array.isArray(propertySchema.anyOf);
+	if (isRefOrUnion && typeof value === 'string') {
+		const trimmed = value.trim();
+		if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+			try {
+				return JSON.parse(value);
+			} catch {
+				// keep value
+			}
+		}
+	}
+
 	// Coerce based on schema type
 	switch (targetType) {
 		case 'number':
@@ -266,17 +284,6 @@ function coerceValue(value: unknown, propertySchema: Schema): unknown {
 			return value;
 
 		default:
-			// $ref / oneOf / anyOf have no top-level type; parse only JSON-looking payloads so scalar strings (e.g. "true", "1") are preserved for string unions
-			if (typeof value === 'string') {
-				const trimmed = value.trim();
-				if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-					try {
-						return JSON.parse(value);
-					} catch {
-						return value;
-					}
-				}
-			}
 			return value;
 	}
 }
