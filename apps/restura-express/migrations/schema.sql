@@ -49,7 +49,8 @@ CREATE TABLE "user"
      "onboardingStatus" TEXT NOT NULL DEFAULT 'verify_email' CHECK ("onboardingStatus" IN ('verify_email','complete')),
      "pendingEmail" VARCHAR(100) NULL,
      "testAge" INTEGER NOT NULL DEFAULT 0,
-     "metadata" JSON NOT NULL DEFAULT '{}'
+     "metadata" JSON NOT NULL DEFAULT '{}',
+     "birthDate" DATE NULL
 );
 
 ALTER TABLE "item"       ADD CONSTRAINT "item_orderId_order_id_fk"

@@ -431,12 +431,12 @@ class MySqlEngine extends SqlEngine {
 		return '';
 	}
 
-	protected abstract generateOrderBy(req: RsRequest<unknown>, routeData: StandardRouteData): string {
+	protected generateOrderBy(req: RsRequest<unknown>, routeData: StandardRouteData): string {
 		console.log(req, routeData);
 		return '';
 	}
 
-	protected abstract generateWhereClause(
+	protected generateWhereClause(
 		req: RsRequest<unknown>,
 		where: WhereData[],
 		routeData: StandardRouteData,

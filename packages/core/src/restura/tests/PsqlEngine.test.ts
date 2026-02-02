@@ -1635,6 +1635,43 @@ describe('PsqlEngine', function () {
 		});
 	});
 
+	describe('PsqlEngine DATE column type handling', () => {
+		it('should return DATE column as a string type', async () => {
+			const psqlTransaction = getPsqlTransaction();
+			const result = await psqlTransaction.queryOne<{ birthDate: unknown }>(
+				`SELECT "birthDate" FROM "user" WHERE id = 1;`,
+				[],
+				{} as RequesterDetails
+			);
+			console.log(typeof result.birthDate);
+			expect(result.birthDate).to.be.a('string');
+			expect(result.birthDate).to.equal('1990-05-15');
+		});
+
+		it('should return DATE column with correct format YYYY-MM-DD', async () => {
+			const psqlTransaction = getPsqlTransaction();
+			const result = await psqlTransaction.queryOne<{ birthDate: string }>(
+				`SELECT "birthDate" FROM "user" WHERE id = 2;`,
+				[],
+				{} as RequesterDetails
+			);
+			expect(result.birthDate).to.match(/^\d{4}-\d{2}-\d{2}$/);
+			expect(result.birthDate).to.equal('1985-12-25');
+		});
+
+		it('should return null for DATE column when value is null', async () => {
+			const psqlTransaction = getPsqlTransaction();
+			const result = await psqlTransaction.runQuery<{ birthDate: string | null }>(
+				`SELECT "birthDate" FROM "user" WHERE "birthDate" IS NULL LIMIT 1;`,
+				[],
+				{} as RequesterDetails
+			);
+			if (result.length > 0) {
+				expect(result[0].birthDate).to.equal(null);
+			}
+		});
+	});
+
 	describe('PsqlEngine deprecation handling', () => {
 		const psqlEngine = new PsqlEngine(psqlPool);
 

@@ -59,18 +59,32 @@ export class PsqlEngine extends SqlEngine {
 		}
 	}
 
+	/**
+	 * Setup the return types for the PostgreSQL connection.
+	 * For example return DATE as a string instead of a Date object and BIGINT as a number instead of a string.
+	 */
 	private setupPgReturnTypes() {
-		// OID for timestamptz in Postgres
-		const TIMESTAMPTZ_OID = 1184;
-		// Set a custom parser for timestamptz to return an ISO string
-		types.setTypeParser(TIMESTAMPTZ_OID, (val) => {
-			return val === null ? null : new Date(val).toISOString();
-		});
-		const BIGINT_OID = 20;
-		// Set a custom parser for BIGINT to return a JavaScript Number
-		types.setTypeParser(BIGINT_OID, (val) => {
-			return val === null ? null : Number(val);
-		});
+		// Object Identifiers (OIDs) for the PostgreSQL types.
+		const PG_TYPE_OID = {
+			BIGINT: 20,
+			DATE: 1082,
+			TIME: 1083,
+			TIMESTAMP: 1114,
+			TIMESTAMPTZ: 1184,
+			TIMETZ: 1266
+		};
+
+		// Return BIGINT as a JavaScript Number instead of string
+		types.setTypeParser(PG_TYPE_OID.BIGINT, (val) => (val === null ? null : Number(val)));
+
+		// Return all date/time types as strings (never as JS Date objects)
+		// TIMESTAMP/TIMESTAMPTZ use toISOString() for standardized ISO 8601 format
+		// This assumes servers run with TZ=UTC (enforced via environment)
+		types.setTypeParser(PG_TYPE_OID.DATE, (val) => val); // YYYY-MM-DD
+		types.setTypeParser(PG_TYPE_OID.TIME, (val) => val); // HH:MM:SS
+		types.setTypeParser(PG_TYPE_OID.TIMETZ, (val) => val); // HH:MM:SS+TZ
+		types.setTypeParser(PG_TYPE_OID.TIMESTAMP, (val) => (val === null ? null : new Date(val).toISOString()));
+		types.setTypeParser(PG_TYPE_OID.TIMESTAMPTZ, (val) => (val === null ? null : new Date(val).toISOString()));
 	}
 
 	private async reconnectTriggerClient() {
