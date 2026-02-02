@@ -78,6 +78,8 @@ export class PsqlEngine extends SqlEngine {
 		types.setTypeParser(PG_TYPE_OID.BIGINT, (val) => (val === null ? null : Number(val)));
 
 		// Return all date/time types as strings (never as JS Date objects)
+		// TIMESTAMP/TIMESTAMPTZ use toISOString() for standardized ISO 8601 format
+		// This assumes servers run with TZ=UTC (enforced via environment)
 		types.setTypeParser(PG_TYPE_OID.DATE, (val) => val); // YYYY-MM-DD
 		types.setTypeParser(PG_TYPE_OID.TIME, (val) => val); // HH:MM:SS
 		types.setTypeParser(PG_TYPE_OID.TIMETZ, (val) => val); // HH:MM:SS+TZ
