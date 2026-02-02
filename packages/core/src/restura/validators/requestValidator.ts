@@ -177,20 +177,14 @@ export default function requestValidator(
 }
 
 export function getRequestData(req: RsRequest<unknown>, schema: Schema): DynamicObject {
-	let body = '';
-	if (req.method === 'GET' || req.method === 'DELETE') {
-		body = 'query';
-	} else {
-		body = 'body';
+	const body = req.method === 'GET' || req.method === 'DELETE' ? 'query' : 'body';
+	const bodyData = req[body as keyof typeof req];
+
+	if (bodyData && schema) {
+		return coerceBySchema(bodyData as DynamicObject, schema);
 	}
 
-	const bodyData = req[body as keyof typeof req]; // Cast once and store in a variable
-
-	if (bodyData && body === 'query' && schema) {
-		return coerceBySchema(bodyData, schema);
-	}
-
-	return bodyData;
+	return bodyData as DynamicObject;
 }
 
 function coerceBySchema(data: DynamicObject, schema: Schema): DynamicObject {
@@ -272,12 +266,15 @@ function coerceValue(value: unknown, propertySchema: Schema): unknown {
 			return value;
 
 		default:
-			// $ref / oneOf / anyOf have no top-level type; parse JSON strings so nested objects from query params validate
+			// $ref / oneOf / anyOf have no top-level type; parse only JSON-looking payloads so scalar strings (e.g. "true", "1") are preserved for string unions
 			if (typeof value === 'string') {
-				try {
-					return JSON.parse(value);
-				} catch {
-					return value;
+				const trimmed = value.trim();
+				if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+					try {
+						return JSON.parse(value);
+					} catch {
+						return value;
+					}
 				}
 			}
 			return value;

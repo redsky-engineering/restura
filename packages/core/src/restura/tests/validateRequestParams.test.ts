@@ -1770,5 +1770,77 @@ describe('validateRequestParams', () => {
 
 			expect(data.customerUserId).to.equal(31);
 		});
+
+		it('should fail if shippingMethod is not a valid object', () => {
+			const req = {
+				method: 'GET',
+				query: {
+					'items[]': '{"productId":8,"quantity":1,"subscriptionIntervalUnit":"MONTH"}',
+					shippingAddress:
+						'{"city":"Spanish Fork","countryCode":"US","stateProvince":"UT","postalCode":"84660"}',
+					shippingMethod: '{"type":"ID","shippingMethodId": "not a number"}',
+					customerUserId: '31'
+				}
+			} as unknown as RsRequest<unknown>;
+
+			try {
+				requestValidator(req, orderSummaryRouteData, orderSummaryValidationSchema, standardValidationSchema);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+					expect(error.msg).to.include('shippingMethod');
+				}
+			}
+		});
+
+		it('should validate PATCH order/summary with items, shippingAddress, shippingMethod, customerUserId in body', () => {
+			const patchOrderSummaryRouteData: RouteData = {
+				...orderSummaryRouteData,
+				method: 'PATCH'
+			};
+
+			const req = {
+				method: 'PATCH',
+				body: {
+					items: [{ productId: 8, quantity: 1, subscriptionIntervalUnit: 'MONTH' }],
+					shippingAddress: {
+						city: 'Spanish Fork',
+						countryCode: 'US',
+						stateProvince: 'UT',
+						postalCode: '84660'
+					},
+					shippingMethod: { type: 'ID', shippingMethodId: 1 },
+					customerUserId: 31
+				}
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, patchOrderSummaryRouteData, orderSummaryValidationSchema, standardValidationSchema);
+
+			const data = req.data as {
+				items: Array<{ productId: number; quantity: number; subscriptionIntervalUnit?: string }>;
+				shippingAddress: { city: string; countryCode: string; stateProvince?: string; postalCode: string };
+				shippingMethod: { type: string; shippingMethodId: number };
+				customerUserId: number;
+			};
+
+			expect(data.items).to.be.an('array').with.lengthOf(1);
+			expect(data.items[0].productId).to.equal(8);
+			expect(data.items[0].quantity).to.equal(1);
+			expect(data.items[0].subscriptionIntervalUnit).to.equal('MONTH');
+
+			expect(data.shippingAddress).to.deep.equal({
+				city: 'Spanish Fork',
+				countryCode: 'US',
+				stateProvince: 'UT',
+				postalCode: '84660'
+			});
+
+			expect(data.shippingMethod).to.deep.equal({ type: 'ID', shippingMethodId: 1 });
+
+			expect(data.customerUserId).to.equal(31);
+		});
 	});
 });
