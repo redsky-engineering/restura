@@ -77,6 +77,44 @@ function resolveSchemaRef(schema: Schema, definitions: { [key: string]: Schema }
 	return deepResolveSchemaRefs(schema, definitions);
 }
 
+/**
+ * Summarize a subSchema (e.g. oneOf item) for a friendlier error message.
+ */
+function summarizeSubSchema(sub: Schema): string {
+	if (!sub || typeof sub !== 'object') return 'unknown';
+	if (sub.type === 'object' && sub.properties && typeof sub.properties === 'object') {
+		const props = sub.properties as Record<string, Schema>;
+		const parts: string[] = [];
+		if (props.type && (props.type as { enum?: unknown }).enum) {
+			const enumVal = (props.type as { enum: unknown[] }).enum[0];
+			parts.push(`type: '${String(enumVal)}'`);
+		}
+		for (const key of Object.keys(props)) {
+			if (key === 'type') continue;
+			parts.push(key);
+		}
+		return parts.length ? `{ ${parts.join(', ')} }` : 'object';
+	}
+	return 'object';
+}
+
+/**
+ * Format validation error message; replace generic oneOf/anyOf "subSchema" text with a clearer description.
+ */
+function formatValidationErrorMessage(message: string, errSchema: unknown): string {
+	const schema = errSchema as { oneOf?: Schema[]; anyOf?: Schema[] } | null;
+	const options = schema?.oneOf ?? schema?.anyOf;
+	if (
+		options &&
+		Array.isArray(options) &&
+		(message.includes('subschema') || message.includes('any of') || message.includes('exactly one from'))
+	) {
+		const summaries = options.map((sub, i) => `(${i + 1}) ${summarizeSubSchema(sub)}`);
+		return `must be one of: ${summaries.join(' or ')}`;
+	}
+	return message;
+}
+
 export default function requestValidator(
 	req: RsRequest<unknown>,
 	routeData: RouteData,
@@ -133,7 +171,8 @@ export default function requestValidator(
 		const errorMessages = executeValidation.errors
 			.map((err) => {
 				const property = err.property.replace('instance.', '');
-				return `${property}: ${err.message}`;
+				const message = formatValidationErrorMessage(err.message, err.schema);
+				return `${property}: ${message}`;
 			})
 			.join(', ');
 
@@ -142,20 +181,14 @@ export default function requestValidator(
 }
 
 export function getRequestData(req: RsRequest<unknown>, schema: Schema): DynamicObject {
-	let body = '';
-	if (req.method === 'GET' || req.method === 'DELETE') {
-		body = 'query';
-	} else {
-		body = 'body';
-	}
-
-	const bodyData = req[body as keyof typeof req]; // Cast once and store in a variable
+	const body = req.method === 'GET' || req.method === 'DELETE' ? 'query' : 'body';
+	const bodyData = req[body as keyof typeof req];
 
 	if (bodyData && body === 'query' && schema) {
-		return coerceBySchema(bodyData, schema);
+		return coerceBySchema(bodyData as DynamicObject, schema);
 	}
 
-	return bodyData;
+	return bodyData as DynamicObject;
 }
 
 function coerceBySchema(data: DynamicObject, schema: Schema): DynamicObject {
@@ -206,6 +239,20 @@ function coerceValue(value: unknown, propertySchema: Schema): unknown {
 
 	if (value === '') {
 		return targetType === 'string' ? '' : undefined;
+	}
+
+	// $ref / oneOf / anyOf: parse only JSON-looking payloads before switch so scalar strings (e.g. "true", "1") are preserved for string unions
+	const isRefOrUnion =
+		propertySchema.$ref != null || Array.isArray(propertySchema.oneOf) || Array.isArray(propertySchema.anyOf);
+	if (isRefOrUnion && typeof value === 'string') {
+		const trimmed = value.trim();
+		if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+			try {
+				return JSON.parse(value);
+			} catch {
+				// keep value
+			}
+		}
 	}
 
 	// Coerce based on schema type
