@@ -1644,4 +1644,237 @@ describe('validateRequestParams', () => {
 			expect((req.data as { 'user-id': number })['user-id']).to.equal(456);
 		});
 	});
+
+	describe('GET order/summary (ManualOrderSummaryRequest)', () => {
+		const orderSummaryRouteData: RouteData = {
+			type: 'CUSTOM_ONE',
+			method: 'GET',
+			name: 'order summary',
+			description: 'Get manual order summary',
+			path: '/order/summary',
+			roles: ['admin'],
+			scopes: [],
+			requestType: 'ManualOrderSummaryRequest',
+			responseType: 'ManualOrderSummaryResponse',
+			request: []
+		};
+
+		const orderSummaryValidationSchema: ValidationDictionary = {
+			ManualOrderSummaryRequest: {
+				$schema: 'http://json-schema.org/draft-07/schema#',
+				$ref: '#/definitions/ManualOrderSummaryRequest',
+				definitions: {
+					CreateManualOrderItemRequest: {
+						type: 'object',
+						properties: {
+							productId: { type: 'number' },
+							quantity: { type: 'number' },
+							variantId: { type: 'number' },
+							subscriptionPlanId: { type: 'number' },
+							subscriptionIntervalCount: { type: 'number' },
+							subscriptionIntervalUnit: { type: 'string', enum: ['DAY', 'WEEK', 'MONTH', 'YEAR'] }
+						},
+						required: ['productId', 'quantity'],
+						additionalProperties: false
+					},
+					ShippingMethodInput: {
+						oneOf: [
+							{
+								type: 'object',
+								properties: {
+									type: { type: 'string', enum: ['CUSTOM'] },
+									name: { type: 'string' },
+									price: { type: 'string' }
+								},
+								required: ['type', 'name', 'price'],
+								additionalProperties: false
+							},
+							{
+								type: 'object',
+								properties: {
+									type: { type: 'string', enum: ['ID'] },
+									shippingMethodId: { type: 'number' }
+								},
+								required: ['type', 'shippingMethodId'],
+								additionalProperties: false
+							}
+						]
+					},
+					ManualOrderSummaryRequest: {
+						type: 'object',
+						properties: {
+							items: {
+								type: 'array',
+								items: { $ref: '#/definitions/CreateManualOrderItemRequest' }
+							},
+							shippingAddress: {
+								type: 'object',
+								properties: {
+									city: { type: 'string' },
+									countryCode: { type: 'string' },
+									stateProvince: { type: 'string' },
+									postalCode: { type: 'string' }
+								},
+								required: ['city', 'countryCode', 'postalCode'],
+								additionalProperties: false
+							},
+							shippingMethod: { $ref: '#/definitions/ShippingMethodInput' },
+							customerUserId: { type: 'number' }
+						},
+						required: ['items', 'shippingAddress'],
+						additionalProperties: false
+					}
+				}
+			} as Definition
+		};
+
+		it('should validate GET order/summary with items[], shippingAddress, shippingMethod, customerUserId query params', () => {
+			// Query params as the server receives them (URL-decoded keys, string values)
+			// items[]=%7B%22productId%22%3A8%2C%22quantity%22%3A1%2C%22subscriptionIntervalUnit%22%3A%22MONTH%22%7D
+			// shippingAddress=%7B%22city%22%3A%22Spanish%20Fork%22%2C%22countryCode%22%3A%22US%22%2C%22stateProvince%22%3A%22UT%22%2C%22postalCode%22%3A%2284660%22%7D
+			// shippingMethod=%7B%22type%22%3A%22ID%22%2C%22shippingMethodId%22%3A1%7D
+			// customerUserId=31
+			const req = {
+				method: 'GET',
+				query: {
+					'items[]': '{"productId":8,"quantity":1,"subscriptionIntervalUnit":"MONTH"}',
+					shippingAddress:
+						'{"city":"Spanish Fork","countryCode":"US","stateProvince":"UT","postalCode":"84660"}',
+					shippingMethod: '{"type":"ID","shippingMethodId":1}',
+					customerUserId: '31'
+				}
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, orderSummaryRouteData, orderSummaryValidationSchema, standardValidationSchema);
+
+			const data = req.data as {
+				items: Array<{ productId: number; quantity: number; subscriptionIntervalUnit?: string }>;
+				shippingAddress: { city: string; countryCode: string; stateProvince?: string; postalCode: string };
+				shippingMethod: { type: string; shippingMethodId: number };
+				customerUserId: number;
+			};
+
+			expect(data.items).to.be.an('array').with.lengthOf(1);
+			expect(data.items[0].productId).to.equal(8);
+			expect(data.items[0].quantity).to.equal(1);
+			expect(data.items[0].subscriptionIntervalUnit).to.equal('MONTH');
+
+			expect(data.shippingAddress).to.deep.equal({
+				city: 'Spanish Fork',
+				countryCode: 'US',
+				stateProvince: 'UT',
+				postalCode: '84660'
+			});
+
+			expect(data.shippingMethod).to.deep.equal({ type: 'ID', shippingMethodId: 1 });
+
+			expect(data.customerUserId).to.equal(31);
+		});
+
+		it('should fail if shippingMethod is not a valid object', () => {
+			const req = {
+				method: 'GET',
+				query: {
+					'items[]': '{"productId":8,"quantity":1,"subscriptionIntervalUnit":"MONTH"}',
+					shippingAddress:
+						'{"city":"Spanish Fork","countryCode":"US","stateProvince":"UT","postalCode":"84660"}',
+					shippingMethod: '{"type":"ID","shippingMethodId": "not a number"}',
+					customerUserId: '31'
+				}
+			} as unknown as RsRequest<unknown>;
+
+			try {
+				requestValidator(req, orderSummaryRouteData, orderSummaryValidationSchema, standardValidationSchema);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+					expect(error.msg).to.include('shippingMethod');
+				}
+			}
+		});
+
+		it('should format oneOf validation error message for shippingMethod (not raw subschema text)', () => {
+			const req = {
+				method: 'GET',
+				query: {
+					'items[]': '{"productId":8,"quantity":1,"subscriptionIntervalUnit":"MONTH"}',
+					shippingAddress:
+						'{"city":"Spanish Fork","countryCode":"US","stateProvince":"UT","postalCode":"84660"}',
+					shippingMethod: 'express',
+					customerUserId: '31'
+				}
+			} as unknown as RsRequest<unknown>;
+
+			try {
+				requestValidator(req, orderSummaryRouteData, orderSummaryValidationSchema, standardValidationSchema);
+				throw new Error('Should have thrown an error');
+			} catch (error: unknown) {
+				expect(error).to.be.instanceOf(RsError);
+				if (error instanceof RsError) {
+					expect(error.err).to.equal('BAD_REQUEST');
+					expect(error.msg).to.include('Request validation failed');
+					expect(error.msg).to.include('shippingMethod');
+					// formatValidationErrorMessage should replace raw "[subschema 0],[subschema 1]" with a readable summary
+					expect(error.msg).to.include('must be one of:');
+					expect(error.msg).to.include("type: 'CUSTOM'");
+					expect(error.msg).to.include('name');
+					expect(error.msg).to.include('price');
+					expect(error.msg).to.include("type: 'ID'");
+					expect(error.msg).to.include('shippingMethodId');
+					expect(error.msg).to.not.include('[subschema 0]');
+					expect(error.msg).to.not.include('[subschema 1]');
+				}
+			}
+		});
+
+		it('should validate PATCH order/summary with items, shippingAddress, shippingMethod, customerUserId in body', () => {
+			const patchOrderSummaryRouteData: RouteData = {
+				...orderSummaryRouteData,
+				method: 'PATCH'
+			};
+
+			const req = {
+				method: 'PATCH',
+				body: {
+					items: [{ productId: 8, quantity: 1, subscriptionIntervalUnit: 'MONTH' }],
+					shippingAddress: {
+						city: 'Spanish Fork',
+						countryCode: 'US',
+						stateProvince: 'UT',
+						postalCode: '84660'
+					},
+					shippingMethod: { type: 'ID', shippingMethodId: 1 },
+					customerUserId: 31
+				}
+			} as unknown as RsRequest<unknown>;
+
+			requestValidator(req, patchOrderSummaryRouteData, orderSummaryValidationSchema, standardValidationSchema);
+
+			const data = req.data as {
+				items: Array<{ productId: number; quantity: number; subscriptionIntervalUnit?: string }>;
+				shippingAddress: { city: string; countryCode: string; stateProvince?: string; postalCode: string };
+				shippingMethod: { type: string; shippingMethodId: number };
+				customerUserId: number;
+			};
+
+			expect(data.items).to.be.an('array').with.lengthOf(1);
+			expect(data.items[0].productId).to.equal(8);
+			expect(data.items[0].quantity).to.equal(1);
+			expect(data.items[0].subscriptionIntervalUnit).to.equal('MONTH');
+
+			expect(data.shippingAddress).to.deep.equal({
+				city: 'Spanish Fork',
+				countryCode: 'US',
+				stateProvince: 'UT',
+				postalCode: '84660'
+			});
+
+			expect(data.shippingMethod).to.deep.equal({ type: 'ID', shippingMethodId: 1 });
+
+			expect(data.customerUserId).to.equal(31);
+		});
+	});
 });

@@ -744,4 +744,122 @@ describe('customTypeValidationGenerator', function () {
 			expect(props).to.have.property('email');
 		}
 	});
+
+	it('should generate schemas for ManualOrderSummaryRequest and related custom types', function () {
+		const testSchema: ResturaSchema = {
+			database: [],
+			endpoints: [],
+			globalParams: [],
+			roles: [],
+			scopes: [],
+			customTypes: [
+				`export interface CreateManualOrderItemRequest {
+					productId: number;
+					variantId?: number;
+					quantity: number;
+					subscriptionPlanId?: number;
+					subscriptionIntervalCount?: number;
+					subscriptionIntervalUnit?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
+				}`,
+				`export interface CreateManualOrderCustomItemRequest {
+					name: string;
+					unitPrice: string;
+					quantity: number;
+					isTaxable: boolean;
+					isVirtual: boolean;
+					type?: 'STANDARD' | 'ENROLLMENT';
+					productTaxClassId?: number;
+				}`,
+				`export type DiscountInput = { type: 'PERCENTAGE'; amount: string } | { type: 'FIXED_AMOUNT'; amount: string };`,
+				`export type ShippingMethodInput = { type: 'CUSTOM'; name: string; price: string } | { type: 'ID'; shippingMethodId: number };`,
+				`export interface ManualOrderSummaryRequest {
+					items: CreateManualOrderItemRequest[];
+					shippingAddress: {
+						city: string;
+						countryCode: string;
+						stateProvince?: string;
+						postalCode: string;
+					};
+					customItems?: CreateManualOrderCustomItemRequest[];
+					discount?: DiscountInput;
+					shippingMethod?: ShippingMethodInput;
+					customerUserId?: number;
+					marketId?: number;
+				}`
+			]
+		};
+
+		const result = customTypeValidationGenerator(testSchema, true);
+
+		// All custom types should have generated schemas
+		expect(result).to.have.property('CreateManualOrderItemRequest');
+		expect(result).to.have.property('CreateManualOrderCustomItemRequest');
+		expect(result).to.have.property('DiscountInput');
+		expect(result).to.have.property('ShippingMethodInput');
+		expect(result).to.have.property('ManualOrderSummaryRequest');
+
+		// CreateManualOrderItemRequest
+		const orderItem = result.CreateManualOrderItemRequest.definitions!.CreateManualOrderItemRequest as Schema;
+		expect(orderItem).to.have.property('type', 'object');
+		const orderItemProps = orderItem.properties!;
+		expect(orderItemProps).to.have.property('productId');
+		expect(orderItemProps.productId).to.deep.equal({ type: 'number' });
+		expect(orderItemProps).to.have.property('quantity');
+		expect(orderItemProps).to.have.property('variantId');
+		expect(orderItemProps).to.have.property('subscriptionIntervalUnit');
+		expect((orderItemProps.subscriptionIntervalUnit as DynamicObject).enum).to.include.members([
+			'DAY',
+			'WEEK',
+			'MONTH',
+			'YEAR'
+		]);
+		expect(orderItem.required).to.include.members(['productId', 'quantity']);
+
+		// CreateManualOrderCustomItemRequest
+		const customItem = result.CreateManualOrderCustomItemRequest.definitions!
+			.CreateManualOrderCustomItemRequest as Schema;
+		expect(customItem).to.have.property('type', 'object');
+		const customItemProps = customItem.properties!;
+		expect(customItemProps).to.have.property('name');
+		expect(customItemProps).to.have.property('unitPrice');
+		expect(customItemProps).to.have.property('quantity');
+		expect(customItemProps).to.have.property('isTaxable');
+		expect(customItemProps).to.have.property('isVirtual');
+		expect(customItemProps).to.have.property('type');
+		expect((customItemProps.type as DynamicObject).enum).to.include.members(['STANDARD', 'ENROLLMENT']);
+		expect(customItem.required).to.include.members(['name', 'unitPrice', 'quantity', 'isTaxable', 'isVirtual']);
+
+		// DiscountInput (discriminated union)
+		expect(result.DiscountInput.definitions).to.be.an('object');
+		const discountSchema = result.DiscountInput.definitions!.DiscountInput as Schema;
+		expect(discountSchema).to.satisfy((s: DynamicObject) => s.oneOf || s.anyOf || s.properties);
+
+		// ShippingMethodInput (discriminated union)
+		expect(result.ShippingMethodInput.definitions).to.be.an('object');
+		const shippingSchema = result.ShippingMethodInput.definitions!.ShippingMethodInput as Schema;
+		expect(shippingSchema).to.satisfy((s: DynamicObject) => s.oneOf || s.anyOf || s.properties);
+
+		// ManualOrderSummaryRequest
+		const summary = result.ManualOrderSummaryRequest.definitions!.ManualOrderSummaryRequest as Schema;
+		expect(summary).to.have.property('type', 'object');
+		const summaryProps = summary.properties!;
+		expect(summaryProps).to.have.property('items');
+		expect(summaryProps.items).to.have.property('type', 'array');
+		expect(summaryProps).to.have.property('shippingAddress');
+		expect(summaryProps.shippingAddress).to.have.property('type', 'object');
+		const addrProps = (summaryProps.shippingAddress as DynamicObject).properties;
+		expect(addrProps).to.have.property('city');
+		expect(addrProps).to.have.property('countryCode');
+		expect(addrProps).to.have.property('postalCode');
+		expect(addrProps).to.have.property('stateProvince');
+		expect(summaryProps).to.have.property('customItems');
+		expect(summaryProps).to.have.property('discount');
+		expect(summaryProps).to.have.property('shippingMethod');
+		expect(summaryProps).to.have.property('customerUserId');
+		expect(summaryProps).to.have.property('marketId');
+		expect(summary.required).to.include.members(['items', 'shippingAddress']);
+		expect(summary.required).to.not.include('discount');
+		expect(summary.required).to.not.include('shippingMethod');
+		expect(summary.required).to.not.include('customItems');
+	});
 });
