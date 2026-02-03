@@ -184,7 +184,7 @@ export function getRequestData(req: RsRequest<unknown>, schema: Schema): Dynamic
 	const body = req.method === 'GET' || req.method === 'DELETE' ? 'query' : 'body';
 	const bodyData = req[body as keyof typeof req];
 
-	if (bodyData && schema) {
+	if (bodyData && body === 'query' && schema) {
 		return coerceBySchema(bodyData as DynamicObject, schema);
 	}
 
