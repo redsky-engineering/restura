@@ -253,7 +253,15 @@ NullOperator
     / "null"i { return function(col) { return formatColumn(col) + ' IS NULL'; }; }
 
 OperatorWithValue
-    = "in"i _ "," _ val:CastedValueWithPipes { return function(col) { return buildInClauseWithCast(formatColumn(col), val.value, val.cast); }; }
+    = "in"i _ "," _ vals:InValueList cast:TypeCast? { return function(col) { 
+        var formattedCol = formatColumn(col);
+        var literals = vals.map(function(v) {
+            var unescaped = unescapeValue(v);
+            var formatted = formatValue(unescaped);
+            return cast ? formatted + '::' + cast : formatted;
+        });
+        return formattedCol + ' IN (' + literals.join(', ') + ')';
+    }; }
     / "ne"i _ "," _ val:CastedValue { return function(col) { return formatColumn(col) + ' <> ' + formatValueWithCast(val.value, val.cast); }; }
     / "gte"i _ "," _ val:CastedValue { return function(col) { return formatColumn(col) + ' >= ' + formatValueWithCast(val.value, val.cast); }; }
     / "gt"i _ "," _ val:CastedValue { return function(col) { return formatColumn(col) + ' > ' + formatValueWithCast(val.value, val.cast); }; }
@@ -262,6 +270,26 @@ OperatorWithValue
     / "has"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value) + '%'); return formatColumn(col) + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
     / "sw"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal(unescapeValue(val.value) + '%'); return formatColumn(col) + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
     / "ew"i _ "," _ val:CastedValue { return function(col) { var formatted = format.literal('%' + unescapeValue(val.value)); return formatColumn(col) + ' ILIKE ' + (val.cast ? formatted + '::' + val.cast : formatted); }; }
+
+InValueList
+    = first:InValue rest:("|" InValue)* {
+        var values = [first];
+        for (var i = 0; i < rest.length; i++) {
+            values.push(rest[i][1]);
+        }
+        return values;
+    }
+
+InValue
+    = QuotedString
+    / chars:InValueChar+ { return chars.join(''); }
+
+InValueChar
+    = "\\\\\\\\" { return '\\\\\\\\'; }
+    / "\\\\," { return '\\\\,'; }
+    / "\\\\|" { return '\\\\|'; }
+    / [a-zA-Z0-9_\\-!#/@$%^&*+=<>?~.;'\" ]
+    / c:":" !":"  { return c; }
 
 CastedValue
     = val:Value cast:TypeCast? { return { value: val, cast: cast }; }
@@ -273,24 +301,40 @@ TypeCast
     = "::" type:("timestamptz"i / "timestamp"i / "boolean"i / "numeric"i / "bigint"i / "text"i / "date"i / "int"i)
         { return type.toLowerCase(); }
 
+QuotedString
+    = '"' chars:DoubleQuotedChar* '"' { return chars.join(''); }
+    / "'" chars:SingleQuotedChar* "'" { return chars.join(''); }
+
+DoubleQuotedChar
+    = '\\\\"' { return '"'; }
+    / '\\\\\\\\' { return '\\\\'; }
+    / [^"\\\\]
+
+SingleQuotedChar
+    = "\\\\'" { return "'"; }
+    / '\\\\\\\\' { return '\\\\'; }
+    / [^'\\\\]
+
 Value
-    = chars:ValueChar+ { return chars.join(''); }
+    = QuotedString
+    / chars:ValueChar+ { return chars.join(''); }
 
 ValueChar
     = "\\\\\\\\" { return '\\\\\\\\'; }
     / "\\\\," { return '\\\\,'; }
     / "\\\\|" { return '\\\\|'; }
-    / [^,()\\\\|:]
+    / [a-zA-Z0-9_\\-!#/@$%^&*+=<>?~.;'\" ]
     / c:":" !":"  { return c; }
 
 ValueWithPipes
-    = chars:ValueWithPipesChar+ { return chars.join(''); }
+    = QuotedString
+    / chars:ValueWithPipesChar+ { return chars.join(''); }
 
 ValueWithPipesChar
     = "\\\\\\\\" { return '\\\\\\\\'; }
     / "\\\\," { return '\\\\,'; }
     / "\\\\|" { return '\\\\|'; }
-    / [^,()\\\\:]
+    / [a-zA-Z0-9_\\-!#/@$%^&*+=<>?~.;'\" |]
     / c:":" !":"  { return c; }
 `;
 

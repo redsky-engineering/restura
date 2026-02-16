@@ -326,7 +326,7 @@ Examples of safely escaped input:
 **Example 2 - Filter:**
 
 ```
-(password,' OR '1'='1)
+(password,"' OR '1'='1")
 ```
 
 **SQL:**
@@ -334,6 +334,8 @@ Examples of safely escaped input:
 ```sql
 "password" = ''' OR ''1''=''1'
 ```
+
+**Explanation:** Quoted strings allow any characters including single quotes. The value is safely escaped by pg-format.
 
 ---
 
