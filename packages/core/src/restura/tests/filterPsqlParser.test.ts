@@ -166,6 +166,106 @@ describe('Filter Psql Parsing test - New Syntax', function () {
 			test('(codes,in,A\\|1|B\\|2|C\\|3)', `("codes" IN ('A|1', 'B|2', 'C|3'))`);
 			done();
 		});
+
+		it('Should handle special characters !#/ in values (no escaping needed)', function (done: Done) {
+			test('(code,user#123)', `("code" = 'user#123')`);
+			test('(version,v1.0/beta!)', `("version" = 'v1.0/beta!')`);
+			test('(tag,has,#important)', `("tag" ILIKE '%#important%')`);
+			test('(path,sw,/home/user)', `("path" ILIKE '/home/user%')`);
+			test('(alert,Critical!)', `("alert" = 'Critical!')`);
+			test('(id,user#123/v1!)', `("id" = 'user#123/v1!')`);
+			done();
+		});
+	});
+
+	describe('Quoted String Support', function () {
+		it('Should handle double-quoted strings with commas', function (done: Done) {
+			test('(name,"Smith, John")', `("name" = 'Smith, John')`);
+			test('(address,"123 Main St, Suite 100")', `("address" = '123 Main St, Suite 100')`);
+			test('(company,has,"Acme, Inc.")', `("company" ILIKE '%Acme, Inc.%')`);
+			done();
+		});
+
+		it('Should handle single-quoted strings with commas', function (done: Done) {
+			test("(name,'Smith, John')", `("name" = 'Smith, John')`);
+			test("(address,'123 Main St, Suite 100')", `("address" = '123 Main St, Suite 100')`);
+			test("(company,has,'Acme, Inc.')", `("company" ILIKE '%Acme, Inc.%')`);
+			done();
+		});
+
+		it('Should handle escaped quotes inside double-quoted strings', function (done: Done) {
+			test('(title,"He said \\"hello\\"")', `("title" = 'He said "hello"')`);
+			test('(text,has,"Value with \\"quotes\\"")', `("text" ILIKE '%Value with "quotes"%')`);
+			done();
+		});
+
+		it('Should handle escaped quotes inside single-quoted strings', function (done: Done) {
+			test("(title,'It\\'s working')", `("title" = 'It''s working')`);
+			test("(text,has,'Can\\'t stop')", `("text" ILIKE '%Can''t stop%')`);
+			done();
+		});
+
+		it('Should handle escaped backslashes in quoted strings', function (done: Done) {
+			test('(path,"C:\\\\Windows\\\\System32")', `("path" = E'C:\\\\Windows\\\\System32')`);
+			test("(path,'\\\\\\\\server\\\\\\\\share')", `("path" = E'\\\\server\\\\share')`);
+			done();
+		});
+
+		it('Should handle empty quoted strings', function (done: Done) {
+			test('(name,"")', `("name" = '')`);
+			test("(value,'')", `("value" = '')`);
+			done();
+		});
+
+		it('Should handle quoted strings with all special characters', function (done: Done) {
+			test('(data,"value,with|special::chars")', `("data" = 'value,with|special::chars')`);
+			test('(text,"!#/@$%^&*()")', `("text" = '!#/@$%^&*()')`);
+			test('(mixed,has,"test, value | with # special!")', `("mixed" ILIKE '%test, value | with # special!%')`);
+			done();
+		});
+
+		it('Should handle quoted strings in IN operator', function (done: Done) {
+			test(
+				'(status,in,"Active, Working"|"On Hold"|Complete)',
+				`("status" IN ('Active, Working', 'On Hold', 'Complete'))`
+			);
+			test("(tag,in,'red,blue'|'green'|'yellow')", `("tag" IN ('red,blue', 'green', 'yellow'))`);
+			done();
+		});
+
+		it('Should handle quoted strings with operators', function (done: Done) {
+			test('(name,ne,"Smith, John")', `("name" <> 'Smith, John')`);
+			test('(company,sw,"Acme,")', `("company" ILIKE 'Acme,%')`);
+			test('(email,ew,",Inc.")', `("email" ILIKE '%,Inc.')`);
+			done();
+		});
+
+		it('Should handle quoted strings with type casting', function (done: Done) {
+			test('(data,"123,456"::text)', `("data" = '123,456'::text)`);
+			test('(value,"1,000"::text)', `("value" = '1,000'::text)`);
+			done();
+		});
+
+		it('Should handle quoted strings with logical operators', function (done: Done) {
+			test(
+				'(name,"Smith, John")and(city,"New York, NY")',
+				`("name" = 'Smith, John') AND ("city" = 'New York, NY')`
+			);
+			test('(a,"x,y")or(b,"z,w")', `("a" = 'x,y') OR ("b" = 'z,w')`);
+			done();
+		});
+
+		it('Should handle quoted strings with negation', function (done: Done) {
+			test('!(name,"Smith, John")', `NOT ("name" = 'Smith, John')`);
+			test('!(company,has,"Acme, Inc.")', `NOT ("company" ILIKE '%Acme, Inc.%')`);
+			done();
+		});
+
+		it('Should handle quoted strings with column paths', function (done: Done) {
+			test('(user.name,"Smith, John")', `("user"."name" = 'Smith, John')`);
+			test('(order.address.city,"New York, NY")', `("order"."address"->>'city' = 'New York, NY')`);
+			done();
+		});
 	});
 
 	describe('IN Operator Edge Cases', function () {
@@ -928,8 +1028,8 @@ describe('SQL Injection Prevention', function () {
 		});
 
 		it('Should safely escape classic OR injection attempts', function (done: Done) {
-			// The ' OR '1'='1 pattern becomes a harmless literal string
-			test("(password,' OR '1'='1)", `("password" = ''' OR ''1''=''1')`);
+			// The ' OR '1'='1 pattern becomes a harmless literal string when quoted
+			test("(password,\"' OR '1'='1\")", `("password" = ''' OR ''1''=''1')`);
 			test("(user,admin'--)", `("user" = 'admin''--')`);
 			done();
 		});

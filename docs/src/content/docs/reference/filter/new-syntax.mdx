@@ -43,27 +43,74 @@ Operators are **case-insensitive**: `GT`, `Gt`, `gt` all work identically.
 
 <Aside type="note">Column paths cannot exceed 3 parts. `a.b.c.d` is rejected.</Aside>
 
-## Escaping Special Characters
+## Special Characters in Values
+
+### Allowed Characters (No Escaping)
+
+The following characters can be used directly in unquoted values:
+
+- **Letters and digits**: `a-z`, `A-Z`, `0-9`
+- **Special characters**: `!`, `#`, `/`, `@`, `$`, `%`, `^`, `&`, `*`, `+`, `=`, `<`, `>`, `?`, `~`, `.`, `;`, `-`, `_`
+- **Single and double quotes**: `'`, `"`
+- **Spaces**
+
+**Examples:**
+
+```
+(code,user#123/v1!)
+(tag,has,#important)
+(path,sw,/home/user)
+(name,has,John Doe)
+```
+
+### Quoted String Syntax (Recommended)
+
+For values containing commas, pipes, or parentheses, use quoted strings:
+
+**Double quotes:**
+
+```
+(name,"Smith, John")
+(address,"123 Main St, Suite 100")
+```
+
+**Single quotes:**
+
+```
+(name,'Smith, John')
+(company,'Acme, Inc.')
+```
+
+**Escape quotes inside quoted strings:**
+
+- `\"` inside double-quoted strings
+- `\'` inside single-quoted strings
+- `\\` for backslashes
+
+**Examples:**
+
+```
+(title,"He said \"hello\"")
+(text,'It\'s working')
+(path,"C:\\Windows\\System32")
+```
+
+**Empty strings:**
+
+```
+(name,"")
+(value,'')
+```
+
+### Backslash Escaping (Alternative)
+
+You can also escape special characters with backslashes in unquoted values:
 
 | Character       | Escape Sequence | Example                 | Result                                 |
 | --------------- | --------------- | ----------------------- | -------------------------------------- |
 | `,` (comma)     | `\,`            | `(name,Doe\, John)`     | `"name" = 'Doe, John'`                 |
 | `\|` (pipe)     | `\|`            | `(desc,has,A\|B)`       | `"desc"::text ILIKE '%A\|B%'`          |
 | `\` (backslash) | `\\`            | `(path,sw,C:\\Windows)` | `"path"::text ILIKE E'C:\\\\Windows%'` |
-
-Spaces do **not** require escaping:
-
-**Filter:**
-
-```
-(name,has,John Doe)
-```
-
-**SQL:**
-
-```sql
-"name"::text ILIKE '%John Doe%'
-```
 
 ## IN Operator Values
 
@@ -121,6 +168,36 @@ Escape literal pipes within values:
 
 ```sql
 "tags" IN ('red|green', 'blue', 'yellow')
+```
+
+### Quoted Strings in IN Operator
+
+Mix quoted and unquoted values for complex cases:
+
+**Example 5 - Filter:**
+
+```
+(status,in,"Active, Working"|Pending|"On Hold")
+```
+
+**SQL:**
+
+```sql
+"status" IN ('Active, Working', 'Pending', 'On Hold')
+```
+
+---
+
+**Example 6 - Filter:**
+
+```
+(tag,in,'red,blue'|'green'|yellow)
+```
+
+**SQL:**
+
+```sql
+"tag" IN ('red,blue', 'green', 'yellow')
 ```
 
 ## Logical Operators
