@@ -8,6 +8,8 @@
 		width: 90%;
 		margin: 0 auto;
 		max-width: 800px;
+		height: calc(100vh - 123px);
+		overflow: hidden;
 	}
 
 	.tabHeader {

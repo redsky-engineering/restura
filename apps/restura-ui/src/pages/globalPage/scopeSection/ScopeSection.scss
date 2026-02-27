@@ -1,6 +1,16 @@
 @import 'src/themes/themes';
 
 .rsScopeSection {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+
+	.scopeList {
+		flex: 1;
+		overflow-y: auto;
+	}
+
 	.deleteIcon {
 		color: theme-var($neutralBeige500);
 		cursor: pointer;

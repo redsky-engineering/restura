@@ -37,7 +37,7 @@ const ScopeSection: React.FC<ScopeSectionProps> = (props) => {
 
 	return (
 		<Box className={'rsScopeSection'}>
-			<Box display={'flex'} gap={16} alignItems={'center'}>
+			<Box display={'flex'} gap={16} alignItems={'center'} flexShrink={0}>
 				<Box width={'100%'}>
 					<InputText
 						value={newScopeName}
@@ -53,7 +53,7 @@ const ScopeSection: React.FC<ScopeSectionProps> = (props) => {
 					Add
 				</Button>
 			</Box>
-			<Box display={'flex'} flexDirection={'column'} gap={16} mt={16}>
+			<Box className={'scopeList'} display={'flex'} flexDirection={'column'} gap={16} mt={16}>
 				{schema.scopes.map((scope) => {
 					return (
 						<Box key={scope} className={'scopeItem'}>
