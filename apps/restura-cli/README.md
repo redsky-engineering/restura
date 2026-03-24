@@ -7,7 +7,7 @@ Command-line interface for Restura. Provides tooling for generating TypeScript t
 `@restura/core` must be built before using the CLI:
 
 ```bash
-bun --filter @restura/core build
+pnpm --filter @restura/core build
 ```
 
 ## Setup
@@ -15,14 +15,14 @@ bun --filter @restura/core build
 Install dependencies from the workspace root:
 
 ```bash
-bun install
+pnpm install
 ```
 
 To make the `restura` command available globally:
 
 ```bash
 cd apps/restura-cli
-bun link
+pnpm link --global
 ```
 
 ## Commands
@@ -82,9 +82,9 @@ pnpm build
 
 ```bash
 # Run directly without linking
-bun dev -- types -s ./restura.schema.json -o ./generated-types
-bun dev -- diff -s ./restura.schema.json
+pnpm dev -- types -s ./restura.schema.json -o ./generated-types
+pnpm dev -- diff -s ./restura.schema.json
 
 # Run tests
-bun test
+pnpm test
 ```
