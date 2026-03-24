@@ -26,7 +26,9 @@ program
 	.alias('d')
 	.description('Diff a restura.schema.json against a live database and emit migration SQL')
 	.requiredOption('-s, --schema <path>', 'Path to the restura.schema.json file')
-	.option('--scratch-suffix <string>', 'Suffix appended to the scratch database name', '')
 	.action(diffCommand);
 
-program.parseAsync();
+program.parseAsync().catch((err) => {
+	console.error(err);
+	process.exit(1);
+});

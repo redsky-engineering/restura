@@ -45,9 +45,18 @@ restura t -s ./restura.schema.json -o ./generated-types
 
 ### `diff` (alias: `d`)
 
-Diffs a `restura.schema.json` against a live database and prints the SQL needed to bring the database in line with the schema. Output goes to stdout so it can be inspected, piped, or redirected as needed.
+Diffs a `restura.schema.json` against a live database and prints the SQL needed to bring the database in line with the schema. The diff engine introspects the live database directly via `pg_catalog` and `information_schema` — no scratch database is needed.
 
-Requires the `RESTURA_DB_URL` environment variable to be set to a Postgres connection string. A scratch database (`<dbname>_scratch`) is created automatically and torn down between runs.
+Supported operations:
+- `CREATE TABLE` / `DROP TABLE`
+- `ADD COLUMN` / `DROP COLUMN` / `ALTER COLUMN` (type, nullability, default)
+- `CREATE INDEX` / `DROP INDEX`
+- `ADD` / `DROP` foreign key constraints
+- `ADD` / `DROP` check constraints
+
+Output goes to stdout so it can be inspected, piped, or redirected as needed.
+
+Requires the `RESTURA_DB_URL` environment variable (or a `.env` file in the working directory).
 
 ```bash
 RESTURA_DB_URL=postgresql://user:pass@localhost:5432/mydb restura diff --schema ./restura.schema.json
@@ -59,10 +68,9 @@ RESTURA_DB_URL=... restura diff -s ./restura.schema.json > migrations/001_change
 
 **Options:**
 
-| Flag                        | Alias | Description                                  | Required |
-| --------------------------- | ----- | -------------------------------------------- | -------- |
-| `--schema <path>`           | `-s`  | Path to the `restura.schema.json` file       | Yes      |
-| `--scratch-suffix <string>` |       | Suffix appended to the scratch database name | No       |
+| Flag               | Alias | Description                            | Required |
+| ------------------ | ----- | -------------------------------------- | -------- |
+| `--schema <path>`  | `-s`  | Path to the `restura.schema.json` file | Yes      |
 
 **Environment variables:**
 

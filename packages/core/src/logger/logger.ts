@@ -70,10 +70,14 @@ function buildErrorSerializer(loggerConfig?: LoggerConfigSchema) {
 
 function buildPinoInstance(loggerConfig?: LoggerConfigSchema): pino.Logger {
 	const level = loggerConfig ? logLevelMap[loggerConfig.level] : 'info';
-	const stream = loggerConfig?.stream ?? buildDefaultStream();
-	const transport = loggerConfig?.transports ? { transport: { targets: loggerConfig.transports } } : {};
+	const options: pino.LoggerOptions = { level, serializers: { err: buildErrorSerializer(loggerConfig) } };
 
-	return pino({ level, ...transport, serializers: { err: buildErrorSerializer(loggerConfig) } }, stream);
+	if (loggerConfig?.transports) {
+		options.transport = { targets: loggerConfig.transports };
+		return pino(options);
+	}
+
+	return pino(options, loggerConfig?.stream ?? buildDefaultStream());
 }
 
 function buildContext(args: unknown[]) {

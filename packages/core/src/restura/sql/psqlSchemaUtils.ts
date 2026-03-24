@@ -4,6 +4,7 @@ import pg from 'pg';
 import { type ColumnData, type ResturaSchema } from '../schemas/resturaSchema.js';
 import { DynamicObject, RequesterDetails } from '../types/customExpressTypes.js';
 import { PsqlPool } from './PsqlPool.js';
+import { escapeColumnName } from './PsqlUtils.js';
 
 const { Client } = pg;
 
@@ -196,7 +197,7 @@ BEGIN
 						'previousRecord', OLD
 		)::text
 		);
-	RETURN NEW;
+	RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -232,7 +233,7 @@ BEGIN
 						)
 		)::text
 		);
-	RETURN NEW;
+	RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -340,14 +341,12 @@ export function generateDatabaseSchemaFromSchema(schema: ResturaSchema): string 
 
 export async function getNewPublicSchemaAndScratchPool(targetPool: PsqlPool, scratchDbName: string): Promise<PsqlPool> {
 	const scratchDbExists = await targetPool.runQuery<DynamicObject>(
-		`SELECT *
-             FROM pg_database
-             WHERE datname = '${scratchDbName}';`,
-		[],
+		`SELECT * FROM pg_database WHERE datname = ?;`,
+		[scratchDbName],
 		systemUser
 	);
 	if (scratchDbExists.length === 0) {
-		await targetPool.runQuery(`CREATE DATABASE ${scratchDbName};`, [], systemUser);
+		await targetPool.runQuery(`CREATE DATABASE ${escapeColumnName(scratchDbName)};`, [], systemUser);
 	}
 
 	const scratchPool = new PsqlPool({
@@ -361,7 +360,7 @@ export async function getNewPublicSchemaAndScratchPool(targetPool: PsqlPool, scr
 		connectionTimeoutMillis: targetPool.poolConfig.connectionTimeoutMillis
 	});
 	await scratchPool.runQuery(`DROP SCHEMA public CASCADE;`, [], systemUser);
-	await scratchPool.runQuery(`CREATE SCHEMA public AUTHORIZATION ${targetPool.poolConfig.user};`, [], systemUser);
+	await scratchPool.runQuery(`CREATE SCHEMA public AUTHORIZATION ${escapeColumnName(targetPool.poolConfig.user)};`, [], systemUser);
 	const schemaComment = await targetPool.runQuery<{ description: string }>(
 		`
 		SELECT pg_description.description
@@ -372,7 +371,7 @@ export async function getNewPublicSchemaAndScratchPool(targetPool: PsqlPool, scr
 		systemUser
 	);
 	if (schemaComment[0]?.description) {
-		await scratchPool.runQuery(`COMMENT ON SCHEMA public IS '${schemaComment[0]?.description}';`, [], systemUser);
+		await scratchPool.runQuery(`COMMENT ON SCHEMA public IS $1;`, [schemaComment[0].description], systemUser);
 	}
 	return scratchPool;
 }
@@ -382,32 +381,37 @@ export async function diffDatabaseToSchema(
 	targetPool: PsqlPool,
 	scratchDbName: string
 ): Promise<string> {
-	const scratchPool = await getNewPublicSchemaAndScratchPool(targetPool, scratchDbName);
-	const sqlFullStatement = generateDatabaseSchemaFromSchema(schema);
-	await scratchPool.runQuery(sqlFullStatement, [], systemUser);
+	let scratchPool: PsqlPool | undefined;
+	let originalClient: InstanceType<typeof Client> | undefined;
+	let scratchClient: InstanceType<typeof Client> | undefined;
 
-	const originalClient = new Client({
-		database: targetPool.poolConfig.database,
-		user: targetPool.poolConfig.user,
-		password: targetPool.poolConfig.password,
-		host: targetPool.poolConfig.host,
-		port: targetPool.poolConfig.port
-	});
-	const scratchClient = new Client({
-		database: scratchDbName,
-		user: targetPool.poolConfig.user,
-		password: targetPool.poolConfig.password,
-		host: targetPool.poolConfig.host,
-		port: targetPool.poolConfig.port
-	});
-	const promises = [originalClient.connect(), scratchClient.connect()];
-	await Promise.all(promises);
+	try {
+		scratchPool = await getNewPublicSchemaAndScratchPool(targetPool, scratchDbName);
+		const sqlFullStatement = generateDatabaseSchemaFromSchema(schema);
+		await scratchPool.runQuery(sqlFullStatement, [], systemUser);
 
-	const infoPromises = [pgInfo({ client: originalClient }), pgInfo({ client: scratchClient })];
-	const [info1, info2] = await Promise.all(infoPromises);
+		const connectionConfig = {
+			host: targetPool.poolConfig.host,
+			port: targetPool.poolConfig.port,
+			user: targetPool.poolConfig.user,
+			password: targetPool.poolConfig.password,
+			ssl: targetPool.poolConfig.ssl
+		};
+		originalClient = new Client({ ...connectionConfig, database: targetPool.poolConfig.database });
+		scratchClient = new Client({ ...connectionConfig, database: scratchDbName });
 
-	const diff = getDiff(info1, info2);
-	const endPromises = [originalClient.end(), scratchClient.end()];
-	await Promise.all(endPromises);
-	return diff.join('\n');
+		await Promise.all([originalClient.connect(), scratchClient.connect()]);
+		const [info1, info2] = await Promise.all([
+			pgInfo({ client: originalClient }),
+			pgInfo({ client: scratchClient })
+		]);
+		const diff = getDiff(info1, info2);
+		return diff.join('\n');
+	} finally {
+		const cleanups: Promise<void>[] = [];
+		if (originalClient) cleanups.push(originalClient.end());
+		if (scratchClient) cleanups.push(scratchClient.end());
+		if (scratchPool) cleanups.push(scratchPool.pool.end());
+		await Promise.allSettled(cleanups);
+	}
 }

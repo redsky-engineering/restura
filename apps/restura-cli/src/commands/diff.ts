@@ -1,10 +1,10 @@
-import { PsqlPool, diffDatabaseToSchema, isSchemaValid, type ResturaSchema } from '@restura/core';
+import { PsqlPool, introspectDatabase, diffSchemaToDatabase, isSchemaValid, type ResturaSchema } from '@restura/core';
 import fs from 'node:fs';
 
-export async function diffCommand(options: { schema: string; scratchSuffix: string }): Promise<void> {
+export async function diffCommand(options: { schema: string }): Promise<void> {
 	const dbUrl = process.env.RESTURA_DB_URL;
 	if (!dbUrl) {
-		console.error('Error: RESTURA_DB_URL environment variable is not set');
+		console.error('Error: RESTURA_DB_URL is not set. Add it to a .env file or export it in your shell.');
 		process.exit(1);
 	}
 
@@ -31,30 +31,21 @@ export async function diffCommand(options: { schema: string; scratchSuffix: stri
 	}
 
 	const validSchema = schema as ResturaSchema;
-
-	const parsedUrl = new URL(dbUrl);
-	const dbName = parsedUrl.pathname.replace(/^\//, '');
-	if (!dbName) {
-		console.error('Error: could not parse database name from RESTURA_DB_URL');
-		process.exit(1);
-	}
-
-	const scratchDbName = options.scratchSuffix ? `${dbName}_scratch_${options.scratchSuffix}` : `${dbName}_scratch`;
-
 	const pool = new PsqlPool({ connectionString: dbUrl });
 
-	let sql: string;
 	try {
-		sql = await diffDatabaseToSchema(validSchema, pool, scratchDbName);
+		const snapshot = await introspectDatabase(pool);
+		const statements = diffSchemaToDatabase(validSchema, snapshot);
+
+		if (statements.length === 0) {
+			console.log('No schema differences found.');
+		} else {
+			console.log(statements.join('\n'));
+		}
 	} catch (err) {
 		console.error(`Error: diff failed: ${err}`);
-		process.exit(1);
+		process.exitCode = 1;
+	} finally {
+		await pool.pool.end();
 	}
-
-	if (!sql.trim()) {
-		console.log('No schema differences found.');
-		return;
-	}
-
-	console.log(sql);
 }

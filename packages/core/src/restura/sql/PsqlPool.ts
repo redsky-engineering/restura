@@ -11,7 +11,12 @@ export class PsqlPool extends PsqlConnection {
 	constructor(public poolConfig: PoolConfig) {
 		super();
 		if (poolConfig.connectionString) {
-			const url = new URL(poolConfig.connectionString as string);
+			let url: URL;
+			try {
+				url = new URL(poolConfig.connectionString as string);
+			} catch {
+				throw new Error(`Invalid connectionString: ${poolConfig.connectionString}`);
+			}
 			poolConfig.host = url.hostname;
 			poolConfig.port = url.port ? parseInt(url.port) : 5432;
 			poolConfig.user = url.username;
