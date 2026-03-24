@@ -1,0 +1,3056 @@
+{
+	"customTypes": [
+		"export interface FilteredUser {\n    id: number;\n\tfirstName: string;\n\tlastName: string;\n\temail: string;\n\trole: string;\n\tlastLoginOn: string | null;\n}",
+		"export interface AuthResponse {\n    token: string;\n    tokenExp: string;\n    refreshToken: string;\n    refreshTokenExp: string;\n}",
+		"export interface GetBookPromptResponse{\n    id: number;\n    title: string;\n}",
+		"export interface CreateStoryRequest{\n    title?: string;\n\tcontent?: string;\n\tbookId: number;\n\tsentToEmail?: string;\n\tprompt?: string;\n\tpromptType?: Model.Story['promptType'];\n}",
+		"export interface CreateStoryResponse{\n    id: number;\n    title: string | null;\n}",
+		"export interface CreateStoryBulkRequest{\n    bookIds?: number[];\n    prompt?: string;\n    promptType?: Model.Story['promptType'];\n}",
+		"export interface GetPromptPagedRequest extends Restura.PageQuery {\n\tcategoryId?: number;\n}",
+		"export interface GetPromptPagedResponse extends Pick<Model.Prompt, 'id' | 'content'> {\n    books: Pick<Model.Book, 'id' | 'title'>[];\n    categories: Pick<Model.PromptCategory, 'id' | 'name'>[]\n}",
+		"export interface CreateStoryBulkResponse{\n    id: number;\n    prompt: string | null;\n    order: number;\n    title: string;\n}",
+		"export interface StoryImageGenerateRequest {\n    storyId: number;\n    prompt: string;\n    artStyle: Model.Book['artStyle'];\n}",
+		"export interface StoryImageGenerateResponse {\n    requestId: string;\n}",
+		"export type StoryCleanUpOption = \"CHECK_GRAMMAR\" | \"FIX_SPELLING\" | \"REMOVE_FILLER_WORDS\";",
+		"export interface StoryCleanUpRequest {\n    id: number;\n    options: StoryCleanUpOption[];\n}",
+		"export interface StoryCleanUpResponse {\n    requestId: string;   \n}",
+		"export interface StoryResetContentResponse {\n   content: string;\n}",
+		"export interface UploadStoryImageResponse {\n   id: number;\n   url: string;\n}",
+		"export interface UploadBookCoverImageResponse {\n   coverImageUrl: string;\n}",
+		"export interface StoryImagePromptRequest {\n    content: string;\n}",
+		"export interface StoryImagePromptResponse {\n    prompt: string;\n}",
+		"export interface StoryImagePageAllResponse {\n    id: number;\n    parentTextPage: number;\n    url: string;\n    source: Model.Image['source'];\n}",
+		"export interface PostAudioResponse extends Model.Audio {};",
+		"export interface RefineStoryImageRequest {\n  storyImageId: number;\n  prompt: string;\n}",
+		"export interface RefineStoryImageResponse {\n  requestId: string;\n}",
+		"export interface GetBookResponse extends Omit<Model.Book, \"userId\" | \"pdfUrl\"> {\n  story: {\n    id: Model.Story['id'];\n    author: Model.Story['author'];\n    status: Model.Story['status'];\n    prompt: Model.Story['prompt'];\n    order: Model.Story['order'];\n    pageCount: Model.Story['pageCount'];\n    title: Model.Story['title'];\n    contributorInvitationEmail: string | null;\n    contributorName: string | null;\n    contributorEmail: string | null;\n    content: string | null;\n    audioUrl: string | null;\n  }[];\n}",
+		"export interface CreateStoryFromMediaResponse {\n    requestId: string;\n    story: Model.Story;\n}",
+		"export interface UpdateStoryResponse extends Model.Story {};",
+		"export interface MarkStoryCompleteResponse extends Model.Story {};",
+		"export interface PostVideoResponse extends Model.Video {};",
+		"export interface PostWebhookRequest {\n    triggerType: string;   \n    payload: Record<string, unknown>;\n}",
+		"export interface CreatePrintHistoryResponse {\n    id: number;\n    creditsUsed: number;\n    remainingCredits: number;\n}",
+		"export interface PostBookGeneratePdfRequest {\n    pdfHtml: string;\n    coverImageUrl?: string;\n    bookId: number;\n    options: {\n        pageCount?: number;\n    }\n}",
+		"export type PostPublishBookRequest = PostBookGeneratePdfRequest;"
+	],
+	"database": [
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"comment": "Foreign key to book(id)",
+					"isNullable": false,
+					"name": "bookId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to user(id)",
+					"isNullable": false,
+					"name": "userId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"isNullable": false,
+					"length": 255,
+					"name": "coverPdfUrl",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": false,
+					"length": 255,
+					"name": "interiorPdfUrl",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": false,
+					"length": 255,
+					"name": "coverGuid",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": false,
+					"length": 255,
+					"name": "interiorGuid",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				}
+			],
+			"foreignKeys": [
+				{
+					"column": "bookId",
+					"name": "documents_bookId_book_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "book"
+				},
+				{
+					"column": "userId",
+					"name": "documents_userId_user_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "user"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["bookId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "documents_bookId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["userId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "documents_userId_index",
+					"order": "ASC"
+				}
+			],
+			"name": "document",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"comment": "Foreign key to user(id)",
+					"isNullable": false,
+					"name": "userId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to book(id)",
+					"isNullable": false,
+					"name": "bookId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{ "isNullable": true, "name": "printedOn", "roles": [], "scopes": [], "type": "DATETIME" },
+				{ "isNullable": true, "length": 255, "name": "company", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"isNullable": false,
+					"length": 255,
+					"name": "streetLine1",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": true,
+					"length": 255,
+					"name": "streetLine2",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{ "isNullable": false, "length": 100, "name": "city", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"isNullable": false,
+					"length": 100,
+					"name": "stateProvince",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": false,
+					"length": 20,
+					"name": "postalCode",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": false,
+					"length": 2,
+					"name": "countryCode",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"default": "1",
+					"isNullable": false,
+					"name": "creditsUsed",
+					"roles": [],
+					"scopes": [],
+					"type": "SMALLINT"
+				},
+				{ "isNullable": true, "length": 255, "name": "notes", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"isNullable": true,
+					"length": 255,
+					"name": "failureReason",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"default": "'PENDING'",
+					"isNullable": false,
+					"name": "status",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'PENDING','PROCESSING','COMPLETED','FAILED','CANCELLED'"
+				},
+				{
+					"default": "1",
+					"isNullable": false,
+					"name": "quantity",
+					"roles": [],
+					"scopes": [],
+					"type": "SMALLINT"
+				},
+				{
+					"isNullable": false,
+					"length": 255,
+					"name": "coverPdfUrl",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": false,
+					"length": 255,
+					"name": "interiorPdfUrl",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				}
+			],
+			"foreignKeys": [
+				{
+					"column": "userId",
+					"name": "printHistory_userId_user_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "user"
+				},
+				{
+					"column": "bookId",
+					"name": "printHistory_bookId_book_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "book"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["userId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "printHistory_userId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["bookId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "printHistory_bookId_index",
+					"order": "ASC"
+				}
+			],
+			"name": "printHistory",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "startedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": true, "name": "endedOn", "roles": [], "scopes": [], "type": "DATETIME" },
+				{
+					"default": "'ACTIVE'",
+					"isNullable": false,
+					"name": "status",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'ACTIVE','EXPIRED','CANCELED'"
+				},
+				{
+					"comment": "Foreign key to user(id)",
+					"isNullable": true,
+					"name": "userId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to userInvitation(id)",
+					"isNullable": true,
+					"name": "userInvitationId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				}
+			],
+			"foreignKeys": [
+				{
+					"column": "userId",
+					"name": "subscription_userId_user_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "user"
+				},
+				{
+					"column": "userInvitationId",
+					"name": "subscription_userInvitationId_userInvitation_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "userInvitation"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["userId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "subscription_userId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["userInvitationId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "subscription_userInvitationId_index",
+					"order": "ASC"
+				}
+			],
+			"name": "subscription",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": false, "length": 255, "name": "url", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": false, "length": 255, "name": "guid", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"comment": "Foreign key to user(id)",
+					"isNullable": true,
+					"name": "userId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to storyContributorInvitation(id)",
+					"isNullable": true,
+					"name": "storyContributorInvitationId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to storyContributor(id)",
+					"hasAutoIncrement": false,
+					"isNullable": true,
+					"name": "storyContributorId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to story(id)",
+					"isNullable": true,
+					"name": "storyId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				}
+			],
+			"foreignKeys": [
+				{
+					"column": "userId",
+					"name": "video_userId_user_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "user"
+				},
+				{
+					"column": "storyContributorInvitationId",
+					"name": "video_storyContributorInvitationId_storyContributorInvitation_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "storyContributorInvitation"
+				},
+				{
+					"column": "storyContributorId",
+					"name": "video_storyContributorId_storyContributor_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "storyContributor"
+				},
+				{
+					"column": "storyId",
+					"name": "video_storyId_story_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "story"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["userId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "video_userId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["storyContributorInvitationId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "video_storyContributorInvitationId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["storyContributorId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "video_storyContributorId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["guid"],
+					"isPrimaryKey": false,
+					"isUnique": true,
+					"name": "video_guid_unique_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["storyId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "video_storyId_index",
+					"order": "ASC"
+				}
+			],
+			"name": "video",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": false, "length": 255, "name": "guid", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": true, "name": "acceptedOn", "roles": [], "scopes": [], "type": "DATETIME" },
+				{ "isNullable": true, "name": "revokedOn", "roles": [], "scopes": [], "type": "DATETIME" },
+				{
+					"comment": "Foreign key to story(id)",
+					"isNullable": false,
+					"name": "storyId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"default": "'QUEUED'",
+					"isNullable": false,
+					"name": "status",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'SENT','QUEUED','ACCEPTED','REVOKED','FAILED'"
+				},
+				{ "isNullable": false, "length": 255, "name": "email", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"comment": "Foreign key to story(id)",
+					"isNullable": false,
+					"name": "baseStoryId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{ "isNullable": true, "name": "failedOn", "roles": [], "scopes": [], "type": "DATETIME" }
+			],
+			"foreignKeys": [
+				{
+					"column": "storyId",
+					"name": "storyContributorInvitation_storyId_story_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "story"
+				},
+				{
+					"column": "baseStoryId",
+					"name": "storyContributorInvitation_baseStoryId_story_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "story"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["storyId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "storyContributorInvitation_storyId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["guid"],
+					"isPrimaryKey": false,
+					"isUnique": true,
+					"name": "storyContributorInvitation_guid_unique_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["baseStoryId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "storyContributorInvitation_baseStoryId_index",
+					"order": "ASC"
+				}
+			],
+			"name": "storyContributorInvitation",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": false, "length": 255, "name": "email", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": true, "length": 150, "name": "name", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"comment": "Foreign key to story(id)",
+					"isNullable": false,
+					"name": "storyId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"isNullable": false,
+					"name": "contributionType",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'AUDIO','TEXT','VIDEO'"
+				},
+				{ "isNullable": true, "name": "textResponse", "roles": [], "scopes": [], "type": "TEXT" }
+			],
+			"foreignKeys": [
+				{
+					"column": "storyId",
+					"name": "storyContributor_storyId_story_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "story"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["storyId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "storyContributor_storyId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["storyId"],
+					"isPrimaryKey": false,
+					"isUnique": true,
+					"name": "storyContributor_storyId_unique_index",
+					"order": "ASC"
+				}
+			],
+			"name": "storyContributor",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": false, "length": 255, "name": "url", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": false, "length": 255, "name": "guid", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": true, "name": "transcription", "roles": [], "scopes": [], "type": "TEXT" },
+				{
+					"comment": "Foreign key to user(id)",
+					"isNullable": true,
+					"name": "userId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to storyContributorInvitation(id)",
+					"isNullable": true,
+					"name": "storyContributorInvitationId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to storyContributor(id)",
+					"isNullable": true,
+					"name": "storyContributorId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to story(id)",
+					"isNullable": true,
+					"name": "storyId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				}
+			],
+			"foreignKeys": [
+				{
+					"column": "userId",
+					"name": "audio_userId_user_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "user"
+				},
+				{
+					"column": "storyContributorInvitationId",
+					"name": "audio_storyContributorInvitationId_storyContributorInvitation_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "storyContributorInvitation"
+				},
+				{
+					"column": "storyContributorId",
+					"name": "audio_storyContributorId_storyContributor_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "storyContributor"
+				},
+				{
+					"column": "storyId",
+					"name": "audio_storyId_story_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "story"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["userId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "audio_userId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["guid"],
+					"isPrimaryKey": false,
+					"isUnique": true,
+					"name": "audio_guid_unique_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["storyContributorInvitationId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "audio_storyContributorInvitationId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["storyContributorId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "audio_storyContributorId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["storyId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "audio_storyId_index",
+					"order": "ASC"
+				}
+			],
+			"name": "audio",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"comment": "Foreign key to image(id)",
+					"isNullable": false,
+					"name": "imageId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to story(id)",
+					"isNullable": false,
+					"name": "storyId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"hasAutoIncrement": false,
+					"isNullable": true,
+					"name": "parentTextPage",
+					"roles": [],
+					"scopes": [],
+					"type": "SMALLINT"
+				}
+			],
+			"foreignKeys": [
+				{
+					"column": "imageId",
+					"name": "storyImage_imageId_image_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "image"
+				},
+				{
+					"column": "storyId",
+					"name": "storyImage_storyId_story_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "story"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["imageId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "storyImage_imageId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["storyId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "storyImage_storyId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["storyId", "parentTextPage"],
+					"isPrimaryKey": false,
+					"isUnique": true,
+					"name": "storyImage_storyId_parentTextPage_unique_index",
+					"order": "ASC"
+				}
+			],
+			"name": "storyImage",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": false, "length": 255, "name": "url", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": false, "length": 255, "name": "guid", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"isNullable": false,
+					"name": "source",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'USER_UPLOAD','AI_GENERATED'"
+				},
+				{
+					"comment": "Foreign key to user(id)",
+					"isNullable": false,
+					"name": "userId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{ "isNullable": true, "length": 55, "name": "responseId", "roles": [], "scopes": [], "type": "VARCHAR" }
+			],
+			"foreignKeys": [
+				{
+					"column": "userId",
+					"name": "image_userId_user_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "user"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["userId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "image_userId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["guid"],
+					"isPrimaryKey": false,
+					"isUnique": true,
+					"name": "image_guid_unique_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["responseId"],
+					"isPrimaryKey": false,
+					"isUnique": true,
+					"name": "image_responseId_unique_index",
+					"order": "ASC"
+				}
+			],
+			"name": "image",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"comment": "Foreign key to prompt(id)",
+					"isNullable": false,
+					"name": "promptId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"comment": "Foreign key to promptCategory(id)",
+					"isNullable": false,
+					"name": "promptCategoryId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				}
+			],
+			"foreignKeys": [
+				{
+					"column": "promptId",
+					"name": "promptCategoryMap_promptId_prompt_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "prompt"
+				},
+				{
+					"column": "promptCategoryId",
+					"name": "promptCategoryMap_promptCategoryId_promptCategory_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "promptCategory"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["promptId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "promptCategoryMap_promptId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["promptCategoryId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "promptCategoryMap_promptCategoryId_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["promptCategoryId", "promptId"],
+					"isPrimaryKey": false,
+					"isUnique": true,
+					"name": "promptCategoryMap_promptCategoryId_promptId_unique_index",
+					"order": "ASC"
+				}
+			],
+			"name": "promptCategoryMap",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": false, "length": 255, "name": "name", "roles": [], "scopes": [], "type": "VARCHAR" }
+			],
+			"foreignKeys": [],
+			"indexes": [],
+			"name": "promptCategory",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": false, "length": 255, "name": "content", "roles": [], "scopes": [], "type": "VARCHAR" }
+			],
+			"foreignKeys": [],
+			"indexes": [],
+			"name": "prompt",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": false, "length": 255, "name": "guid", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": true, "name": "usedOn", "roles": [], "scopes": [], "type": "DATETIME" },
+				{ "isNullable": false, "length": 255, "name": "email", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": true, "name": "expiresOn", "roles": [], "scopes": [], "type": "DATETIME" }
+			],
+			"foreignKeys": [],
+			"indexes": [
+				{
+					"columns": ["guid"],
+					"isPrimaryKey": false,
+					"isUnique": true,
+					"name": "userInvitation_guid_unique_index",
+					"order": "ASC"
+				}
+			],
+			"name": "userInvitation",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": false, "length": 255, "name": "title", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"comment": "Foreign key to user(id)",
+					"isNullable": false,
+					"name": "userId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{ "isNullable": true, "length": 255, "name": "author", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"isNullable": true,
+					"length": 255,
+					"name": "coverBackgroundColor",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": true,
+					"length": 255,
+					"name": "textColor",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": true,
+					"length": 255,
+					"name": "authorFontFamily",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": true,
+					"length": 255,
+					"name": "authorFontSize",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": true,
+					"length": 255,
+					"name": "titleFontFamily",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"isNullable": true,
+					"length": 255,
+					"name": "titleFontSize",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"default": "'WATERCOLOR'",
+					"isNullable": false,
+					"name": "artStyle",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'WATERCOLOR','ANIME','CHILDS_DRAWING','OIL_PAINTING','CLAYMATION','COMIC','GRAPHIC_NOVEL','CUBISM','PENCIL_DRAWING','PEN_SKETCH','ABSTRACT_PHOTOGRAPHY','MINIMALIST','IMPRESSIONIST_PAINTING'"
+				},
+				{
+					"isNullable": true,
+					"length": 255,
+					"name": "coverImageUrl",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{ "isNullable": true, "name": "publishedOn", "roles": [], "scopes": [], "type": "DATETIME" },
+				{
+					"default": "'IN_PROGRESS'",
+					"isNullable": false,
+					"name": "status",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'IN_PROGRESS','PUBLISHING','PUBLISHED'"
+				}
+			],
+			"foreignKeys": [
+				{
+					"column": "userId",
+					"name": "book_userId_user_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "user"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["userId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "book_userId_index",
+					"order": "ASC"
+				}
+			],
+			"name": "book",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{ "isNullable": true, "length": 255, "name": "prompt", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"default": "'NOT_STARTED'",
+					"isNullable": false,
+					"name": "status",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'AWAITING_RESPONSE','RECEIVED','IN_PROGRESS','UPLOADING','COMPLETE','NOT_STARTED'"
+				},
+				{ "isNullable": false, "name": "bookId", "roles": [], "scopes": [], "type": "BIGSERIAL" },
+				{ "isNullable": false, "length": 255, "name": "title", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": false, "name": "order", "roles": [], "scopes": [], "type": "INTEGER" },
+				{ "isNullable": false, "name": "content", "roles": [], "scopes": [], "type": "TEXT" },
+				{ "isNullable": false, "length": 150, "name": "author", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"comment": "Foreign key to user(id)",
+					"isNullable": false,
+					"name": "userId",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGINT"
+				},
+				{
+					"default": "1",
+					"isNullable": false,
+					"name": "pageCount",
+					"roles": [],
+					"scopes": [],
+					"type": "SMALLINT"
+				},
+				{
+					"isNullable": true,
+					"name": "promptType",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'USER','SYSTEM'"
+				}
+			],
+			"foreignKeys": [
+				{
+					"column": "bookId",
+					"name": "story_bookId_book_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "book"
+				},
+				{
+					"column": "userId",
+					"name": "story_userId_user_id_fk",
+					"onDelete": "NO ACTION",
+					"onUpdate": "NO ACTION",
+					"refColumn": "id",
+					"refTable": "user"
+				}
+			],
+			"indexes": [
+				{
+					"columns": ["userId"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "story_userId_index",
+					"order": "ASC"
+				}
+			],
+			"name": "story",
+			"roles": [],
+			"scopes": []
+		},
+		{
+			"checkConstraints": [],
+			"columns": [
+				{
+					"hasAutoIncrement": true,
+					"isNullable": false,
+					"isPrimary": true,
+					"name": "id",
+					"roles": [],
+					"scopes": [],
+					"type": "BIGSERIAL"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "createdOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "now()",
+					"isNullable": false,
+					"name": "modifiedOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"isNullable": false,
+					"length": 30,
+					"name": "firstName",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{ "isNullable": false, "length": 30, "name": "lastName", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": false, "length": 70, "name": "password", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{ "isNullable": false, "length": 100, "name": "email", "roles": [], "scopes": [], "type": "VARCHAR" },
+				{
+					"isNullable": false,
+					"name": "role",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'ADMIN','USER'"
+				},
+				{ "isNullable": true, "name": "lastLoginOn", "roles": [], "scopes": [], "type": "DATETIME" },
+				{
+					"isNullable": true,
+					"length": 100,
+					"name": "passwordResetGuid",
+					"roles": [],
+					"scopes": [],
+					"type": "VARCHAR"
+				},
+				{
+					"default": "'ACTIVE'",
+					"isNullable": false,
+					"name": "accountStatus",
+					"roles": [],
+					"scopes": [],
+					"type": "ENUM",
+					"value": "'ACTIVE','BANNED','SUSPENDED','DEACTIVATED'"
+				},
+				{
+					"comment": "When guid is no longer valid",
+					"isNullable": true,
+					"name": "passwordResetExpiresOn",
+					"roles": [],
+					"scopes": [],
+					"type": "DATETIME"
+				},
+				{
+					"default": "1",
+					"isNullable": false,
+					"name": "printCredits",
+					"roles": [],
+					"scopes": [],
+					"type": "SMALLINT"
+				},
+				{
+					"default": "500",
+					"isNullable": false,
+					"name": "imageGenerationCredits",
+					"roles": [],
+					"scopes": [],
+					"type": "SMALLINT"
+				}
+			],
+			"foreignKeys": [],
+			"indexes": [
+				{ "columns": ["id"], "isPrimaryKey": true, "isUnique": true, "name": "PRIMARY", "order": "ASC" },
+				{
+					"columns": ["email"],
+					"isPrimaryKey": false,
+					"isUnique": true,
+					"name": "user_email_unique_index",
+					"order": "ASC"
+				},
+				{
+					"columns": ["passwordResetGuid"],
+					"isPrimaryKey": false,
+					"isUnique": false,
+					"name": "user_passwordResetGuid_index",
+					"order": "ASC"
+				}
+			],
+			"name": "user",
+			"roles": [],
+			"scopes": []
+		}
+	],
+	"endpoints": [
+		{
+			"baseUrl": "/api/v1",
+			"description": "V1 Endpoints",
+			"name": "V1",
+			"routes": [
+				{
+					"assignments": [],
+					"description": "Get my user",
+					"joins": [],
+					"method": "GET",
+					"name": "get my user",
+					"path": "/user/me",
+					"request": [],
+					"response": [
+						{ "name": "id", "selector": "user.id" },
+						{ "name": "createdOn", "selector": "user.createdOn" },
+						{ "name": "modifiedOn", "selector": "user.modifiedOn" },
+						{ "name": "firstName", "selector": "user.firstName" },
+						{ "name": "lastName", "selector": "user.lastName" },
+						{ "name": "email", "selector": "user.email" },
+						{ "name": "role", "selector": "user.role" },
+						{ "name": "lastLoginOn", "selector": "user.lastLoginOn" },
+						{ "name": "accountStatus", "selector": "user.accountStatus" },
+						{ "name": "printCredits", "selector": "user.printCredits" },
+						{ "name": "imageGenerationCredits", "selector": "user.imageGenerationCredits" }
+					],
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"table": "user",
+					"type": "ONE",
+					"where": [{ "columnName": "id", "operator": "=", "tableName": "user", "value": "#userId" }]
+				},
+				{
+					"description": "User login endpoint",
+					"method": "POST",
+					"name": "Login",
+					"path": "/user/login",
+					"request": [
+						{
+							"name": "username",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "password",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "AuthResponse",
+					"roles": [],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Refresh an old, possibly expired token and returns a new token.",
+					"method": "POST",
+					"name": "Refreshes a Token",
+					"path": "/user/refresh-token",
+					"request": [],
+					"responseType": "AuthResponse",
+					"roles": [],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Creates a user",
+					"method": "POST",
+					"name": "Create User",
+					"path": "/user",
+					"request": [
+						{
+							"name": "firstName",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "lastName",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "email",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "password",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "phone",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{ "name": "guid", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "string" }] }
+					],
+					"responseType": "FilteredUser",
+					"roles": [],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Update an existing user.",
+					"method": "PATCH",
+					"name": "Update User",
+					"path": "/user",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] },
+						{
+							"name": "firstName",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "lastName",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "email",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "role",
+							"required": false,
+							"validator": [{ "type": "ONE_OF", "value": ["ADMIN", "USER"] }]
+						},
+						{
+							"name": "password",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "FilteredUser",
+					"roles": ["ADMIN"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "User logout endpoint",
+					"method": "POST",
+					"name": "Logout",
+					"path": "/user/logout",
+					"request": [],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Checks if a given username or email or both are available or not",
+					"method": "POST",
+					"name": "Check Available",
+					"path": "/user/check-available",
+					"request": [
+						{
+							"name": "username",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "email",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": [],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Verifies a user password to get past security checkpoints",
+					"method": "POST",
+					"name": "Verify User Password",
+					"path": "/user/verify-password",
+					"request": [
+						{
+							"name": "password",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Sends a forgot password request",
+					"method": "POST",
+					"name": "Forgot Password",
+					"path": "/user/forgot-password",
+					"request": [
+						{
+							"name": "email",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": [],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Changes a password of the user",
+					"method": "POST",
+					"name": "Change Password",
+					"path": "/user/change-password",
+					"request": [
+						{
+							"name": "oldPassword",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "newPassword",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Resets a password using a reset password guid",
+					"method": "POST",
+					"name": "Reset Password",
+					"path": "/user/reset-password",
+					"request": [
+						{
+							"name": "guid",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "newPassword",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": [],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Deletes the user that calls this. This is a post so we don't show password on url.",
+					"method": "POST",
+					"name": "Delete Me",
+					"path": "/user/delete/me",
+					"request": [
+						{
+							"name": "password",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"assignments": [],
+					"description": "Update my user",
+					"joins": [],
+					"method": "PATCH",
+					"name": "Update my user",
+					"path": "/user/me",
+					"request": [
+						{
+							"name": "firstName",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "lastName",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "email",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "phone",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "password",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"response": [
+						{ "name": "id", "selector": "user.id" },
+						{ "name": "firstName", "selector": "user.firstName" },
+						{ "name": "lastName", "selector": "user.lastName" },
+						{ "name": "email", "selector": "user.email" }
+					],
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"table": "user",
+					"type": "ONE",
+					"where": [{ "columnName": "id", "operator": "=", "tableName": "user", "value": "#userId" }]
+				},
+				{
+					"assignments": [],
+					"description": "Get my books",
+					"joins": [],
+					"method": "GET",
+					"name": "Get my books",
+					"path": "/books/me",
+					"request": [],
+					"response": [
+						{ "name": "id", "selector": "book.id" },
+						{ "name": "createdOn", "selector": "book.createdOn" },
+						{ "name": "modifiedOn", "selector": "book.modifiedOn" },
+						{ "name": "title", "selector": "book.title" },
+						{
+							"name": "story",
+							"subquery": {
+								"joins": [
+									{
+										"alias": "bookId_book",
+										"foreignColumnName": "id",
+										"localColumnName": "bookId",
+										"table": "book",
+										"type": "INNER"
+									}
+								],
+								"properties": [
+									{ "name": "id", "selector": "story.id" },
+									{ "name": "prompt", "selector": "story.prompt" }
+								],
+								"table": "story",
+								"where": [
+									{
+										"columnName": "bookId",
+										"operator": "=",
+										"tableName": "story",
+										"value": "book.id"
+									}
+								]
+							}
+						},
+						{ "name": "publishedOn", "selector": "book.publishedOn" },
+						{ "name": "status", "selector": "book.status" }
+					],
+					"roles": ["USER", "ADMIN"],
+					"scopes": [],
+					"table": "book",
+					"type": "ARRAY",
+					"where": [{ "columnName": "userId", "operator": "=", "tableName": "book", "value": "#userId" }]
+				},
+				{
+					"description": "Get book by id",
+					"method": "GET",
+					"name": "Get book by id",
+					"path": "/book",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"responseType": "GetBookResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"assignments": [{ "name": "userId", "value": "#userId" }],
+					"description": "Create a book",
+					"joins": [],
+					"method": "POST",
+					"name": "Create a book",
+					"path": "/book",
+					"request": [
+						{
+							"name": "title",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "artStyle",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"response": [
+						{ "name": "id", "selector": "book.id" },
+						{ "name": "title", "selector": "book.title" },
+						{ "name": "artStyle", "selector": "book.artStyle" }
+					],
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"table": "book",
+					"type": "ONE",
+					"where": []
+				},
+				{
+					"assignments": [],
+					"description": "Update book details",
+					"joins": [],
+					"method": "PATCH",
+					"name": "Update book",
+					"path": "/book",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] },
+						{
+							"name": "artStyle",
+							"required": false,
+							"validator": [
+								{
+									"type": "ONE_OF",
+									"value": [
+										"WATERCOLOR",
+										"ANIME",
+										"CHILDS_DRAWING",
+										"OIL_PAINTING",
+										"CLAYMATION",
+										"COMIC",
+										"GRAPHIC_NOVEL",
+										"CUBISM",
+										"PENCIL_DRAWING",
+										"PEN_SKETCH",
+										"ABSTRACT_PHOTOGRAPHY",
+										"MINIMALIST",
+										"IMPRESSIONIST_PAINTING"
+									]
+								}
+							]
+						},
+						{
+							"name": "title",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "textColor",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "titleFontFamily",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "titleFontSize",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "authorFontFamily",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "authorFontSize",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "coverBackgroundColor",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "coverImageUrl",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "author",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"response": [
+						{ "name": "id", "selector": "book.id" },
+						{ "name": "createdOn", "selector": "book.createdOn" },
+						{ "name": "modifiedOn", "selector": "book.modifiedOn" },
+						{ "name": "title", "selector": "book.title" },
+						{ "name": "userId", "selector": "book.userId" },
+						{ "name": "author", "selector": "book.author" },
+						{ "name": "coverBackgroundColor", "selector": "book.coverBackgroundColor" },
+						{ "name": "textColor", "selector": "book.textColor" },
+						{ "name": "authorFontFamily", "selector": "book.authorFontFamily" },
+						{ "name": "authorFontSize", "selector": "book.authorFontSize" },
+						{ "name": "titleFontFamily", "selector": "book.titleFontFamily" },
+						{ "name": "titleFontSize", "selector": "book.titleFontSize" },
+						{ "name": "artStyle", "selector": "book.artStyle" },
+						{ "name": "coverImageUrl", "selector": "book.coverImageUrl" },
+						{ "name": "publishedOn", "selector": "book.publishedOn" }
+					],
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"table": "book",
+					"type": "ONE",
+					"where": [
+						{ "columnName": "id", "operator": "=", "tableName": "book", "value": "$id" },
+						{
+							"columnName": "userId",
+							"conjunction": "AND",
+							"operator": "=",
+							"tableName": "book",
+							"value": "#userId"
+						}
+					]
+				},
+				{
+					"description": "Create a story for a book",
+					"method": "POST",
+					"name": "Create a story",
+					"path": "/story",
+					"requestType": "CreateStoryRequest",
+					"responseType": "CreateStoryResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Edits a story",
+					"method": "PATCH",
+					"name": "Edit story",
+					"path": "/story",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] },
+						{
+							"name": "author",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "pageCount",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "content",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "title",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "UpdateStoryResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Delete story from book",
+					"method": "DELETE",
+					"name": "Delete story",
+					"path": "/story",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Reorders a story",
+					"method": "PATCH",
+					"name": "Reorder story",
+					"path": "/story/reorder",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] },
+						{
+							"name": "beforeId",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "afterId",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"assignments": [],
+					"description": "Get prompt categories",
+					"joins": [],
+					"method": "GET",
+					"name": "Get prompt categories",
+					"path": "/prompt-category/all",
+					"request": [],
+					"response": [
+						{ "name": "id", "selector": "promptCategory.id" },
+						{ "name": "createdOn", "selector": "promptCategory.createdOn" },
+						{ "name": "modifiedOn", "selector": "promptCategory.modifiedOn" },
+						{ "name": "name", "selector": "promptCategory.name" }
+					],
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"table": "promptCategory",
+					"type": "ARRAY",
+					"where": []
+				},
+				{
+					"description": "Create a story as a bulk with books or as a single with book",
+					"method": "POST",
+					"name": "Create a story as a bulk with books or as a single with book",
+					"path": "/story/bulk",
+					"requestType": "CreateStoryBulkRequest",
+					"responseType": "CreateStoryBulkResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ARRAY"
+				},
+				{
+					"description": "Gets prompts in a paginated list",
+					"method": "GET",
+					"name": "Get prompt paged",
+					"path": "/prompt/paged",
+					"requestType": "GetPromptPagedRequest",
+					"responseType": "GetPromptPagedResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_PAGED"
+				},
+				{
+					"assignments": [],
+					"description": "Get story by id",
+					"joins": [
+						{
+							"alias": "bookId_book",
+							"foreignColumnName": "id",
+							"localColumnName": "bookId",
+							"table": "book",
+							"type": "INNER"
+						},
+						{
+							"alias": "storyContributor_storyContributor",
+							"foreignColumnName": "storyId",
+							"localColumnName": "id",
+							"table": "storyContributor",
+							"type": "LEFT"
+						},
+						{
+							"alias": "audio_contributor",
+							"custom": "\"storyContributor_storyContributor\".\"id\" = \"audio_contributor\".\"storyContributorId\"",
+							"foreignColumnName": "storyContributorId",
+							"localColumnName": "id",
+							"table": "audio",
+							"type": "LEFT"
+						},
+						{
+							"alias": "audio_user",
+							"custom": "\"story\".\"userId\" = \"audio_user\".\"userId\" AND \"audio_user\".\"id\" = (SELECT a.\"id\" FROM \"audio\" a WHERE a.\"userId\" = \"story\".\"userId\" AND a.\"storyId\" = \"story\".\"id\" ORDER BY a.\"createdOn\" DESC LIMIT 1)",
+							"table": "audio",
+							"type": "LEFT"
+						}
+					],
+					"method": "GET",
+					"name": "Get story by id",
+					"path": "/story",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"response": [
+						{ "name": "id", "selector": "story.id" },
+						{ "name": "createdOn", "selector": "story.createdOn" },
+						{ "name": "modifiedOn", "selector": "story.modifiedOn" },
+						{ "name": "prompt", "selector": "story.prompt" },
+						{ "name": "status", "selector": "story.status" },
+						{ "name": "title", "selector": "story.title" },
+						{ "name": "content", "selector": "story.content" },
+						{ "name": "author", "selector": "story.author" },
+						{ "name": "bookId", "selector": "story.bookId" },
+						{
+							"name": "audioUrl",
+							"selector": "COALESCE(audio_contributor.url, audio_user.url)",
+							"type": "string | null"
+						},
+						{ "name": "bookArtStyle", "selector": "bookId_book.artStyle" },
+						{ "name": "contributorName", "selector": "storyContributor_storyContributor.name" }
+					],
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"table": "story",
+					"type": "ONE",
+					"where": [
+						{ "columnName": "id", "operator": "=", "tableName": "story", "value": "$id" },
+						{
+							"columnName": "userId",
+							"conjunction": "AND",
+							"operator": "=",
+							"tableName": "story",
+							"value": "#userId"
+						}
+					]
+				},
+				{
+					"description": "Resets the story content to the original content",
+					"method": "PATCH",
+					"name": "Reset Story Content",
+					"path": "/story/reset-content",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"responseType": "StoryResetContentResponse",
+					"roles": [],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Uploads story an image",
+					"fileUploadType": "SINGLE",
+					"method": "POST",
+					"name": "Upload story image",
+					"path": "/story-image/upload",
+					"request": [
+						{
+							"name": "storyId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "parentTextPage",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						}
+					],
+					"responseType": "UploadStoryImageResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Deletes a story image",
+					"method": "DELETE",
+					"name": "Delete story image",
+					"path": "/story-image",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Generates a story image with AI",
+					"method": "POST",
+					"name": "Generate story image",
+					"path": "/story-image/generate",
+					"requestType": "StoryImageGenerateRequest",
+					"responseType": "StoryImageGenerateResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Cleans up a story",
+					"method": "PATCH",
+					"name": "Clean up story",
+					"path": "/story/clean-up",
+					"requestType": "StoryCleanUpRequest",
+					"responseType": "StoryCleanUpResponse",
+					"roles": [],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Generate prompts for a story image",
+					"method": "POST",
+					"name": "Generate prompts for a story image",
+					"path": "/story/generate-image-prompt",
+					"requestType": "StoryImagePromptRequest",
+					"responseType": "StoryImagePromptResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ARRAY"
+				},
+				{
+					"assignments": [],
+					"description": "Gets the generated image history for a story",
+					"joins": [
+						{
+							"alias": "imageId_image",
+							"custom": "\"storyImage\".\"imageId\" = \"imageId_image\".\"id\"",
+							"table": "image",
+							"type": "INNER"
+						}
+					],
+					"method": "GET",
+					"name": "Get story image history",
+					"orderBy": { "columnName": "createdOn", "order": "DESC", "tableName": "storyImage" },
+					"path": "/story/image-history",
+					"request": [
+						{
+							"name": "storyId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						}
+					],
+					"response": [
+						{ "name": "imageUrl", "selector": "imageId_image.url" },
+						{ "name": "storyImageId", "selector": "storyImage.id" }
+					],
+					"roles": ["USER", "ADMIN"],
+					"scopes": [],
+					"table": "storyImage",
+					"type": "ARRAY",
+					"where": [
+						{ "columnName": "storyId", "operator": "=", "tableName": "storyImage", "value": "$storyId" },
+						{
+							"columnName": "userId",
+							"conjunction": "AND",
+							"operator": "=",
+							"tableName": "imageId_image",
+							"value": "#userId"
+						},
+						{
+							"columnName": "source",
+							"conjunction": "AND",
+							"operator": "=",
+							"tableName": "imageId_image",
+							"value": "'AI_GENERATED'"
+						}
+					]
+				},
+				{
+					"description": "Updates a page index for a story image",
+					"method": "PATCH",
+					"name": "Update story image page",
+					"path": "/story-image/page",
+					"request": [
+						{
+							"name": "storyImageId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"isNullable": true,
+							"name": "parentTextPage",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Gets the images that have pages set for a specified story",
+					"method": "GET",
+					"name": "Get story image page list",
+					"path": "/story/image-page/all",
+					"request": [
+						{
+							"name": "storyId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						}
+					],
+					"responseType": "StoryImagePageAllResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ARRAY"
+				},
+				{
+					"description": "Deletes an audio file",
+					"method": "DELETE",
+					"name": "Delete audio",
+					"path": "/audio",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Uploads an audio file",
+					"fileUploadType": "SINGLE",
+					"method": "POST",
+					"name": "Upload audio",
+					"path": "/audio",
+					"request": [],
+					"responseType": "PostAudioResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Refines a story image with AI",
+					"method": "POST",
+					"name": "Refine story image",
+					"path": "/story-image/refine",
+					"requestType": "RefineStoryImageRequest",
+					"responseType": "RefineStoryImageResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Invites contributors to a story",
+					"method": "POST",
+					"name": "Invite story contributors",
+					"path": "/story/invite-contributors",
+					"request": [
+						{
+							"name": "storyId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "emailList",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string[]" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"assignments": [],
+					"description": "Get story by id",
+					"joins": [
+						{
+							"alias": "storyId_story",
+							"foreignColumnName": "id",
+							"localColumnName": "storyId",
+							"table": "story",
+							"type": "INNER"
+						},
+						{
+							"alias": "userId_user",
+							"foreignColumnName": "id",
+							"localColumnName": "userId",
+							"localTable": "story",
+							"localTableAlias": "storyId_story",
+							"table": "user",
+							"type": "INNER"
+						}
+					],
+					"method": "GET",
+					"name": "Get story by id",
+					"path": "/contributor/story",
+					"request": [],
+					"response": [
+						{ "name": "storyId", "selector": "storyId_story.id" },
+						{ "name": "storyPrompt", "selector": "storyId_story.prompt" },
+						{ "name": "storyOwnerFirstName", "selector": "userId_user.firstName" },
+						{ "name": "storyOwnerLastName", "selector": "userId_user.lastName" }
+					],
+					"roles": ["CONTRIBUTOR"],
+					"scopes": [],
+					"table": "storyContributorInvitation",
+					"type": "ONE",
+					"where": [
+						{
+							"columnName": "id",
+							"operator": "=",
+							"tableName": "storyContributorInvitation",
+							"value": "#storyContributorInvitationId"
+						}
+					]
+				},
+				{
+					"description": "Submits a contribution",
+					"method": "POST",
+					"name": "Submit contribution",
+					"path": "/contributor/submit",
+					"request": [
+						{
+							"name": "name",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "content",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "audioId",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "videoId",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": ["CONTRIBUTOR"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Uploads an audio file to Apex Media",
+					"fileUploadType": "SINGLE",
+					"method": "POST",
+					"name": "Upload audio",
+					"path": "/contributor/audio",
+					"request": [
+						{
+							"name": "storyId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number | string" }]
+						}
+					],
+					"responseType": "PostAudioResponse",
+					"roles": ["CONTRIBUTOR"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Deletes an audio file",
+					"method": "DELETE",
+					"name": "Delete audio",
+					"path": "/contributor/audio",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"responseType": "boolean",
+					"roles": ["CONTRIBUTOR"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Creates a story from media",
+					"method": "POST",
+					"name": "Create story from media",
+					"path": "/story/from-media",
+					"request": [
+						{
+							"name": "audioId",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "bookId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "storyTitle",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "videoId",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						}
+					],
+					"responseType": "CreateStoryFromMediaResponse",
+					"roles": ["USER", "ADMIN"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Subscribes to server-sent events for a specific job",
+					"method": "GET",
+					"name": "Get job stream",
+					"path": "/job/stream",
+					"request": [
+						{
+							"name": "requestId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": ["USER", "ADMIN"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Cancels a job",
+					"method": "POST",
+					"name": "Cancel job",
+					"path": "/job/cancel",
+					"request": [
+						{
+							"name": "requestId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": ["USER", "ADMIN"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Sets a story's status to complete",
+					"method": "PATCH",
+					"name": "Mark story complete",
+					"path": "/story/mark-complete",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"responseType": "MarkStoryCompleteResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Deletes an video file",
+					"method": "DELETE",
+					"name": "Delete video",
+					"path": "/video",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Uploads an video file",
+					"fileUploadType": "SINGLE",
+					"method": "POST",
+					"name": "Upload video",
+					"path": "/video",
+					"request": [],
+					"responseType": "PostVideoResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Deletes a video file",
+					"method": "DELETE",
+					"name": "Delete video",
+					"path": "/contributor/video",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"responseType": "boolean",
+					"roles": ["CONTRIBUTOR"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Uploads a video file",
+					"fileUploadType": "SINGLE",
+					"method": "POST",
+					"name": "Upload video",
+					"path": "/contributor/video",
+					"request": [
+						{
+							"name": "storyId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number | string" }]
+						}
+					],
+					"responseType": "PostVideoResponse",
+					"roles": ["CONTRIBUTOR"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"assignments": [],
+					"description": "Gets my subscription",
+					"joins": [],
+					"method": "GET",
+					"name": "Get My Subscription",
+					"path": "/subscription/me",
+					"request": [],
+					"response": [
+						{ "name": "id", "selector": "subscription.id" },
+						{ "name": "createdOn", "selector": "subscription.createdOn" },
+						{ "name": "modifiedOn", "selector": "subscription.modifiedOn" },
+						{ "name": "startedOn", "selector": "subscription.startedOn" },
+						{ "name": "endedOn", "selector": "subscription.endedOn" },
+						{ "name": "status", "selector": "subscription.status" },
+						{ "name": "userId", "selector": "subscription.userId" },
+						{ "name": "userInvitationId", "selector": "subscription.userInvitationId" }
+					],
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"table": "subscription",
+					"type": "ONE",
+					"where": [
+						{ "columnName": "userId", "operator": "=", "tableName": "subscription", "value": "#userId" },
+						{
+							"columnName": "endedOn",
+							"conjunction": "AND",
+							"operator": "IS",
+							"tableName": "subscription",
+							"value": "NULL"
+						}
+					]
+				},
+				{
+					"description": "Sends a reminder email to an invited story contributor",
+					"method": "POST",
+					"name": "Remind contributor",
+					"path": "/story/remind-contributor",
+					"request": [
+						{
+							"name": "storyId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						}
+					],
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "General webhook endpoint",
+					"method": "POST",
+					"name": "Webhook",
+					"path": "/webhook",
+					"requestType": "PostWebhookRequest",
+					"responseType": "boolean",
+					"roles": ["WEBFLOW"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"assignments": [],
+					"description": "Get print history for a user",
+					"joins": [
+						{
+							"alias": "bookId_book",
+							"foreignColumnName": "id",
+							"localColumnName": "bookId",
+							"table": "book",
+							"type": "INNER"
+						}
+					],
+					"method": "GET",
+					"name": "Get print history",
+					"orderBy": { "columnName": "createdOn", "order": "DESC", "tableName": "printHistory" },
+					"path": "/print-history/all",
+					"request": [],
+					"response": [
+						{ "name": "id", "selector": "printHistory.id" },
+						{ "name": "bookTitle", "selector": "bookId_book.title" },
+						{ "name": "createdOn", "selector": "printHistory.createdOn" },
+						{ "name": "bookId", "selector": "bookId_book.id" },
+						{ "name": "company", "selector": "printHistory.company" },
+						{ "name": "streetLine1", "selector": "printHistory.streetLine1" },
+						{ "name": "streetLine2", "selector": "printHistory.streetLine2" },
+						{ "name": "city", "selector": "printHistory.city" },
+						{ "name": "stateProvince", "selector": "printHistory.stateProvince" },
+						{ "name": "postalCode", "selector": "printHistory.postalCode" },
+						{ "name": "countryCode", "selector": "printHistory.countryCode" },
+						{ "name": "creditsUsed", "selector": "printHistory.creditsUsed" }
+					],
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"table": "printHistory",
+					"type": "ARRAY",
+					"where": [
+						{ "columnName": "userId", "operator": "=", "tableName": "printHistory", "value": "#userId" }
+					]
+				},
+				{
+					"description": "Create a print request for a published book",
+					"method": "POST",
+					"name": "Create print request",
+					"path": "/print-history",
+					"request": [
+						{
+							"name": "bookId",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "quantity",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "number" }]
+						},
+						{
+							"name": "company",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "streetLine1",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "streetLine2",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "city",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "stateProvince",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "postalCode",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "countryCode",
+							"required": true,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						},
+						{
+							"name": "notes",
+							"required": false,
+							"validator": [{ "type": "TYPE_CHECK", "value": "string" }]
+						}
+					],
+					"responseType": "CreatePrintHistoryResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Uploads a cover image for a book",
+					"fileUploadType": "SINGLE",
+					"method": "POST",
+					"name": "Upload book cover image",
+					"path": "/book/cover-image",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"responseType": "UploadBookCoverImageResponse",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Uploads a generated PDF and marks the book as published",
+					"method": "POST",
+					"name": "Publish Book",
+					"path": "/book/publish",
+					"requestType": "PostPublishBookRequest",
+					"responseType": "boolean",
+					"roles": ["ADMIN", "USER"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"description": "Generate a PDF for the book",
+					"method": "POST",
+					"name": "Generate Book PDF",
+					"path": "/book/generate-pdf",
+					"requestType": "PostBookGeneratePdfRequest",
+					"responseType": "boolean",
+					"roles": ["ADMIN"],
+					"scopes": [],
+					"type": "CUSTOM_ONE"
+				},
+				{
+					"assignments": [],
+					"description": "Get Print History slim for a customer.",
+					"joins": [],
+					"method": "GET",
+					"name": "Get Print History Slim",
+					"path": "/print-history",
+					"request": [
+						{ "name": "id", "required": true, "validator": [{ "type": "TYPE_CHECK", "value": "number" }] }
+					],
+					"response": [
+						{ "name": "id", "selector": "printHistory.id" },
+						{ "name": "createdOn", "selector": "printHistory.createdOn" },
+						{ "name": "bookId", "selector": "printHistory.bookId" },
+						{ "name": "company", "selector": "printHistory.company" },
+						{ "name": "streetLine1", "selector": "printHistory.streetLine1" },
+						{ "name": "streetLine2", "selector": "printHistory.streetLine2" },
+						{ "name": "city", "selector": "printHistory.city" },
+						{ "name": "stateProvince", "selector": "printHistory.stateProvince" },
+						{ "name": "postalCode", "selector": "printHistory.postalCode" },
+						{ "name": "countryCode", "selector": "printHistory.countryCode" },
+						{ "name": "creditsUsed", "selector": "printHistory.creditsUsed" },
+						{ "name": "quantity", "selector": "printHistory.quantity" }
+					],
+					"roles": ["USER", "ADMIN"],
+					"scopes": [],
+					"table": "printHistory",
+					"type": "ONE",
+					"where": [
+						{ "columnName": "userId", "operator": "=", "tableName": "printHistory", "value": "#userId" },
+						{
+							"columnName": "id",
+							"conjunction": "AND",
+							"operator": "=",
+							"tableName": "printHistory",
+							"value": "$id"
+						}
+					]
+				}
+			]
+		}
+	],
+	"globalParams": ["userId", "storyContributorInvitationId"],
+	"roles": ["ADMIN", "USER", "CONTRIBUTOR", "WEBFLOW"],
+	"scopes": []
+}

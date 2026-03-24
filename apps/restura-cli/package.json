@@ -1,0 +1,28 @@
+{
+	"name": "restura-cli",
+	"version": "0.1.0",
+	"type": "module",
+	"private": true,
+	"bin": {
+		"restura": "./src/index.ts"
+	},
+	"scripts": {
+		"dev": "tsx src/index.ts",
+		"test": "mocha 'test/**/*.test.ts'"
+	},
+	"dependencies": {
+		"@restura/core": "workspace:*",
+		"commander": "^14.0.3"
+	},
+	"devDependencies": {
+		"@types/mocha": "^10.0.10",
+		"@types/node": "^22.19.7",
+		"mocha": "^11.7.5",
+		"tsup": "^8.5.1",
+		"tsx": "^4.21.0"
+	},
+	"mocha": {
+		"enable-source-maps": true,
+		"node-option": ["import=tsx"]
+	}
+}

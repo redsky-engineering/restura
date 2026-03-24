@@ -60,6 +60,31 @@ importers:
                 specifier: ^8.54.0
                 version: 8.54.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
 
+    apps/restura-cli:
+        dependencies:
+            '@restura/core':
+                specifier: workspace:*
+                version: link:../../packages/core
+            commander:
+                specifier: ^14.0.3
+                version: 14.0.3
+        devDependencies:
+            '@types/mocha':
+                specifier: ^10.0.10
+                version: 10.0.10
+            '@types/node':
+                specifier: ^22.19.7
+                version: 22.19.7
+            mocha:
+                specifier: ^11.7.5
+                version: 11.7.5
+            tsup:
+                specifier: ^8.5.1
+                version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)
+            tsx:
+                specifier: ^4.21.0
+                version: 4.21.0
+
     apps/restura-express:
         dependencies:
             express:
@@ -15036,7 +15061,7 @@ snapshots:
     '@types/body-parser@1.19.6':
         dependencies:
             '@types/connect': 3.4.38
-            '@types/node': 25.2.0
+            '@types/node': 22.19.7
 
     '@types/braces@3.0.5': {}
 
@@ -15048,11 +15073,11 @@ snapshots:
     '@types/compression@1.8.1':
         dependencies:
             '@types/express': 5.0.6
-            '@types/node': 25.2.0
+            '@types/node': 22.19.7
 
     '@types/connect@3.4.38':
         dependencies:
-            '@types/node': 25.2.0
+            '@types/node': 22.19.7
 
     '@types/cookie-parser@1.4.10(@types/express@5.0.6)':
         dependencies:
@@ -15060,7 +15085,7 @@ snapshots:
 
     '@types/cors@2.8.19':
         dependencies:
-            '@types/node': 25.2.0
+            '@types/node': 22.19.7
 
     '@types/debug@4.1.12':
         dependencies:
@@ -15080,7 +15105,7 @@ snapshots:
 
     '@types/express-serve-static-core@5.0.7':
         dependencies:
-            '@types/node': 25.2.0
+            '@types/node': 22.19.7
             '@types/qs': 6.14.0
             '@types/range-parser': 1.2.7
             '@types/send': 0.17.5
@@ -15161,7 +15186,7 @@ snapshots:
 
     '@types/mysql@2.15.27':
         dependencies:
-            '@types/node': 25.2.0
+            '@types/node': 22.19.7
 
     '@types/nlcst@2.0.3':
         dependencies:
@@ -15178,6 +15203,7 @@ snapshots:
     '@types/node@25.2.0':
         dependencies:
             undici-types: 7.16.0
+        optional: true
 
     '@types/pako@1.0.7': {}
 
@@ -15189,7 +15215,7 @@ snapshots:
 
     '@types/pg@8.16.0':
         dependencies:
-            '@types/node': 25.2.0
+            '@types/node': 22.19.7
             pg-protocol: 1.10.0
             pg-types: 2.2.0
 
@@ -15215,7 +15241,7 @@ snapshots:
 
     '@types/sax@1.2.7':
         dependencies:
-            '@types/node': 17.0.45
+            '@types/node': 22.19.7
 
     '@types/scheduler@0.16.8': {}
 
@@ -15224,12 +15250,12 @@ snapshots:
     '@types/send@0.17.5':
         dependencies:
             '@types/mime': 1.3.5
-            '@types/node': 25.2.0
+            '@types/node': 22.19.7
 
     '@types/serve-static@2.2.0':
         dependencies:
             '@types/http-errors': 2.0.5
-            '@types/node': 25.2.0
+            '@types/node': 22.19.7
 
     '@types/stack-utils@2.0.3': {}
 
@@ -18420,7 +18446,7 @@ snapshots:
 
     jest-worker@27.5.1:
         dependencies:
-            '@types/node': 14.18.63
+            '@types/node': 22.19.7
             merge-stream: 2.0.0
             supports-color: 8.1.1
 
@@ -21237,7 +21263,8 @@ snapshots:
 
     undici-types@6.21.0: {}
 
-    undici-types@7.16.0: {}
+    undici-types@7.16.0:
+        optional: true
 
     unicode-canonical-property-names-ecmascript@2.0.1: {}
 
