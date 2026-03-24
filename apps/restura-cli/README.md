@@ -48,11 +48,33 @@ restura t -s ./restura.schema.json -o ./generated-types
 Diffs a `restura.schema.json` against a live database and prints the SQL needed to bring the database in line with the schema. The diff engine introspects the live database directly via `pg_catalog` and `information_schema` — no scratch database is needed.
 
 Supported operations:
-- `CREATE TABLE` / `DROP TABLE`
-- `ADD COLUMN` / `DROP COLUMN` / `ALTER COLUMN` (type, nullability, default)
+
+**Table drops**
+- `DROP TABLE` — suppresses redundant index, FK, and check constraint drops that would be implicit
+
+**Table creates**
+- `CREATE TABLE` with FK constraints and check constraints inlined in the statement
+- Tables are created in dependency order based on FK relationships
+- Self-referencing FKs are inlined in the `CREATE TABLE`
+- Circular FK references are handled by deferring one side to `ALTER TABLE ADD CONSTRAINT`
+
+**Column changes**
+- `ADD COLUMN` / `DROP COLUMN`
+- `ALTER COLUMN` for nullability and default changes
+- `ALTER COLUMN TYPE` for `VARCHAR` length changes (adding, removing, tightening, or widening)
+- `ALTER COLUMN TYPE` for `DECIMAL` precision and scale changes
+
+**Index changes**
 - `CREATE INDEX` / `DROP INDEX`
-- `ADD` / `DROP` foreign key constraints
-- `ADD` / `DROP` check constraints
+- Index is rebuilt (`DROP` + `CREATE`) when columns, uniqueness, sort order, or `WHERE` clause changes
+
+**Foreign key changes**
+- `ALTER TABLE ADD CONSTRAINT ... FOREIGN KEY` for new FKs on existing tables
+- `ALTER TABLE DROP CONSTRAINT` for removed FKs
+
+**Check constraint changes**
+- `ALTER TABLE ADD CONSTRAINT ... CHECK` / `ALTER TABLE DROP CONSTRAINT` when the expression changes
+- `ENUM` column value sets are normalized and diffed against Postgres `ANY(ARRAY[...])` syntax, so only actual value-set changes trigger a rebuild
 
 Output goes to stdout so it can be inspected, piped, or redirected as needed.
 
