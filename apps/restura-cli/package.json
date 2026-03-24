@@ -13,7 +13,8 @@
 	},
 	"dependencies": {
 		"@restura/core": "workspace:*",
-		"commander": "^14.0.3"
+		"commander": "^14.0.3",
+		"dotenv": "^16.5.0"
 	},
 	"devDependencies": {
 		"@types/mocha": "^10.0.10",
@@ -24,6 +25,8 @@
 	},
 	"mocha": {
 		"enable-source-maps": true,
-		"node-option": ["import=tsx"]
+		"node-option": [
+			"import=tsx"
+		]
 	}
 }

@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+import 'dotenv/config';
+
 import { Command } from 'commander';
 import { createRequire } from 'node:module';
 import { diffCommand } from './commands/diff.js';

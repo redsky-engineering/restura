@@ -7,8 +7,17 @@ const { Pool } = pg;
 
 export class PsqlPool extends PsqlConnection {
 	public pool: PoolType;
+
 	constructor(public poolConfig: PoolConfig) {
 		super();
+		if (poolConfig.connectionString) {
+			const url = new URL(poolConfig.connectionString as string);
+			poolConfig.host = url.hostname;
+			poolConfig.port = url.port ? parseInt(url.port) : 5432;
+			poolConfig.user = url.username;
+			poolConfig.password = url.password;
+			poolConfig.database = url.pathname.replace(/^\//, '');
+		}
 		this.pool = new Pool(poolConfig);
 		// Run a test query to ensure the connection is working
 		this.queryOne('SELECT NOW();', [], {
