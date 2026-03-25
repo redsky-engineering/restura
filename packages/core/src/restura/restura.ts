@@ -74,6 +74,8 @@ class ResturaEngine {
 		authenticationHandler: AuthenticateHandler,
 		psqlConnectionPool: PsqlPool
 	): Promise<void> {
+		await logger.configure();
+
 		// Try to load config first. If it fails, we can't continue.
 		this.resturaConfig = await config.validate('restura', resturaConfigSchema);
 
