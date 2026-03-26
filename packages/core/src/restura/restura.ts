@@ -10,7 +10,8 @@ import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
 import * as prettier from 'prettier';
-import { logger } from '../logger/logger.js';
+import type { ResturaLogger } from '../logger/logger.js';
+import { logger, setLogger } from '../logger/logger.js';
 import { RsError } from './RsError.js';
 import compareSchema from './compareSchema.js';
 import customApiFactory from './customApiFactory.js';
@@ -72,9 +73,10 @@ class ResturaEngine {
 	async init(
 		app: express.Express,
 		authenticationHandler: AuthenticateHandler,
-		psqlConnectionPool: PsqlPool
+		psqlConnectionPool: PsqlPool,
+		options?: { logger?: ResturaLogger }
 	): Promise<void> {
-		await logger.configure();
+		if (options?.logger) setLogger(options.logger);
 
 		// Try to load config first. If it fails, we can't continue.
 		this.resturaConfig = await config.validate('restura', resturaConfigSchema);

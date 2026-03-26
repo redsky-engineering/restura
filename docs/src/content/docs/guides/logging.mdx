@@ -1,0 +1,108 @@
+---
+title: Logging
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+By default, Restura logs to the console. If your application already uses a logging library like [Winston](https://github.com/winstonjs/winston) or [Pino](https://getpino.io), you can plug it in by passing an adapter to `restura.init()`:
+
+```typescript
+await restura.init(app, authHandler, pool, {
+	logger: myAdapter
+});
+```
+
+## The ResturaLogger Interface
+
+Your adapter must satisfy this interface, exported from `@restura/core`:
+
+```typescript
+import type { LogLevel } from '@restura/core';
+
+interface ResturaLogger {
+	readonly level: LogLevel; // 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'
+	fatal(msg: unknown, ...args: unknown[]): void;
+	error(msg: unknown, ...args: unknown[]): void;
+	warn(msg: unknown, ...args: unknown[]): void;
+	info(msg: unknown, ...args: unknown[]): void;
+	debug(msg: unknown, ...args: unknown[]): void;
+	trace(msg: unknown, ...args: unknown[]): void;
+}
+```
+
+## Winston Example
+
+Winston uses npm log levels and doesn't have `fatal` or `trace`, so map them to the nearest equivalents:
+
+```typescript
+import winston from 'winston';
+import { type ResturaLogger, type LogLevel } from '@restura/core';
+
+const LEVEL_MAP: Record<LogLevel, string> = {
+	fatal: 'error',
+	error: 'error',
+	warn: 'warn',
+	info: 'info',
+	debug: 'debug',
+	trace: 'silly'
+};
+
+function createWinstonAdapter(level: LogLevel = 'info'): ResturaLogger {
+	const win = winston.createLogger({
+		level: LEVEL_MAP[level],
+		format: winston.format.json(),
+		transports: [new winston.transports.Console()]
+	});
+
+	return {
+		level,
+		fatal: (msg, ...args) => win.error(String(msg), ...args),
+		error: (msg, ...args) => win.error(String(msg), ...args),
+		warn: (msg, ...args) => win.warn(String(msg), ...args),
+		info: (msg, ...args) => win.info(String(msg), ...args),
+		debug: (msg, ...args) => win.debug(String(msg), ...args),
+		trace: (msg, ...args) => win.silly(String(msg), ...args)
+	};
+}
+
+await restura.init(app, authHandler, pool, {
+	logger: createWinstonAdapter('debug')
+});
+```
+
+<Aside type="note">
+	Winston's methods expect a string as the first argument. The `String(msg)` coercion handles cases where Restura
+	passes an `Error` or another non-string value as the message.
+</Aside>
+
+## Using @restura/logger
+
+Use the `createLogger` export from `@restura/logger` for a Pino-backed logger out of the box:
+
+```typescript
+import { createLogger } from '@restura/logger';
+
+const logger = createLogger({ level: 'debug' });
+
+await restura.init(app, authHandler, pool, { logger });
+```
+
+## Environment Variables
+
+Both the default console logger and `@restura/logger` respect the `RESTURA_LOG_LEVEL` environment variable. This lets you change log verbosity without modifying code — useful for production deployments or debugging in specific environments:
+
+```bash
+RESTURA_LOG_LEVEL=debug node server.js
+```
+
+Valid values are `fatal`, `error`, `warn`, `info`, `debug`, and `trace`. The default is `info` if the variable is not set or contains an invalid value.
+
+When using `@restura/logger`, an explicit `level` passed to `createLogger` always takes priority over the environment variable:
+
+```typescript
+// uses 'warn' regardless of RESTURA_LOG_LEVEL
+createLogger({ level: 'warn' })
+
+// uses RESTURA_LOG_LEVEL if set, otherwise 'info'
+createLogger()
+```

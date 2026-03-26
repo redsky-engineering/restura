@@ -15,11 +15,12 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
+		"@restura/core": "workspace:*",
+		"@restura/logger": "workspace:*",
 		"express": "^5.2.1",
 		"pg": "^8.18.0"
 	},
 	"devDependencies": {
-		"@restura/core": "workspace:*",
 		"@types/express": "^5.0.6",
 		"@types/pg": "^8.16.0",
 		"tsx": "^4.21.0",

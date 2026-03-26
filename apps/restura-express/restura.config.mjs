@@ -9,10 +9,6 @@ const config = {
 	restura: {
 		authToken: '12345',
 		scratchDatabaseSuffix: 'josh'
-	},
-	// The @restura/logger configuration
-	logger: {
-		level: 'silly'
 	}
 };
 
