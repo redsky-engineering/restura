@@ -59,7 +59,7 @@ export abstract class PsqlConnection {
 		} catch (error) {
 			if (error instanceof z.ZodError) {
 				logger.error('Invalid data returned from database:');
-				logger.silly('\n' + JSON.stringify(result, null, 2));
+				logger.trace('\n' + JSON.stringify(result, null, 2));
 				logger.error('\n' + z.prettifyError(error));
 			} else {
 				logger.error(error);
@@ -101,7 +101,7 @@ export abstract class PsqlConnection {
 		} catch (error) {
 			if (error instanceof z.ZodError) {
 				logger.error('Invalid data returned from database:');
-				logger.silly('\n' + JSON.stringify(result, null, 2));
+				logger.trace('\n' + JSON.stringify(result, null, 2));
 				logger.error('\n' + z.prettifyError(error));
 			} else {
 				logger.error(error);
@@ -117,7 +117,7 @@ export abstract class PsqlConnection {
 		startTime: [number, number],
 		prefix: string = ''
 	) {
-		if (logger.level !== 'trace' && logger.level !== 'silly') return;
+		if (logger.level !== 'trace') return;
 
 		const sqlStatement = query.replace(/\$(\d+)/g, (_, num) => {
 			const paramIndex = parseInt(num) - 1;
@@ -142,7 +142,7 @@ export abstract class PsqlConnection {
 			initiator = `User Id (${queryMetadata.userId.toString()})`;
 		if ('isSystemUser' in queryMetadata && queryMetadata.isSystemUser) initiator = 'SYSTEM';
 
-		logger.silly(`${prefix}query by ${initiator}, Query ->\n${formattedSql}`, {
+		logger.trace(`${prefix}query by ${initiator}, Query ->\n${formattedSql}`, {
 			durationMs
 		});
 	}

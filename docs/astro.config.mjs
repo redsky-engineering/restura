@@ -39,7 +39,8 @@ export default defineConfig({
 						{ label: 'Create a Database Table', slug: 'guides/database-table' },
 						{ label: 'Create a Standard Endpoint', slug: 'guides/standard-endpoint' },
 						{ label: 'Create a Custom Endpoint', slug: 'guides/custom-endpoint' },
-						{ label: 'Regenerate Types Without Starting the Server', slug: 'guides/regenerate-types' }
+					{ label: 'Regenerate Types Without Starting the Server', slug: 'guides/regenerate-types' },
+					{ label: 'Logging', slug: 'guides/logging' }
 					]
 				},
 				{

@@ -8,7 +8,7 @@
 	},
 	"scripts": {
 		"dev": "tsx src/index.ts",
-		"build": "bun build --compile ./src/index.ts --outfile restura",
+		"build": "bun build --compile ./src/index.ts --outfile dist/restura",
 		"test": "mocha 'test/**/*.test.ts'"
 	},
 	"dependencies": {
