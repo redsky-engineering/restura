@@ -14,16 +14,13 @@ const noopImpl = (): ResturaLogger => ({
 describe('setLogger', () => {
 	it('throws when trying to install the proxy logger itself', () => {
 		expect(() => setLogger(logger)).to.throw(
-			'setLogger: cannot reinstall the proxy logger or the current logger implementation'
+			'setLogger: cannot install the proxy logger as its own implementation'
 		);
 	});
 
-	it('throws when trying to reinstall the current implementation', () => {
+	it('is idempotent when reinstalling the current implementation', () => {
 		const impl = noopImpl();
 		setLogger(impl);
-
-		expect(() => setLogger(impl)).to.throw(
-			'setLogger: cannot reinstall the proxy logger or the current logger implementation'
-		);
+		expect(() => setLogger(impl)).to.not.throw();
 	});
 });

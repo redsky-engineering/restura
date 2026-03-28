@@ -333,7 +333,7 @@ describe('diffSchemaToDatabase', () => {
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
 			const createStory = statements.find((s) => s.startsWith('CREATE TABLE "story"'));
-			expect(createStory).to.exist;
+			expect(createStory).to.not.equal(undefined);
 			expect(createStory).to.include('CONSTRAINT "story_bookId_book_id_fk" FOREIGN KEY');
 			expect(createStory).to.include('REFERENCES "book" ("id")');
 
@@ -485,7 +485,7 @@ describe('diffSchemaToDatabase', () => {
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
 			const createCategory = statements.find((s) => s.startsWith('CREATE TABLE "category"'));
-			expect(createCategory).to.exist;
+			expect(createCategory).to.not.equal(undefined);
 			expect(createCategory).to.include('CONSTRAINT "category_parentId_category_id_fk" FOREIGN KEY');
 
 			const alterFks = statements.filter((s) => s.includes('ALTER TABLE') && s.includes('FOREIGN KEY'));
@@ -511,7 +511,7 @@ describe('diffSchemaToDatabase', () => {
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
 			const createProduct = statements.find((s) => s.startsWith('CREATE TABLE "product"'));
-			expect(createProduct).to.exist;
+			expect(createProduct).to.not.equal(undefined);
 			expect(createProduct).to.include('CONSTRAINT "product_price_positive" CHECK ("price" > 0)');
 
 			const alterChecks = statements.filter((s) => s.includes('ALTER TABLE') && s.includes('CHECK'));
@@ -544,7 +544,7 @@ describe('diffSchemaToDatabase', () => {
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
 			const createOrder = statements.find((s) => s.startsWith('CREATE TABLE "order"'));
-			expect(createOrder).to.exist;
+			expect(createOrder).to.not.equal(undefined);
 			expect(createOrder).to.include(
 				`CONSTRAINT "order_status_check" CHECK ("status" IN ('pending','shipped','delivered'))`
 			);
@@ -673,12 +673,10 @@ describe('diffSchemaToDatabase', () => {
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
 			const createPost = statements.find((s) => s.startsWith('CREATE TABLE "post"'));
-			expect(createPost).to.exist;
+			expect(createPost).to.not.equal(undefined);
 			expect(createPost).to.include('CONSTRAINT "post_userId_user_id_fk" FOREIGN KEY');
 
-			const alterFks = statements.filter(
-				(s) => s.includes('ALTER TABLE "post"') && s.includes('FOREIGN KEY')
-			);
+			const alterFks = statements.filter((s) => s.includes('ALTER TABLE "post"') && s.includes('FOREIGN KEY'));
 			expect(alterFks).to.have.length(0);
 		});
 	});
@@ -833,9 +831,7 @@ describe('diffSchemaToDatabase', () => {
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
 
-			expect(statements).to.include(
-				'ALTER TABLE "subscription" DROP CONSTRAINT "subscription_status_check";'
-			);
+			expect(statements).to.include('ALTER TABLE "subscription" DROP CONSTRAINT "subscription_status_check";');
 			expect(statements).to.include(
 				`ALTER TABLE "subscription" ADD CONSTRAINT "subscription_status_check" CHECK ("status" IN ('ACTIVE','EXPIRED','CANCELED'));`
 			);
@@ -959,9 +955,7 @@ describe('diffSchemaToDatabase', () => {
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
 
-			expect(statements).to.include(
-				'ALTER TABLE "product" DROP CONSTRAINT "product_price_positive";'
-			);
+			expect(statements).to.include('ALTER TABLE "product" DROP CONSTRAINT "product_price_positive";');
 			expect(statements).to.include(
 				'ALTER TABLE "product" ADD CONSTRAINT "product_price_positive" CHECK ("price" >= 0);'
 			);
@@ -1409,9 +1403,7 @@ describe('diffSchemaToDatabase', () => {
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
 
-			expect(statements).to.include(
-				'ALTER TABLE "user" ALTER COLUMN "bio" TYPE VARCHAR USING "bio"::VARCHAR;'
-			);
+			expect(statements).to.include('ALTER TABLE "user" ALTER COLUMN "bio" TYPE VARCHAR USING "bio"::VARCHAR;');
 		});
 
 		it('should emit multiple ALTER COLUMN TYPE statements for several columns with length changes', () => {
@@ -1843,9 +1835,7 @@ describe('diffSchemaToDatabase', () => {
 			const statements = diffSchemaToDatabase(schema, snapshot);
 
 			expect(statements).to.include('DROP INDEX "user_search_index";');
-			expect(statements).to.include(
-				'CREATE INDEX "user_search_index" ON "user" ("email" ASC, "firstName" ASC);'
-			);
+			expect(statements).to.include('CREATE INDEX "user_search_index" ON "user" ("email" ASC, "firstName" ASC);');
 		});
 
 		it('should emit DROP + CREATE when index uniqueness changes', () => {
@@ -1914,9 +1904,7 @@ describe('diffSchemaToDatabase', () => {
 			const statements = diffSchemaToDatabase(schema, snapshot);
 
 			expect(statements).to.include('DROP INDEX "user_email_index";');
-			expect(statements).to.include(
-				'CREATE UNIQUE INDEX "user_email_index" ON "user" ("email" ASC);'
-			);
+			expect(statements).to.include('CREATE UNIQUE INDEX "user_email_index" ON "user" ("email" ASC);');
 		});
 
 		it('should emit DROP + CREATE when index order changes', () => {
@@ -1985,9 +1973,7 @@ describe('diffSchemaToDatabase', () => {
 			const statements = diffSchemaToDatabase(schema, snapshot);
 
 			expect(statements).to.include('DROP INDEX "event_createdAt_index";');
-			expect(statements).to.include(
-				'CREATE INDEX "event_createdAt_index" ON "event" ("createdAt" DESC);'
-			);
+			expect(statements).to.include('CREATE INDEX "event_createdAt_index" ON "event" ("createdAt" DESC);');
 		});
 
 		it('should emit DROP + CREATE when index where clause changes', () => {
@@ -2209,9 +2195,7 @@ describe('diffSchemaToDatabase', () => {
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
 
-			const indexStatements = statements.filter(
-				(s) => s.includes('user_email_index')
-			);
+			const indexStatements = statements.filter((s) => s.includes('user_email_index'));
 			expect(indexStatements).to.have.length(0);
 		});
 
