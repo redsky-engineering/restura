@@ -4,15 +4,20 @@ title: Logging
 
 import { Aside } from '@astrojs/starlight/components';
 
-By default, Restura logs to the console. If your application already uses a logging library like [Winston](https://github.com/winstonjs/winston) or [Pino](https://getpino.io), you can plug it in by passing an adapter to `restura.init()`:
+By default, Restura logs to the console. You can swap in any logger by passing an adapter to `restura.init()` or by calling `setLogger()` before your app starts:
 
 ```typescript
 await restura.init(app, authHandler, pool, {
 	logger: myAdapter
 });
+
+// or, before restura.init():
+setLogger(myAdapter);
 ```
 
-## The ResturaLogger Interface
+## Custom Logger Adapters
+
+### The ResturaLogger Interface
 
 Your adapter must satisfy this interface, exported from `@restura/core`:
 
@@ -30,7 +35,7 @@ interface ResturaLogger {
 }
 ```
 
-## Winston Example
+### Winston Example
 
 Winston uses npm log levels and doesn't have `fatal` or `trace`, so map them to the nearest equivalents:
 
@@ -77,15 +82,44 @@ await restura.init(app, authHandler, pool, {
 
 ## Using @restura/logger
 
-Use the `createLogger` export from `@restura/logger` for a Pino-backed logger out of the box:
+### Existing Projects (importing `logger` from `@restura/core`)
+
+If your project already imports `logger` directly from `@restura/core`, call `createLogger` and `setLogger` at the very top of your `app.ts` (immediately after imports) so the logger is configured before anything else runs:
 
 ```typescript
+// app.ts
+import { createLogger, setLogger } from '@restura/logger';
+
+const logger = createLogger({ level: 'info' });
+setLogger(logger);
+
+// rest of your app setup...
+```
+
+### New Projects
+
+For new projects, create a dedicated `logger.ts` file local to your project and import from that everywhere — instead of reaching into `@restura/core` for a logger instance:
+
+```typescript
+// src/logger.ts
 import { createLogger } from '@restura/logger';
 
-const logger = createLogger({ level: 'debug' });
+export const logger = createLogger({ level: 'info' });
+```
+
+Then import it in your `app.ts` and pass it to `restura.init()`:
+
+```typescript
+// app.ts
+import { logger } from './logger';
 
 await restura.init(app, authHandler, pool, { logger });
 ```
+
+<Aside type="caution">
+	The `logger` export from `@restura/core` is deprecated and will be removed in a future release. New projects should
+	own their logger instance in a local `logger.ts` as shown above.
+</Aside>
 
 ## Environment Variables
 
@@ -101,8 +135,8 @@ When using `@restura/logger`, an explicit `level` passed to `createLogger` alway
 
 ```typescript
 // uses 'warn' regardless of RESTURA_LOG_LEVEL
-createLogger({ level: 'warn' })
+createLogger({ level: 'warn' });
 
 // uses RESTURA_LOG_LEVEL if set, otherwise 'info'
-createLogger()
+createLogger();
 ```
