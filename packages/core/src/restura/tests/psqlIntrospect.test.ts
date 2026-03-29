@@ -3263,6 +3263,111 @@ describe('diffSchemaToDatabase', () => {
 			);
 			expect(indexStatements).to.have.length(0);
 		});
+
+		it('should not diff when Postgres wraps multiple WHERE conditions in sub-expression parens', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'storePaymentProvider',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('storePaymentProvider_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'storeId',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'isActive',
+								udtName: 'bool',
+								isNullable: false,
+								columnDefault: 'false',
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							},
+							{
+								name: 'isDefault',
+								udtName: 'bool',
+								isNullable: false,
+								columnDefault: 'false',
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						indexes: [
+							{
+								name: 'storePaymentProvider_storeId_isActive_isDefault_unique_index',
+								tableName: 'storePaymentProvider',
+								isUnique: true,
+								isPrimary: false,
+								columns: ['storeId', 'isActive', 'isDefault'],
+								order: 'ASC',
+								where: '(("isActive" = true) AND ("isDefault" = true))'
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'storePaymentProvider',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'storeId', type: 'INTEGER', isNullable: false, roles: [], scopes: [] },
+						{
+							name: 'isActive',
+							type: 'BOOLEAN',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							default: 'false'
+						},
+						{
+							name: 'isDefault',
+							type: 'BOOLEAN',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							default: 'false'
+						}
+					],
+					indexes: [
+						{
+							name: 'storePaymentProvider_storeId_isActive_isDefault_unique_index',
+							columns: ['storeId', 'isActive', 'isDefault'],
+							isUnique: true,
+							isPrimaryKey: false,
+							order: 'ASC',
+							where: '"isActive" = true AND "isDefault" = true'
+						}
+					],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const indexStatements = statements.filter((s) =>
+				s.includes('storePaymentProvider_storeId_isActive_isDefault_unique_index')
+			);
+			expect(indexStatements).to.have.length(0);
+		});
 	});
 
 	describe('normalization: CHECK constraint != vs <> and sub-expression parens', () => {

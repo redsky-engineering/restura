@@ -664,6 +664,7 @@ function normalizeWhere(whereExpr: string | null | undefined): string {
 		if (balanced && depth === 0) normalized = inner.trim();
 		else break;
 	}
+	normalized = normalized.replace(/\(([^()]+)\)/g, '$1');
 	return normalized;
 }
 
