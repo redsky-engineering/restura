@@ -1,11 +1,11 @@
 ---
 title: CLI
-description: Reference for the restura-cli command-line tool — generate TypeScript types and diff your schema against a live database.
+description: Reference for the restura-cli command-line tool — generate TypeScript types, diff your schema against a live database, and generate the full SQL schema.
 ---
 
 import { Aside, Code } from '@astrojs/starlight/components';
 
-The `restura-cli` package provides a command-line interface for working with a Restura schema outside of the server. It can regenerate TypeScript types from a schema file and diff a schema against a live Postgres database to produce the SQL needed to bring them in sync.
+The `restura-cli` package provides a command-line interface for working with a Restura schema outside of the server. It can regenerate TypeScript types from a schema file, diff a schema against a live Postgres database to produce the SQL needed to bring them in sync, and generate the full SQL `CREATE TABLE` schema for bootstrapping a new database.
 
 ## Prerequisites
 
@@ -103,6 +103,24 @@ RESTURA_DB_URL=... restura diff -s ./restura.schema.json > migrations/001_change
 
 - `ALTER TABLE ADD CONSTRAINT ... CHECK` / `ALTER TABLE DROP CONSTRAINT` when the expression changes
 - `ENUM` column value sets are normalized and diffed against Postgres `ANY(ARRAY[...])` syntax, so only actual value-set changes trigger a rebuild
+
+### `sql` (alias: `s`)
+
+Generates the full SQL `CREATE TABLE` schema from a `restura.schema.json` file. The output represents the complete database structure — useful for bootstrapping a new database or reviewing the schema as raw SQL.
+
+Output goes to stdout so it can be inspected, piped, or redirected as needed.
+
+```bash
+restura sql --schema ./restura.schema.json
+restura s -s ./restura.schema.json
+
+# Redirect output to a file
+restura sql -s ./restura.schema.json > schema.sql
+```
+
+| Flag              | Alias | Description                            | Required |
+| ----------------- | ----- | -------------------------------------- | -------- |
+| `--schema <path>` | `-s`  | Path to the `restura.schema.json` file | Yes      |
 
 ## Building
 
