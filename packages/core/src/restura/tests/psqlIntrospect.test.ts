@@ -2805,4 +2805,609 @@ describe('diffSchemaToDatabase', () => {
 			expect(statements).to.not.include('DROP TABLE "post";');
 		});
 	});
+
+	describe('normalization: ENUM CHECK constraints with Postgres = ANY(ARRAY[...]) format', () => {
+		it('should not diff when Postgres stores ENUM as = ANY (ARRAY[...]) without inner parens', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'attribute',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('attribute_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'type',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						checkConstraints: [
+							{
+								name: 'attribute_type_check',
+								tableName: 'attribute',
+								expression:
+									"CHECK ((type = ANY (ARRAY['COLOR'::text, 'BUTTON_LIST'::text, 'IMAGE'::text, 'DROPDOWN'::text])))"
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'attribute',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{
+							name: 'type',
+							type: 'ENUM',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							value: "'COLOR','BUTTON_LIST','IMAGE','DROPDOWN'"
+						}
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const checkStatements = statements.filter((s) => s.includes('attribute_type_check'));
+			expect(checkStatements).to.have.length(0);
+		});
+
+		it('should not diff when Postgres stores camelCase ENUM as = ANY (ARRAY[...])', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'customerPaymentMethod',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('customerPaymentMethod_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'paymentType',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						checkConstraints: [
+							{
+								name: 'customerPaymentMethod_paymentType_check',
+								tableName: 'customerPaymentMethod',
+								expression:
+									`CHECK (("paymentType" = ANY (ARRAY['CARD'::text, 'BANK'::text, 'CRYPTO'::text, 'DIGITAL_WALLET'::text])))`
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'customerPaymentMethod',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{
+							name: 'paymentType',
+							type: 'ENUM',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							value: "'CARD','BANK','CRYPTO','DIGITAL_WALLET'"
+						}
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const checkStatements = statements.filter((s) =>
+				s.includes('customerPaymentMethod_paymentType_check')
+			);
+			expect(checkStatements).to.have.length(0);
+		});
+
+		it('should not diff when Postgres stores ENUM with inner parens around ARRAY', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'subscription',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'status',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						checkConstraints: [
+							{
+								name: 'subscription_status_check',
+								tableName: 'subscription',
+								expression:
+									"CHECK (((status)::text = ANY ((ARRAY['ACTIVE'::text, 'PAUSED'::text, 'CANCELLED'::text, 'FAILED'::text])::text[])))"
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'subscription',
+					columns: [
+						{ name: 'id', type: 'INTEGER', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{
+							name: 'status',
+							type: 'ENUM',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							value: "'ACTIVE','PAUSED','CANCELLED','FAILED'"
+						}
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const checkStatements = statements.filter((s) => s.includes('subscription_status_check'));
+			expect(checkStatements).to.have.length(0);
+		});
+	});
+
+	describe('normalization: DECIMAL comma separator', () => {
+		it('should not diff when schema uses comma separator for DECIMAL precision/scale', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'couponRedemption',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('couponRedemption_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'discountAmount',
+								udtName: 'numeric',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 15,
+								numericScale: 4
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'couponRedemption',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{
+							name: 'discountAmount',
+							type: 'DECIMAL',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							value: '15,4'
+						}
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const typeAlters = statements.filter((s) => s.includes('ALTER COLUMN') && s.includes('TYPE'));
+			expect(typeAlters).to.have.length(0);
+		});
+	});
+
+	describe('normalization: default value casts and boolean case', () => {
+		it('should not diff when Postgres stores VARCHAR default with ::character varying cast', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'store',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('store_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'timezone',
+								udtName: 'varchar',
+								isNullable: false,
+								columnDefault: "'UTC'::character varying",
+								characterMaximumLength: 50,
+								numericPrecision: null,
+								numericScale: null
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'store',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{
+							name: 'timezone',
+							type: 'VARCHAR',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							length: 50,
+							default: "'UTC'"
+						}
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const defaultAlters = statements.filter((s) => s.includes('SET DEFAULT'));
+			expect(defaultAlters).to.have.length(0);
+		});
+
+		it('should not diff when schema has uppercase boolean default and Postgres has lowercase', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'marketLanguage',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('marketLanguage_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'isDefault',
+								udtName: 'bool',
+								isNullable: false,
+								columnDefault: 'true',
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'marketLanguage',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{
+							name: 'isDefault',
+							type: 'BOOLEAN',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							default: 'TRUE'
+						}
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const defaultAlters = statements.filter((s) => s.includes('SET DEFAULT'));
+			expect(defaultAlters).to.have.length(0);
+		});
+	});
+
+	describe('normalization: index WHERE clause', () => {
+		it('should not diff when Postgres wraps WHERE clause in parens and lowercases booleans', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'shippingZone',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('shippingZone_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'storeId',
+								udtName: 'int8',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 64,
+								numericScale: 0
+							},
+							{
+								name: 'isFallback',
+								udtName: 'bool',
+								isNullable: false,
+								columnDefault: 'false',
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						indexes: [
+							{
+								name: 'shippingZone_storeId_isFallback_unique_index',
+								tableName: 'shippingZone',
+								isUnique: true,
+								isPrimary: false,
+								columns: ['storeId'],
+								order: 'ASC',
+								where: '(("isFallback" = true))'
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'shippingZone',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'storeId', type: 'BIGINT', isNullable: false, roles: [], scopes: [] },
+						{
+							name: 'isFallback',
+							type: 'BOOLEAN',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							default: 'false'
+						}
+					],
+					indexes: [
+						{
+							name: 'shippingZone_storeId_isFallback_unique_index',
+							columns: ['storeId'],
+							isUnique: true,
+							isPrimaryKey: false,
+							order: 'ASC',
+							where: '"isFallback" = TRUE'
+						}
+					],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const indexStatements = statements.filter((s) =>
+				s.includes('shippingZone_storeId_isFallback_unique_index')
+			);
+			expect(indexStatements).to.have.length(0);
+		});
+	});
+
+	describe('normalization: CHECK constraint != vs <> and sub-expression parens', () => {
+		it('should not diff when Postgres uses <> and schema uses !=', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'coupon',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('coupon_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'type',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							},
+							{
+								name: 'value',
+								udtName: 'numeric',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						checkConstraints: [
+							{
+								name: 'coupon_percentage_max_chk',
+								tableName: 'coupon',
+								expression:
+									"CHECK (((type <> 'PERCENTAGE'::text) OR (value <= (100)::numeric)))"
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'coupon',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'type', type: 'TEXT', isNullable: false, roles: [], scopes: [] },
+						{ name: 'value', type: 'DECIMAL', isNullable: false, roles: [], scopes: [] }
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [
+						{
+							name: 'coupon_percentage_max_chk',
+							check: `"type" != 'PERCENTAGE' OR "value" <= 100`
+						}
+					],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const checkStatements = statements.filter((s) => s.includes('coupon_percentage_max_chk'));
+			expect(checkStatements).to.have.length(0);
+		});
+
+		it('should not diff when Postgres wraps OR operands in sub-expression parens', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'coupon',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('coupon_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'startDate',
+								udtName: 'timestamp',
+								isNullable: true,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							},
+							{
+								name: 'endDate',
+								udtName: 'timestamp',
+								isNullable: true,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						checkConstraints: [
+							{
+								name: 'coupon_date_order_chk',
+								tableName: 'coupon',
+								expression:
+									'CHECK ((("endDate" IS NULL) OR ("startDate" IS NULL) OR ("endDate" >= "startDate")))'
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'coupon',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'startDate', type: 'TIMESTAMP', isNullable: true, roles: [], scopes: [] },
+						{ name: 'endDate', type: 'TIMESTAMP', isNullable: true, roles: [], scopes: [] }
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [
+						{
+							name: 'coupon_date_order_chk',
+							check: '"endDate" IS NULL OR "startDate" IS NULL OR "endDate" >= "startDate"'
+						}
+					],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const checkStatements = statements.filter((s) => s.includes('coupon_date_order_chk'));
+			expect(checkStatements).to.have.length(0);
+		});
+	});
 });

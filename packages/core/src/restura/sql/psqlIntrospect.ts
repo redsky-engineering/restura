@@ -642,6 +642,31 @@ function buildAddCheckConstraint(tableName: string, constraint: CheckLike): stri
 	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${pgTruncate(constraint.name)}" CHECK (${constraint.check});`;
 }
 
+function normalizeWhere(w: string | null | undefined): string {
+	if (!w) return '';
+	let s = w
+		.replace(/"(\w+)"/g, '$1')
+		.replace(/\s+/g, ' ')
+		.trim()
+		.toLowerCase();
+	while (s.startsWith('(') && s.endsWith(')')) {
+		const inner = s.slice(1, -1);
+		let depth = 0;
+		let balanced = true;
+		for (const c of inner) {
+			if (c === '(') depth++;
+			if (c === ')') depth--;
+			if (depth < 0) {
+				balanced = false;
+				break;
+			}
+		}
+		if (balanced && depth === 0) s = inner.trim();
+		else break;
+	}
+	return s;
+}
+
 function indexSignature(
 	name: string,
 	columns: string[],
@@ -649,7 +674,7 @@ function indexSignature(
 	order: string,
 	where?: string | null
 ): string {
-	return `${name}|${columns.join(',')}|${isUnique}|${order}|${where || ''}`;
+	return `${name}|${columns.join(',')}|${isUnique}|${order}|${normalizeWhere(where)}`;
 }
 
 function isFkChanged(desired: ResturaSchema['database'][0], liveFk: DbForeignKey): boolean {
@@ -674,10 +699,12 @@ function normalizeCheckExpression(expr: string): string {
 	const checkMatch = s.match(/^CHECK\s*\(([\s\S]*)\)\s*$/i);
 	if (checkMatch) s = checkMatch[1];
 	s = s.replace(/::\w+(\[\])?/g, '');
-	s = s.replace(/=\s*ANY\s*\(\s*\(?\s*ARRAY\s*\[([^\]]*)\]\s*\)?\s*\)/gi, 'IN ($1)');
+	s = s.replace(/=\s*ANY\s*\(\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)\s*\)/gi, 'IN ($1)');
+	s = s.replace(/=\s*ANY\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)/gi, 'IN ($1)');
 	s = s.replace(/"(\w+)"/g, '$1');
 	s = s.replace(/\((\w+)\)/g, '$1');
 	s = s.replace(/\s+/g, ' ').trim().toLowerCase();
+	s = s.replace(/<>/g, '!=');
 	while (s.startsWith('(') && s.endsWith(')')) {
 		const inner = s.slice(1, -1);
 		let depth = 0;
@@ -693,6 +720,7 @@ function normalizeCheckExpression(expr: string): string {
 		if (balanced && depth === 0) s = inner.trim();
 		else break;
 	}
+	s = s.replace(/\(([^()]+)\)/g, '$1');
 	s = s.replace(/\s*,\s*/g, ', ');
 	return s;
 }
@@ -710,7 +738,7 @@ function modifiersDiffer(column: ColumnData, liveColumn: DbColumn): boolean {
 	if (desiredLength !== liveColumn.characterMaximumLength) return true;
 
 	if (column.type === 'DECIMAL' && column.value) {
-		const parts = column.value.replace(/['"]/g, '').split('-');
+		const parts = column.value.replace(/['"]/g, '').split(/[-,]/);
 		const desiredPrecision = parseInt(parts[0], 10);
 		const desiredScale = parts.length > 1 ? parseInt(parts[1], 10) : 0;
 		if (liveColumn.numericPrecision !== desiredPrecision || liveColumn.numericScale !== desiredScale) return true;
@@ -749,6 +777,6 @@ function defaultsMatch(desired: string | null, live: string | null, column: Colu
 	if (column.hasAutoIncrement || column.type === 'BIGSERIAL' || column.type === 'SERIAL') return true;
 	if (desired === null && live === null) return true;
 	if (desired === null || live === null) return false;
-	const normalizedLive = live.replace(/::[^\s]+$/g, '').trim();
-	return desired.trim() === normalizedLive;
+	const normalizedLive = live.replace(/::[a-z][a-z0-9_ ]*(\[\])?$/gi, '').trim();
+	return desired.trim().toLowerCase() === normalizedLive.toLowerCase();
 }
