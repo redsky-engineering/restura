@@ -486,8 +486,8 @@ interface TopologicalSortResult {
 }
 
 function topologicalSortTables(tables: ResturaSchema['database']): TopologicalSortResult {
-	const tableNames = new Set(tables.map((t) => t.name));
-	const tableMap = new Map(tables.map((t) => [t.name, t]));
+	const tableNames = new Set(tables.map((table) => table.name));
+	const tableMap = new Map(tables.map((table) => [table.name, table]));
 
 	const inDegree = new Map<string, number>();
 	const tableDeps = new Map<string, Set<string>>();
@@ -531,7 +531,7 @@ function topologicalSortTables(tables: ResturaSchema['database']): TopologicalSo
 
 	const sortedSet = new Set(sorted);
 	const deferredFkNames = new Set<string>();
-	const cycleTables = tables.filter((t) => !sortedSet.has(t.name));
+	const cycleTables = tables.filter((table) => !sortedSet.has(table.name));
 
 	const placed = new Set(sorted);
 	for (const table of cycleTables) {
@@ -642,29 +642,29 @@ function buildAddCheckConstraint(tableName: string, constraint: CheckLike): stri
 	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${pgTruncate(constraint.name)}" CHECK (${constraint.check});`;
 }
 
-function normalizeWhere(w: string | null | undefined): string {
-	if (!w) return '';
-	let s = w
+function normalizeWhere(whereExpr: string | null | undefined): string {
+	if (!whereExpr) return '';
+	let normalized = whereExpr
 		.replace(/"(\w+)"/g, '$1')
 		.replace(/\s+/g, ' ')
 		.trim()
 		.toLowerCase();
-	while (s.startsWith('(') && s.endsWith(')')) {
-		const inner = s.slice(1, -1);
+	while (normalized.startsWith('(') && normalized.endsWith(')')) {
+		const inner = normalized.slice(1, -1);
 		let depth = 0;
 		let balanced = true;
-		for (const c of inner) {
-			if (c === '(') depth++;
-			if (c === ')') depth--;
+		for (const char of inner) {
+			if (char === '(') depth++;
+			if (char === ')') depth--;
 			if (depth < 0) {
 				balanced = false;
 				break;
 			}
 		}
-		if (balanced && depth === 0) s = inner.trim();
+		if (balanced && depth === 0) normalized = inner.trim();
 		else break;
 	}
-	return s;
+	return normalized;
 }
 
 function indexSignature(
@@ -695,18 +695,18 @@ function pgTruncate(name: string): string {
 }
 
 function normalizeCheckExpression(expr: string): string {
-	let s = expr;
-	const checkMatch = s.match(/^CHECK\s*\(([\s\S]*)\)\s*$/i);
-	if (checkMatch) s = checkMatch[1];
-	s = s.replace(/::\w+(\[\])?/g, '');
-	s = s.replace(/=\s*ANY\s*\(\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)\s*\)/gi, 'IN ($1)');
-	s = s.replace(/=\s*ANY\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)/gi, 'IN ($1)');
-	s = s.replace(/"(\w+)"/g, '$1');
-	s = s.replace(/\((\w+)\)/g, '$1');
-	s = s.replace(/\s+/g, ' ').trim().toLowerCase();
-	s = s.replace(/<>/g, '!=');
-	while (s.startsWith('(') && s.endsWith(')')) {
-		const inner = s.slice(1, -1);
+	let normalized = expr;
+	const checkMatch = normalized.match(/^CHECK\s*\(([\s\S]*)\)\s*$/i);
+	if (checkMatch) normalized = checkMatch[1];
+	normalized = normalized.replace(/::\w+(\[\])?/g, '');
+	normalized = normalized.replace(/=\s*ANY\s*\(\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)\s*\)/gi, 'IN ($1)');
+	normalized = normalized.replace(/=\s*ANY\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)/gi, 'IN ($1)');
+	normalized = normalized.replace(/"(\w+)"/g, '$1');
+	normalized = normalized.replace(/\((\w+)\)/g, '$1');
+	normalized = normalized.replace(/\s+/g, ' ').trim().toLowerCase();
+	normalized = normalized.replace(/<>/g, '!=');
+	while (normalized.startsWith('(') && normalized.endsWith(')')) {
+		const inner = normalized.slice(1, -1);
 		let depth = 0;
 		let balanced = true;
 		for (const char of inner) {
@@ -717,12 +717,12 @@ function normalizeCheckExpression(expr: string): string {
 				break;
 			}
 		}
-		if (balanced && depth === 0) s = inner.trim();
+		if (balanced && depth === 0) normalized = inner.trim();
 		else break;
 	}
-	s = s.replace(/\(([^()]+)\)/g, '$1');
-	s = s.replace(/\s*,\s*/g, ', ');
-	return s;
+	normalized = normalized.replace(/\(([^()]+)\)/g, '$1');
+	normalized = normalized.replace(/\s*,\s*/g, ', ');
+	return normalized;
 }
 
 function isSerialMatch(column: ColumnData, liveCol: DbColumn): boolean {
