@@ -2199,6 +2199,551 @@ describe('diffSchemaToDatabase', () => {
 			expect(indexStatements).to.have.length(0);
 		});
 
+		it('should not emit DROP or CREATE when index name exceeds 63 chars but matches after truncation', () => {
+			const longName = 'storeIntegrationWorkflow_storeId_taskType_triggerEvent_unique_index'; // 67 chars
+			const truncatedName = longName.slice(0, 63); // 'storeIntegrationWorkflow_storeId_taskType_triggerEvent_unique_i'
+
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'storeIntegrationWorkflow',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'storeId',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'taskType',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							},
+							{
+								name: 'triggerEvent',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						indexes: [
+							{
+								name: truncatedName,
+								tableName: 'storeIntegrationWorkflow',
+								isUnique: true,
+								isPrimary: false,
+								columns: ['storeId', 'taskType', 'triggerEvent'],
+								order: 'ASC',
+								where: null
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'storeIntegrationWorkflow',
+					columns: [
+						{ name: 'id', type: 'INTEGER', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'storeId', type: 'INTEGER', isNullable: false, roles: [], scopes: [] },
+						{ name: 'taskType', type: 'TEXT', isNullable: false, roles: [], scopes: [] },
+						{ name: 'triggerEvent', type: 'TEXT', isNullable: false, roles: [], scopes: [] }
+					],
+					indexes: [
+						{
+							name: longName,
+							columns: ['storeId', 'taskType', 'triggerEvent'],
+							isUnique: true,
+							isPrimaryKey: false,
+							order: 'ASC'
+						}
+					],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const indexStatements = statements.filter((s) => s.includes(truncatedName) || s.includes(longName));
+			expect(indexStatements).to.have.length(0);
+		});
+
+		it('should use truncated name in CREATE INDEX SQL when index name exceeds 63 chars', () => {
+			const longName = 'storeIntegrationWorkflow_storeId_taskType_triggerEvent_unique_index'; // 67 chars
+			const truncatedName = longName.slice(0, 63);
+
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'storeIntegrationWorkflow',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'storeId',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'taskType',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							},
+							{
+								name: 'triggerEvent',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'storeIntegrationWorkflow',
+					columns: [
+						{ name: 'id', type: 'INTEGER', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'storeId', type: 'INTEGER', isNullable: false, roles: [], scopes: [] },
+						{ name: 'taskType', type: 'TEXT', isNullable: false, roles: [], scopes: [] },
+						{ name: 'triggerEvent', type: 'TEXT', isNullable: false, roles: [], scopes: [] }
+					],
+					indexes: [
+						{
+							name: longName,
+							columns: ['storeId', 'taskType', 'triggerEvent'],
+							isUnique: true,
+							isPrimaryKey: false,
+							order: 'ASC'
+						}
+					],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			expect(statements).to.include(
+				`CREATE UNIQUE INDEX "${truncatedName}" ON "storeIntegrationWorkflow" ("storeId" ASC, "taskType" ASC, "triggerEvent" ASC);`
+			);
+			expect(statements.some((s) => s.includes(longName))).to.equal(false);
+		});
+
+		it('should not emit DROP or CREATE when FK name exceeds 63 chars but matches after truncation', () => {
+			const longName = 'subscription_customerPaymentMethodId_customerPaymentMethod_id_fk'; // 64 chars
+			const truncatedName = longName.slice(0, 63); // 'subscription_customerPaymentMethodId_customerPaymentMethod_id_f'
+
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'subscription',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'customerPaymentMethodId',
+								udtName: 'int4',
+								isNullable: true,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							}
+						],
+						foreignKeys: [
+							{
+								name: truncatedName,
+								tableName: 'subscription',
+								column: 'customerPaymentMethodId',
+								refTable: 'customerPaymentMethod',
+								refColumn: 'id',
+								onDelete: 'NO ACTION',
+								onUpdate: 'NO ACTION'
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'subscription',
+					columns: [
+						{ name: 'id', type: 'INTEGER', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'customerPaymentMethodId', type: 'INTEGER', isNullable: true, roles: [], scopes: [] }
+					],
+					indexes: [],
+					foreignKeys: [
+						{
+							name: longName,
+							column: 'customerPaymentMethodId',
+							refTable: 'customerPaymentMethod',
+							refColumn: 'id',
+							onDelete: 'NO ACTION',
+							onUpdate: 'NO ACTION'
+						}
+					],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const fkStatements = statements.filter((s) => s.includes(truncatedName) || s.includes(longName));
+			expect(fkStatements).to.have.length(0);
+		});
+
+		it('should use truncated name in ADD CONSTRAINT FK SQL when FK name exceeds 63 chars', () => {
+			const longName = 'subscription_customerPaymentMethodId_customerPaymentMethod_id_fk'; // 64 chars
+			const truncatedName = longName.slice(0, 63);
+
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'subscription',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'customerPaymentMethodId',
+								udtName: 'int4',
+								isNullable: true,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'subscription',
+					columns: [
+						{ name: 'id', type: 'INTEGER', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'customerPaymentMethodId', type: 'INTEGER', isNullable: true, roles: [], scopes: [] }
+					],
+					indexes: [],
+					foreignKeys: [
+						{
+							name: longName,
+							column: 'customerPaymentMethodId',
+							refTable: 'customerPaymentMethod',
+							refColumn: 'id',
+							onDelete: 'NO ACTION',
+							onUpdate: 'NO ACTION'
+						}
+					],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			expect(statements).to.include(
+				`ALTER TABLE "subscription" ADD CONSTRAINT "${truncatedName}" FOREIGN KEY ("customerPaymentMethodId") REFERENCES "customerPaymentMethod" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;`
+			);
+			expect(statements.some((s) => s.includes(longName))).to.equal(false);
+		});
+
+		it('should not emit DROP or CREATE when check constraint name exceeds 63 chars but matches after truncation', () => {
+			const longName = 'priceProperty_pricePropertyDefinitionId_pricePropertyDefinition_id_fk_chk'; // 74 chars
+			const truncatedName = longName.slice(0, 63);
+
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'priceProperty',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'amount',
+								udtName: 'numeric',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 10,
+								numericScale: 2
+							}
+						],
+						checkConstraints: [
+							{
+								name: truncatedName,
+								tableName: 'priceProperty',
+								expression: 'CHECK (("amount" > 0))'
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'priceProperty',
+					columns: [
+						{ name: 'id', type: 'INTEGER', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'amount', type: 'DECIMAL', isNullable: false, roles: [], scopes: [], value: '10-2' }
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [{ name: longName, check: '"amount" > 0' }],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const checkStatements = statements.filter((s) => s.includes(truncatedName) || s.includes(longName));
+			expect(checkStatements).to.have.length(0);
+		});
+
+		it('should use truncated name in ADD CONSTRAINT CHECK SQL when check constraint name exceeds 63 chars', () => {
+			const longName = 'priceProperty_pricePropertyDefinitionId_pricePropertyDefinition_id_fk_chk'; // 74 chars
+			const truncatedName = longName.slice(0, 63);
+
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'priceProperty',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'amount',
+								udtName: 'numeric',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 10,
+								numericScale: 2
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'priceProperty',
+					columns: [
+						{ name: 'id', type: 'INTEGER', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'amount', type: 'DECIMAL', isNullable: false, roles: [], scopes: [], value: '10-2' }
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [{ name: longName, check: '"amount" > 0' }],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			expect(statements).to.include(
+				`ALTER TABLE "priceProperty" ADD CONSTRAINT "${truncatedName}" CHECK ("amount" > 0);`
+			);
+			expect(statements.some((s) => s.includes(longName))).to.equal(false);
+		});
+
+		it('should not emit DROP or CREATE when ENUM check name exceeds 63 chars but matches after truncation', () => {
+			// Table name 55 chars + '_status_check' = 68 chars total
+			const tableName = 'aVeryLongTableNameThatWillCauseTheEnumCheckNameToExceedTheLimit';
+			const fullCheckName = `${tableName}_status_check`; // > 63 chars
+			const truncatedCheckName = fullCheckName.slice(0, 63);
+
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: tableName,
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'status',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						checkConstraints: [
+							{
+								name: truncatedCheckName,
+								tableName,
+								expression:
+									"CHECK (((status)::text = ANY ((ARRAY['ACTIVE'::text, 'INACTIVE'::text])::text[])))"
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: tableName,
+					columns: [
+						{ name: 'id', type: 'INTEGER', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{
+							name: 'status',
+							type: 'ENUM',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							value: "'ACTIVE','INACTIVE'"
+						}
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const checkStatements = statements.filter(
+				(s) => s.includes(truncatedCheckName) || s.includes(fullCheckName)
+			);
+			expect(checkStatements).to.have.length(0);
+		});
+
+		it('should use truncated name in CREATE TABLE when FK and check constraint names exceed 63 chars', () => {
+			const longFkName = 'subscription_customerPaymentMethodId_customerPaymentMethod_id_fk'; // 64 chars
+			const truncatedFkName = longFkName.slice(0, 63);
+			const longCheckName = 'priceProperty_pricePropertyDefinitionId_pricePropertyDefinition_nonneg_chk'; // 74 chars
+			const truncatedCheckName = longCheckName.slice(0, 63);
+
+			const snapshot: DbSnapshot = { tables: [] };
+
+			const schema = makeSchema([
+				{
+					name: 'testTable',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'refId', type: 'INTEGER', isNullable: false, roles: [], scopes: [] },
+						{ name: 'amount', type: 'DECIMAL', isNullable: false, roles: [], scopes: [], value: '10-2' }
+					],
+					indexes: [],
+					foreignKeys: [
+						{
+							name: longFkName,
+							column: 'refId',
+							refTable: 'otherTable',
+							refColumn: 'id',
+							onDelete: 'NO ACTION',
+							onUpdate: 'NO ACTION'
+						}
+					],
+					checkConstraints: [{ name: longCheckName, check: '"amount" > 0' }],
+					roles: [],
+					scopes: []
+				},
+				{
+					name: 'otherTable',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true }
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const createTestTable = statements.find((s) => s.startsWith('CREATE TABLE "testTable"'));
+			expect(createTestTable).to.not.equal(undefined);
+			expect(createTestTable).to.include(`CONSTRAINT "${truncatedFkName}" FOREIGN KEY`);
+			expect(createTestTable).to.include(`CONSTRAINT "${truncatedCheckName}" CHECK`);
+			expect(createTestTable).to.not.include(longFkName);
+			expect(createTestTable).to.not.include(longCheckName);
+		});
+
 		it('should still emit DROP CONSTRAINT when a FK is removed from a kept table', () => {
 			const snapshot: DbSnapshot = {
 				tables: [

@@ -282,7 +282,7 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 	for (const desired of tablesToAlter) {
 		const live = liveTableMap.get(desired.name)!;
 
-		const desiredFkNames = new Set(desired.foreignKeys.map((fk) => fk.name));
+		const desiredFkNames = new Set(desired.foreignKeys.map((fk) => pgTruncate(fk.name)));
 		for (const liveFk of live.foreignKeys) {
 			if (!desiredFkNames.has(liveFk.name) || isFkChanged(desired, liveFk)) {
 				statements.push(`ALTER TABLE "${desired.name}" DROP CONSTRAINT "${liveFk.name}";`);
@@ -291,11 +291,14 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 
 		const desiredCheckExprMap = new Map<string, string>();
 		for (const check of desired.checkConstraints) {
-			desiredCheckExprMap.set(check.name, check.check);
+			desiredCheckExprMap.set(pgTruncate(check.name), check.check);
 		}
 		for (const col of desired.columns) {
 			if (col.type === 'ENUM' && col.value) {
-				desiredCheckExprMap.set(`${desired.name}_${col.name}_check`, `"${col.name}" IN (${col.value})`);
+				desiredCheckExprMap.set(
+					pgTruncate(`${desired.name}_${col.name}_check`),
+					`"${col.name}" IN (${col.value})`
+				);
 			}
 		}
 		const changedChecks = new Set<string>();
@@ -315,18 +318,27 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		const desiredIdxSignatures = new Map<string, string>();
 		for (const idx of desired.indexes) {
 			if (idx.isPrimaryKey) continue;
-			desiredIdxSignatures.set(idx.name, indexSignature(idx.name, idx.columns, idx.isUnique, idx.order, idx.where));
+			desiredIdxSignatures.set(
+				pgTruncate(idx.name),
+				indexSignature(pgTruncate(idx.name), idx.columns, idx.isUnique, idx.order, idx.where)
+			);
 		}
 		const autoUniqueNames = new Set<string>();
 		for (const col of desired.columns) {
 			if (col.isUnique) {
-				autoUniqueNames.add(`${desired.name}_${col.name}_unique_index`);
+				autoUniqueNames.add(pgTruncate(`${desired.name}_${col.name}_unique_index`));
 			}
 		}
 		for (const liveIdx of live.indexes) {
 			if (liveIdx.isPrimary) continue;
 			if (autoUniqueNames.has(liveIdx.name)) continue;
-			const liveSig = indexSignature(liveIdx.name, liveIdx.columns, liveIdx.isUnique, liveIdx.order, liveIdx.where);
+			const liveSig = indexSignature(
+				liveIdx.name,
+				liveIdx.columns,
+				liveIdx.isUnique,
+				liveIdx.order,
+				liveIdx.where
+			);
 			const desiredSig = desiredIdxSignatures.get(liveIdx.name);
 			if (!desiredSig || desiredSig !== liveSig) {
 				statements.push(`DROP INDEX "${liveIdx.name}";`);
@@ -361,8 +373,14 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		}
 		for (const index of desired.indexes) {
 			if (index.isPrimaryKey) continue;
-			const desiredSig = indexSignature(index.name, index.columns, index.isUnique, index.order, index.where);
-			const liveSig = liveIdxSignatures.get(index.name);
+			const desiredSig = indexSignature(
+				pgTruncate(index.name),
+				index.columns,
+				index.isUnique,
+				index.order,
+				index.where
+			);
+			const liveSig = liveIdxSignatures.get(pgTruncate(index.name));
 			if (!liveSig || liveSig !== desiredSig) {
 				statements.push(buildCreateIndex(desired.name, index));
 			}
@@ -381,10 +399,10 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		const liveFkNames = new Set(live.foreignKeys.map((fk) => fk.name));
 		for (const fk of desired.foreignKeys) {
 			if (
-				!liveFkNames.has(fk.name) ||
+				!liveFkNames.has(pgTruncate(fk.name)) ||
 				isFkChanged(
 					desired,
-					liveTableMap.get(desired.name)!.foreignKeys.find((liveFk) => liveFk.name === fk.name)!
+					liveTableMap.get(desired.name)!.foreignKeys.find((liveFk) => liveFk.name === pgTruncate(fk.name))!
 				)
 			) {
 				statements.push(buildAddForeignKey(desired.name, fk));
@@ -397,13 +415,13 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		const liveCheckNames = new Set(live.checkConstraints.map((check) => check.name));
 		const changedChecks = changedChecksPerTable.get(desired.name) ?? new Set<string>();
 		for (const check of desired.checkConstraints) {
-			if (!liveCheckNames.has(check.name) || changedChecks.has(check.name)) {
+			if (!liveCheckNames.has(pgTruncate(check.name)) || changedChecks.has(pgTruncate(check.name))) {
 				statements.push(buildAddCheckConstraint(desired.name, check));
 			}
 		}
 		for (const col of desired.columns) {
 			if (col.type === 'ENUM' && col.value) {
-				const checkName = `${desired.name}_${col.name}_check`;
+				const checkName = pgTruncate(`${desired.name}_${col.name}_check`);
 				if (!liveCheckNames.has(checkName) || changedChecks.has(checkName)) {
 					statements.push(
 						`ALTER TABLE "${desired.name}" ADD CONSTRAINT "${checkName}" CHECK ("${col.name}" IN (${col.value}));`
@@ -483,7 +501,11 @@ function topologicalSortTables(tables: ResturaSchema['database']): TopologicalSo
 
 	for (const table of tables) {
 		for (const fk of table.foreignKeys) {
-			if (tableNames.has(fk.refTable) && fk.refTable !== table.name && !tableDeps.get(table.name)!.has(fk.refTable)) {
+			if (
+				tableNames.has(fk.refTable) &&
+				fk.refTable !== table.name &&
+				!tableDeps.get(table.name)!.has(fk.refTable)
+			) {
 				tableDeps.get(table.name)!.add(fk.refTable);
 				inDegree.set(table.name, (inDegree.get(table.name) ?? 0) + 1);
 				reverseDeps.get(fk.refTable)!.add(table.name);
@@ -530,7 +552,8 @@ function buildCreateTable(table: ResturaSchema['database'][0], deferredFkNames: 
 	for (const column of table.columns) {
 		let definition = `"${column.name}" ${buildColumnType(column)}`;
 		if (column.isPrimary) definition += ' PRIMARY KEY';
-		if (column.isUnique) definition += ` CONSTRAINT "${table.name}_${column.name}_unique_index" UNIQUE`;
+		if (column.isUnique)
+			definition += ` CONSTRAINT "${pgTruncate(`${table.name}_${column.name}_unique_index`)}" UNIQUE`;
 		if (!column.isNullable) definition += ' NOT NULL';
 		else definition += ' NULL';
 		if (column.default) definition += ` DEFAULT ${column.default}`;
@@ -539,16 +562,16 @@ function buildCreateTable(table: ResturaSchema['database'][0], deferredFkNames: 
 	for (const fk of table.foreignKeys) {
 		if (deferredFkNames.has(fk.name)) continue;
 		definitions.push(
-			`CONSTRAINT "${fk.name}" FOREIGN KEY ("${fk.column}") REFERENCES "${fk.refTable}" ("${fk.refColumn}") ON DELETE ${fk.onDelete} ON UPDATE ${fk.onUpdate}`
+			`CONSTRAINT "${pgTruncate(fk.name)}" FOREIGN KEY ("${fk.column}") REFERENCES "${fk.refTable}" ("${fk.refColumn}") ON DELETE ${fk.onDelete} ON UPDATE ${fk.onUpdate}`
 		);
 	}
 	for (const check of table.checkConstraints) {
-		definitions.push(`CONSTRAINT "${check.name}" CHECK (${check.check})`);
+		definitions.push(`CONSTRAINT "${pgTruncate(check.name)}" CHECK (${check.check})`);
 	}
 	for (const col of table.columns) {
 		if (col.type === 'ENUM' && col.value) {
 			definitions.push(
-				`CONSTRAINT "${table.name}_${col.name}_check" CHECK ("${col.name}" IN (${col.value}))`
+				`CONSTRAINT "${pgTruncate(`${table.name}_${col.name}_check`)}" CHECK ("${col.name}" IN (${col.value}))`
 			);
 		}
 	}
@@ -572,7 +595,7 @@ function buildColumnType(column: ColumnData): string {
 function buildAddColumn(tableName: string, column: ColumnData): string {
 	let definition = `ALTER TABLE "${tableName}" ADD COLUMN "${column.name}" ${buildColumnType(column)}`;
 	if (column.isPrimary) definition += ' PRIMARY KEY';
-	if (column.isUnique) definition += ` CONSTRAINT "${tableName}_${column.name}_unique_index" UNIQUE`;
+	if (column.isUnique) definition += ` CONSTRAINT "${pgTruncate(`${tableName}_${column.name}_unique_index`)}" UNIQUE`;
 	if (!column.isNullable) definition += ' NOT NULL';
 	else definition += ' NULL';
 	if (column.default) definition += ` DEFAULT ${column.default}`;
@@ -591,7 +614,7 @@ interface IndexLike {
 
 function buildCreateIndex(tableName: string, index: IndexLike): string {
 	const unique = index.isUnique ? 'UNIQUE ' : '';
-	let sql = `CREATE ${unique}INDEX "${index.name}" ON "${tableName}" (${index.columns.map((column) => `"${column}" ${index.order}`).join(', ')})`;
+	let sql = `CREATE ${unique}INDEX "${pgTruncate(index.name)}" ON "${tableName}" (${index.columns.map((column) => `"${column}" ${index.order}`).join(', ')})`;
 	if (index.where) sql += ` WHERE ${index.where}`;
 	sql += ';';
 	return sql;
@@ -607,7 +630,7 @@ interface FkLike {
 }
 
 function buildAddForeignKey(tableName: string, foreignKey: FkLike): string {
-	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${foreignKey.name}" FOREIGN KEY ("${foreignKey.column}") REFERENCES "${foreignKey.refTable}" ("${foreignKey.refColumn}") ON DELETE ${foreignKey.onDelete} ON UPDATE ${foreignKey.onUpdate};`;
+	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${pgTruncate(foreignKey.name)}" FOREIGN KEY ("${foreignKey.column}") REFERENCES "${foreignKey.refTable}" ("${foreignKey.refColumn}") ON DELETE ${foreignKey.onDelete} ON UPDATE ${foreignKey.onUpdate};`;
 }
 
 interface CheckLike {
@@ -616,7 +639,7 @@ interface CheckLike {
 }
 
 function buildAddCheckConstraint(tableName: string, constraint: CheckLike): string {
-	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${constraint.name}" CHECK (${constraint.check});`;
+	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${pgTruncate(constraint.name)}" CHECK (${constraint.check});`;
 }
 
 function indexSignature(
@@ -630,7 +653,7 @@ function indexSignature(
 }
 
 function isFkChanged(desired: ResturaSchema['database'][0], liveFk: DbForeignKey): boolean {
-	const desiredFk = desired.foreignKeys.find((fk) => fk.name === liveFk.name);
+	const desiredFk = desired.foreignKeys.find((fk) => pgTruncate(fk.name) === liveFk.name);
 	if (!desiredFk) return true;
 	return (
 		desiredFk.column !== liveFk.column ||
@@ -639,6 +662,11 @@ function isFkChanged(desired: ResturaSchema['database'][0], liveFk: DbForeignKey
 		desiredFk.onDelete !== liveFk.onDelete ||
 		desiredFk.onUpdate !== liveFk.onUpdate
 	);
+}
+
+const PG_MAX_IDENTIFIER = 63;
+function pgTruncate(name: string): string {
+	return name.slice(0, PG_MAX_IDENTIFIER);
 }
 
 function normalizeCheckExpression(expr: string): string {
