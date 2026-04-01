@@ -692,7 +692,11 @@ function isFkChanged(desired: ResturaSchema['database'][0], liveFk: DbForeignKey
 
 const PG_MAX_IDENTIFIER = 63;
 function pgTruncate(name: string): string {
-	return name.slice(0, PG_MAX_IDENTIFIER);
+	const buf = Buffer.from(name, 'utf8');
+	if (buf.length <= PG_MAX_IDENTIFIER) return name;
+	let end = PG_MAX_IDENTIFIER;
+	while (end > 0 && (buf[end] & 0xc0) === 0x80) end--;
+	return buf.subarray(0, end).toString('utf8');
 }
 
 function normalizeCheckExpression(expr: string): string {
