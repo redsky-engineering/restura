@@ -3,6 +3,7 @@ import {
 	generateDatabaseSchemaFromSchema,
 	getNewPublicSchemaAndScratchPool,
 	isSchemaValid,
+	systemUser,
 	type ResturaSchema
 } from '@restura/core';
 import fs from 'node:fs';
@@ -45,7 +46,7 @@ export async function resetScratchCommand(options: { schema: string; suffix?: st
 	try {
 		scratchPool = await getNewPublicSchemaAndScratchPool(pool, scratchDbName);
 		const ddl = generateDatabaseSchemaFromSchema(validSchema);
-		await scratchPool.pool.query(ddl);
+		await scratchPool.runQuery(ddl, [], systemUser);
 		console.log(`Scratch database "${scratchDbName}" has been reset and rebuilt from the schema.`);
 	} catch (err) {
 		console.error(`Error: reset-scratch failed: ${err}`);
