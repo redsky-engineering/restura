@@ -360,7 +360,11 @@ export async function getNewPublicSchemaAndScratchPool(targetPool: PsqlPool, scr
 		connectionTimeoutMillis: targetPool.poolConfig.connectionTimeoutMillis
 	});
 	await scratchPool.runQuery(`DROP SCHEMA public CASCADE;`, [], systemUser);
-	await scratchPool.runQuery(`CREATE SCHEMA public AUTHORIZATION ${escapeColumnName(targetPool.poolConfig.user)};`, [], systemUser);
+	await scratchPool.runQuery(
+		`CREATE SCHEMA public AUTHORIZATION ${escapeColumnName(targetPool.poolConfig.user)};`,
+		[],
+		systemUser
+	);
 	const schemaComment = await targetPool.runQuery<{ description: string }>(
 		`
 		SELECT pg_description.description
@@ -371,7 +375,8 @@ export async function getNewPublicSchemaAndScratchPool(targetPool: PsqlPool, scr
 		systemUser
 	);
 	if (schemaComment[0]?.description) {
-		await scratchPool.runQuery(`COMMENT ON SCHEMA public IS $1;`, [schemaComment[0].description], systemUser);
+		const escaped = schemaComment[0].description.replace(/'/g, "''");
+		await scratchPool.runQuery(`COMMENT ON SCHEMA public IS '${escaped}';`, [], systemUser);
 	}
 	return scratchPool;
 }

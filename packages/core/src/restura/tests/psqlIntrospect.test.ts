@@ -2900,8 +2900,7 @@ describe('diffSchemaToDatabase', () => {
 							{
 								name: 'customerPaymentMethod_paymentType_check',
 								tableName: 'customerPaymentMethod',
-								expression:
-									`CHECK (("paymentType" = ANY (ARRAY['CARD'::text, 'BANK'::text, 'CRYPTO'::text, 'DIGITAL_WALLET'::text])))`
+								expression: `CHECK (("paymentType" = ANY (ARRAY['CARD'::text, 'BANK'::text, 'CRYPTO'::text, 'DIGITAL_WALLET'::text])))`
 							}
 						]
 					})
@@ -2931,9 +2930,7 @@ describe('diffSchemaToDatabase', () => {
 			]);
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
-			const checkStatements = statements.filter((s) =>
-				s.includes('customerPaymentMethod_paymentType_check')
-			);
+			const checkStatements = statements.filter((s) => s.includes('customerPaymentMethod_paymentType_check'));
 			expect(checkStatements).to.have.length(0);
 		});
 
@@ -3171,9 +3168,7 @@ describe('diffSchemaToDatabase', () => {
 			]);
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
-			expect(statements).to.include(
-				`ALTER TABLE "store" ALTER COLUMN "timezone" SET DEFAULT 'utc';`
-			);
+			expect(statements).to.include(`ALTER TABLE "store" ALTER COLUMN "timezone" SET DEFAULT 'utc';`);
 		});
 
 		it('should not diff when schema has uppercase boolean default and Postgres has lowercase', () => {
@@ -3567,8 +3562,7 @@ describe('diffSchemaToDatabase', () => {
 							{
 								name: 'coupon_percentage_max_chk',
 								tableName: 'coupon',
-								expression:
-									"CHECK (((type <> 'PERCENTAGE'::text) OR (value <= (100)::numeric)))"
+								expression: "CHECK (((type <> 'PERCENTAGE'::text) OR (value <= (100)::numeric)))"
 							}
 						]
 					})
@@ -3648,8 +3642,7 @@ describe('diffSchemaToDatabase', () => {
 							{
 								name: 'notificationRule_issue',
 								tableName: 'notificationRule',
-								expression:
-									`CHECK ((((("notificationType")::text = 'UNIT'::text) AND ("unitIssueDefinitionId" IS NOT NULL)) OR ((("notificationType")::text = 'SITE'::text) AND ("siteIssueDefinitionId" IS NOT NULL))))`
+								expression: `CHECK ((((("notificationType")::text = 'UNIT'::text) AND ("unitIssueDefinitionId" IS NOT NULL)) OR ((("notificationType")::text = 'SITE'::text) AND ("siteIssueDefinitionId" IS NOT NULL))))`
 							}
 						]
 					})

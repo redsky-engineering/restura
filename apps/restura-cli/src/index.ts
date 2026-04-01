@@ -5,6 +5,7 @@ import { Command } from 'commander';
 import { createRequire } from 'node:module';
 import { diffCommand } from './commands/diff.js';
 import { generateTypesCommand } from './commands/generateTypes.js';
+import { resetScratchCommand } from './commands/resetScratch.js';
 import { sqlCommand } from './commands/sql.js';
 
 const require = createRequire(import.meta.url);
@@ -28,6 +29,14 @@ program
 	.description('Diff a restura.schema.json against a live database and emit migration SQL')
 	.requiredOption('-s, --schema <path>', 'Path to the restura.schema.json file')
 	.action(diffCommand);
+
+program
+	.command('reset-scratch')
+	.alias('rs')
+	.description('Reset the scratch database and rebuild it from the schema file')
+	.requiredOption('-s, --schema <path>', 'Path to the restura.schema.json file')
+	.option('--suffix <suffix>', 'Scratch database suffix (matches restura.config scratchDatabaseSuffix)')
+	.action(resetScratchCommand);
 
 program
 	.command('sql')

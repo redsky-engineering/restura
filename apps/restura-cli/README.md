@@ -1,6 +1,6 @@
 # restura-cli
 
-Command-line interface for Restura. Provides tooling for generating TypeScript types, diffing a Restura schema against a live database, and generating the full SQL schema from a Restura schema file.
+Command-line interface for Restura. Provides tooling for generating TypeScript types, diffing a Restura schema against a live database, resetting the scratch database, and generating the full SQL schema from a Restura schema file.
 
 ## Prerequisites
 
@@ -100,6 +100,36 @@ RESTURA_DB_URL=... restura diff -s ./restura.schema.json > migrations/001_change
 | ---------------- | -------------------------------------------------- | -------- |
 | `RESTURA_DB_URL` | Postgres connection string for the target database | Yes      |
 
+### `reset-scratch` (alias: `rs`)
+
+Drops and recreates the scratch database's `public` schema, then rebuilds it from the schema file. This is the same operation the Restura UI performs when you click "Preview Schema" — it materializes the proposed schema into the scratch database so it can be compared against the live database.
+
+The scratch database name is derived as `{database}_scratch` by default, or `{database}_scratch_{suffix}` when a suffix is provided. The suffix should match the `scratchDatabaseSuffix` value in your `restura.config`.
+
+Requires the `RESTURA_DB_URL` environment variable (or a `.env` file in the working directory).
+
+```bash
+restura reset-scratch --schema ./restura.schema.json
+restura rs -s ./restura.schema.json
+
+# With a suffix to match your restura.config scratchDatabaseSuffix
+restura rs -s ./restura.schema.json --suffix josh
+```
+
+**Options:**
+
+| Flag                | Alias | Description                                                          | Required |
+| ------------------- | ----- | -------------------------------------------------------------------- | -------- |
+| `--schema <path>`   | `-s`  | Path to the `restura.schema.json` file                               | Yes      |
+| `--suffix <suffix>` |       | Scratch database suffix (matches `scratchDatabaseSuffix` in config)  | No       |
+
+**Environment variables:**
+
+| Variable                 | Description                                                              | Required |
+| ------------------------ | ------------------------------------------------------------------------ | -------- |
+| `RESTURA_DB_URL`         | Postgres connection string for the target database                       | Yes      |
+| `RESTURA_SCRATCH_SUFFIX` | Scratch database suffix (overridden by `--suffix` flag if both are set)  | No       |
+
 ### `sql` (alias: `s`)
 
 Generates the full SQL `CREATE TABLE` schema from a `restura.schema.json` file. The output represents the complete database structure — useful for bootstrapping a new database or reviewing the schema as raw SQL.
@@ -134,6 +164,7 @@ pnpm build
 # Run directly without linking
 pnpm dev -- types -s ./restura.schema.json -o ./generated-types
 pnpm dev -- diff -s ./restura.schema.json
+pnpm dev -- reset-scratch -s ./restura.schema.json
 pnpm dev -- sql -s ./restura.schema.json
 
 # Run tests
