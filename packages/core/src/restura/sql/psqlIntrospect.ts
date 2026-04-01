@@ -642,13 +642,20 @@ function buildAddCheckConstraint(tableName: string, constraint: CheckLike): stri
 	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${pgTruncate(constraint.name)}" CHECK (${constraint.check});`;
 }
 
+function lowercaseOutsideStrings(s: string): string {
+	return s.replace(/'(?:[^']|'')*'|[^']+/g, (match) => {
+		if (match.startsWith("'")) return match;
+		return match.toLowerCase();
+	});
+}
+
 function normalizeWhere(whereExpr: string | null | undefined): string {
 	if (!whereExpr) return '';
 	let normalized = whereExpr
 		.replace(/"(\w+)"/g, '$1')
 		.replace(/\s+/g, ' ')
-		.trim()
-		.toLowerCase();
+		.trim();
+	normalized = lowercaseOutsideStrings(normalized);
 	while (normalized.startsWith('(') && normalized.endsWith(')')) {
 		const inner = normalized.slice(1, -1);
 		let depth = 0;
@@ -664,7 +671,6 @@ function normalizeWhere(whereExpr: string | null | undefined): string {
 		if (balanced && depth === 0) normalized = inner.trim();
 		else break;
 	}
-	normalized = normalized.replace(/\(([^()]+)\)/g, '$1');
 	return normalized;
 }
 
@@ -708,7 +714,8 @@ function normalizeCheckExpression(expr: string): string {
 	normalized = normalized.replace(/=\s*ANY\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)/gi, 'IN ($1)');
 	normalized = normalized.replace(/"(\w+)"/g, '$1');
 	normalized = normalized.replace(/\((\w+)\)/g, '$1');
-	normalized = normalized.replace(/\s+/g, ' ').trim().toLowerCase();
+	normalized = normalized.replace(/\s+/g, ' ').trim();
+	normalized = lowercaseOutsideStrings(normalized);
 	normalized = normalized.replace(/<>/g, '!=');
 	while (normalized.startsWith('(') && normalized.endsWith(')')) {
 		const inner = normalized.slice(1, -1);
@@ -725,7 +732,6 @@ function normalizeCheckExpression(expr: string): string {
 		if (balanced && depth === 0) normalized = inner.trim();
 		else break;
 	}
-	normalized = normalized.replace(/\(([^()]+)\)/g, '$1');
 	normalized = normalized.replace(/\s*,\s*/g, ', ');
 	return normalized;
 }
@@ -783,5 +789,5 @@ function defaultsMatch(desired: string | null, live: string | null, column: Colu
 	if (desired === null && live === null) return true;
 	if (desired === null || live === null) return false;
 	const normalizedLive = live.replace(/::[a-z][a-z0-9_ ]*(\[\])?$/gi, '').trim();
-	return desired.trim().toLowerCase() === normalizedLive.toLowerCase();
+	return lowercaseOutsideStrings(desired.trim()) === lowercaseOutsideStrings(normalizedLive);
 }
