@@ -649,6 +649,25 @@ function lowercaseOutsideStrings(s: string): string {
 	});
 }
 
+/**
+ * normalizeCheckExpression and normalizeWhere both normalize expressions from two sources —
+ * Restura schema JSON and PostgreSQL introspection (pg_get_constraintdef / pg_indexes) —
+ * to a common canonical form for comparison. PostgreSQL wraps individual conditions in
+ * redundant parentheses (e.g., `(a = 1) AND (b = 2)`), while the Restura schema stores
+ * them without (e.g., `a = 1 AND b = 2`). This helper strips those leaf-level parens so
+ * both representations normalize to the same string. Parens around sub-expressions that
+ * contain AND/OR are kept to preserve operator precedence.
+ */
+function stripRedundantInnerParens(expr: string): string {
+	return expr.replace(
+		/(?<=^| (?:and|or) )\(([^()]*)\)(?=$| (?:and|or) )/gi,
+		(match, inner) => {
+			if (/\b(?:and|or)\b/i.test(inner)) return match;
+			return inner;
+		}
+	);
+}
+
 function normalizeWhere(whereExpr: string | null | undefined): string {
 	if (!whereExpr) return '';
 	let normalized = whereExpr
@@ -671,6 +690,7 @@ function normalizeWhere(whereExpr: string | null | undefined): string {
 		if (balanced && depth === 0) normalized = inner.trim();
 		else break;
 	}
+	normalized = stripRedundantInnerParens(normalized);
 	return normalized;
 }
 
@@ -732,6 +752,7 @@ function normalizeCheckExpression(expr: string): string {
 		if (balanced && depth === 0) normalized = inner.trim();
 		else break;
 	}
+	normalized = stripRedundantInnerParens(normalized);
 	normalized = normalized.replace(/\s*,\s*/g, ', ');
 	return normalized;
 }

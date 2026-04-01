@@ -3118,6 +3118,64 @@ describe('diffSchemaToDatabase', () => {
 			expect(defaultAlters).to.have.length(0);
 		});
 
+		it('should diff when string literal default changes case (e.g. UTC to utc)', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'store',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('store_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'timezone',
+								udtName: 'varchar',
+								isNullable: false,
+								columnDefault: "'UTC'::character varying",
+								characterMaximumLength: 50,
+								numericPrecision: null,
+								numericScale: null
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'store',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{
+							name: 'timezone',
+							type: 'VARCHAR',
+							isNullable: false,
+							roles: [],
+							scopes: [],
+							length: 50,
+							default: "'utc'"
+						}
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			expect(statements).to.include(
+				`ALTER TABLE "store" ALTER COLUMN "timezone" SET DEFAULT 'utc';`
+			);
+		});
+
 		it('should not diff when schema has uppercase boolean default and Postgres has lowercase', () => {
 			const snapshot: DbSnapshot = {
 				tables: [
