@@ -1,11 +1,11 @@
 ---
 title: CLI
-description: Reference for the restura-cli command-line tool — generate TypeScript types, diff your schema against a live database, and generate the full SQL schema.
+description: Reference for the restura-cli command-line tool — generate TypeScript types, diff your schema against a live database, reset the scratch database, and generate the full SQL schema.
 ---
 
 import { Aside, Code } from '@astrojs/starlight/components';
 
-The `restura-cli` package provides a command-line interface for working with a Restura schema outside of the server. It can regenerate TypeScript types from a schema file, diff a schema against a live Postgres database to produce the SQL needed to bring them in sync, and generate the full SQL `CREATE TABLE` schema for bootstrapping a new database.
+The `restura-cli` package provides a command-line interface for working with a Restura schema outside of the server. It can regenerate TypeScript types from a schema file, diff a schema against a live Postgres database to produce the SQL needed to bring them in sync, reset the scratch database to match the schema, and generate the full SQL `CREATE TABLE` schema for bootstrapping a new database.
 
 ## Prerequisites
 
@@ -103,6 +103,31 @@ RESTURA_DB_URL=... restura diff -s ./restura.schema.json > migrations/001_change
 
 - `ALTER TABLE ADD CONSTRAINT ... CHECK` / `ALTER TABLE DROP CONSTRAINT` when the expression changes
 - `ENUM` column value sets are normalized and diffed against Postgres `ANY(ARRAY[...])` syntax, so only actual value-set changes trigger a rebuild
+
+### `reset-scratch` (alias: `rs`)
+
+Drops and recreates the scratch database's `public` schema, then rebuilds it from the schema file. This is the same operation the Restura UI performs when you click "Preview Schema" — it materializes the proposed schema into the scratch database so it can be compared against the live database.
+
+The scratch database name is derived as `{database}_scratch` by default, or `{database}_scratch_{suffix}` when a suffix is provided. The suffix should match the `scratchDatabaseSuffix` value in your `restura.config`.
+
+```bash
+restura reset-scratch --schema ./restura.schema.json
+restura rs -s ./restura.schema.json
+
+# With a suffix to match your restura.config scratchDatabaseSuffix
+restura rs -s ./restura.schema.json --suffix josh
+```
+
+| Flag                | Alias | Description                                                          | Required |
+| ------------------- | ----- | -------------------------------------------------------------------- | -------- |
+| `--schema <path>`   | `-s`  | Path to the `restura.schema.json` file                               | Yes      |
+| `--suffix <suffix>` |       | Scratch database suffix (matches `scratchDatabaseSuffix` in config)  | No       |
+
+<Aside type="note">
+	`reset-scratch` requires the `RESTURA_DB_URL` environment variable (or a `.env` file in the working directory) set to a
+	Postgres connection string for the target database. The suffix can also be set via the `RESTURA_SCRATCH_SUFFIX`
+	environment variable instead of the `--suffix` flag.
+</Aside>
 
 ### `sql` (alias: `s`)
 
