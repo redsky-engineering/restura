@@ -3322,6 +3322,106 @@ describe('diffSchemaToDatabase', () => {
 			expect(indexStatements).to.have.length(0);
 		});
 
+		it('should not diff when Postgres adds ::text casts to partial index WHERE clause', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'component',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('component_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'unitId',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'type',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						indexes: [
+							{
+								name: 'component_unitId_generator_unique_index',
+								tableName: 'component',
+								isUnique: true,
+								isPrimary: false,
+								columns: ['unitId'],
+								order: 'ASC',
+								where: `(("type")::text = 'GENERATOR'::text)`
+							},
+							{
+								name: 'component_unitId_battery_unique_index',
+								tableName: 'component',
+								isUnique: true,
+								isPrimary: false,
+								columns: ['unitId'],
+								order: 'ASC',
+								where: `(("type")::text = 'BATTERY'::text)`
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'component',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'unitId', type: 'INTEGER', isNullable: false, roles: [], scopes: [] },
+						{ name: 'type', type: 'TEXT', isNullable: false, roles: [], scopes: [] }
+					],
+					indexes: [
+						{
+							name: 'component_unitId_generator_unique_index',
+							columns: ['unitId'],
+							isUnique: true,
+							isPrimaryKey: false,
+							order: 'ASC',
+							where: `"type" = 'GENERATOR'`
+						},
+						{
+							name: 'component_unitId_battery_unique_index',
+							columns: ['unitId'],
+							isUnique: true,
+							isPrimaryKey: false,
+							order: 'ASC',
+							where: `"type" = 'BATTERY'`
+						}
+					],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const indexStatements = statements.filter(
+				(s) =>
+					s.includes('component_unitId_generator_unique_index') ||
+					s.includes('component_unitId_battery_unique_index')
+			);
+			expect(indexStatements).to.have.length(0);
+		});
+
 		it('should not diff when Postgres wraps multiple WHERE conditions in sub-expression parens', () => {
 			const snapshot: DbSnapshot = {
 				tables: [
@@ -3498,6 +3598,88 @@ describe('diffSchemaToDatabase', () => {
 
 			const statements = diffSchemaToDatabase(schema, snapshot);
 			const checkStatements = statements.filter((s) => s.includes('coupon_percentage_max_chk'));
+			expect(checkStatements).to.have.length(0);
+		});
+
+		it('should not diff when Postgres wraps leaf conditions in compound AND/OR check constraints', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'notificationRule',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: "nextval('notificationRule_id_seq'::regclass)",
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'notificationType',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							},
+							{
+								name: 'unitIssueDefinitionId',
+								udtName: 'int4',
+								isNullable: true,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'siteIssueDefinitionId',
+								udtName: 'int4',
+								isNullable: true,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							}
+						],
+						checkConstraints: [
+							{
+								name: 'notificationRule_issue',
+								tableName: 'notificationRule',
+								expression:
+									`CHECK ((((("notificationType")::text = 'UNIT'::text) AND ("unitIssueDefinitionId" IS NOT NULL)) OR ((("notificationType")::text = 'SITE'::text) AND ("siteIssueDefinitionId" IS NOT NULL))))`
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'notificationRule',
+					columns: [
+						{ name: 'id', type: 'SERIAL', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'notificationType', type: 'TEXT', isNullable: false, roles: [], scopes: [] },
+						{ name: 'unitIssueDefinitionId', type: 'INTEGER', isNullable: true, roles: [], scopes: [] },
+						{ name: 'siteIssueDefinitionId', type: 'INTEGER', isNullable: true, roles: [], scopes: [] }
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [
+						{
+							name: 'notificationRule_issue',
+							check: `("notificationType" = 'UNIT' AND "unitIssueDefinitionId" IS NOT NULL) OR ("notificationType" = 'SITE' AND "siteIssueDefinitionId" IS NOT NULL)`
+						}
+					],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+			const checkStatements = statements.filter((s) => s.includes('notificationRule_issue'));
 			expect(checkStatements).to.have.length(0);
 		});
 

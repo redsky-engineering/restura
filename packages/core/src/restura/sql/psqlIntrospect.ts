@@ -650,28 +650,30 @@ function lowercaseOutsideStrings(s: string): string {
 }
 
 /**
- * normalizeCheckExpression and normalizeWhere both normalize expressions from two sources —
- * Restura schema JSON and PostgreSQL introspection (pg_get_constraintdef / pg_indexes) —
- * to a common canonical form for comparison. PostgreSQL wraps individual conditions in
- * redundant parentheses (e.g., `(a = 1) AND (b = 2)`), while the Restura schema stores
- * them without (e.g., `a = 1 AND b = 2`). This helper strips those leaf-level parens so
- * both representations normalize to the same string. Parens around sub-expressions that
- * contain AND/OR are kept to preserve operator precedence.
+ * Recursively strips parentheses around leaf conditions (those containing no AND/OR
+ * and no nested parens). PostgreSQL wraps individual conditions in redundant parens
+ * (e.g., `(a = 1) AND (b = 2)`) while the Restura schema stores them without.
+ * Parens around sub-expressions that contain AND/OR are kept to preserve precedence.
  */
-function stripRedundantInnerParens(expr: string): string {
-	return expr.replace(
-		/(?<=^| (?:and|or) )\(([^()]*)\)(?=$| (?:and|or) )/gi,
-		(match, inner) => {
+function stripLeafParens(expr: string): string {
+	let prev = '';
+	let curr = expr;
+	while (prev !== curr) {
+		prev = curr;
+		curr = curr.replace(/\(([^()]*)\)/g, (match, inner) => {
 			if (/\b(?:and|or)\b/i.test(inner)) return match;
 			return inner;
-		}
-	);
+		});
+	}
+	return curr;
 }
 
 function normalizeWhere(whereExpr: string | null | undefined): string {
 	if (!whereExpr) return '';
 	let normalized = whereExpr
+		.replace(/::\w+(\[\])?/g, '')
 		.replace(/"(\w+)"/g, '$1')
+		.replace(/\((\w+)\)/g, '$1')
 		.replace(/\s+/g, ' ')
 		.trim();
 	normalized = lowercaseOutsideStrings(normalized);
@@ -690,7 +692,7 @@ function normalizeWhere(whereExpr: string | null | undefined): string {
 		if (balanced && depth === 0) normalized = inner.trim();
 		else break;
 	}
-	normalized = stripRedundantInnerParens(normalized);
+	normalized = stripLeafParens(normalized);
 	return normalized;
 }
 
@@ -752,7 +754,7 @@ function normalizeCheckExpression(expr: string): string {
 		if (balanced && depth === 0) normalized = inner.trim();
 		else break;
 	}
-	normalized = stripRedundantInnerParens(normalized);
+	normalized = stripLeafParens(normalized);
 	normalized = normalized.replace(/\s*,\s*/g, ', ');
 	return normalized;
 }
