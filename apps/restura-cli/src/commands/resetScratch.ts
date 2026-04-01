@@ -38,12 +38,13 @@ export async function resetScratchCommand(options: { schema: string; suffix?: st
 	}
 
 	const validSchema = schema as ResturaSchema;
-	const pool = new PsqlPool({ connectionString: dbUrl });
 	const suffix = options.suffix || process.env.RESTURA_SCRATCH_SUFFIX;
-	const scratchDbName = `${pool.poolConfig.database}_scratch${suffix ? `_${suffix}` : ''}`;
+	let pool: PsqlPool | undefined;
 	let scratchPool: PsqlPool | undefined;
 
 	try {
+		pool = new PsqlPool({ connectionString: dbUrl });
+		const scratchDbName = `${pool.poolConfig.database}_scratch${suffix ? `_${suffix}` : ''}`;
 		scratchPool = await getNewPublicSchemaAndScratchPool(pool, scratchDbName);
 		const ddl = generateDatabaseSchemaFromSchema(validSchema);
 		await scratchPool.runQuery(ddl, [], systemUser);
@@ -54,7 +55,7 @@ export async function resetScratchCommand(options: { schema: string; suffix?: st
 	} finally {
 		const cleanups: Promise<void>[] = [];
 		if (scratchPool) cleanups.push(scratchPool.pool.end());
-		cleanups.push(pool.pool.end());
+		if (pool) cleanups.push(pool.pool.end());
 		await Promise.allSettled(cleanups);
 	}
 }
