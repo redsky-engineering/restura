@@ -282,7 +282,7 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 	for (const desired of tablesToAlter) {
 		const live = liveTableMap.get(desired.name)!;
 
-		const desiredFkNames = new Set(desired.foreignKeys.map((fk) => fk.name));
+		const desiredFkNames = new Set(desired.foreignKeys.map((fk) => pgTruncate(fk.name)));
 		for (const liveFk of live.foreignKeys) {
 			if (!desiredFkNames.has(liveFk.name) || isFkChanged(desired, liveFk)) {
 				statements.push(`ALTER TABLE "${desired.name}" DROP CONSTRAINT "${liveFk.name}";`);
@@ -291,11 +291,14 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 
 		const desiredCheckExprMap = new Map<string, string>();
 		for (const check of desired.checkConstraints) {
-			desiredCheckExprMap.set(check.name, check.check);
+			desiredCheckExprMap.set(pgTruncate(check.name), check.check);
 		}
 		for (const col of desired.columns) {
 			if (col.type === 'ENUM' && col.value) {
-				desiredCheckExprMap.set(`${desired.name}_${col.name}_check`, `"${col.name}" IN (${col.value})`);
+				desiredCheckExprMap.set(
+					pgTruncate(`${desired.name}_${col.name}_check`),
+					`"${col.name}" IN (${col.value})`
+				);
 			}
 		}
 		const changedChecks = new Set<string>();
@@ -315,18 +318,27 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		const desiredIdxSignatures = new Map<string, string>();
 		for (const idx of desired.indexes) {
 			if (idx.isPrimaryKey) continue;
-			desiredIdxSignatures.set(idx.name, indexSignature(idx.name, idx.columns, idx.isUnique, idx.order, idx.where));
+			desiredIdxSignatures.set(
+				pgTruncate(idx.name),
+				indexSignature(pgTruncate(idx.name), idx.columns, idx.isUnique, idx.order, idx.where)
+			);
 		}
 		const autoUniqueNames = new Set<string>();
 		for (const col of desired.columns) {
 			if (col.isUnique) {
-				autoUniqueNames.add(`${desired.name}_${col.name}_unique_index`);
+				autoUniqueNames.add(pgTruncate(`${desired.name}_${col.name}_unique_index`));
 			}
 		}
 		for (const liveIdx of live.indexes) {
 			if (liveIdx.isPrimary) continue;
 			if (autoUniqueNames.has(liveIdx.name)) continue;
-			const liveSig = indexSignature(liveIdx.name, liveIdx.columns, liveIdx.isUnique, liveIdx.order, liveIdx.where);
+			const liveSig = indexSignature(
+				liveIdx.name,
+				liveIdx.columns,
+				liveIdx.isUnique,
+				liveIdx.order,
+				liveIdx.where
+			);
 			const desiredSig = desiredIdxSignatures.get(liveIdx.name);
 			if (!desiredSig || desiredSig !== liveSig) {
 				statements.push(`DROP INDEX "${liveIdx.name}";`);
@@ -361,8 +373,14 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		}
 		for (const index of desired.indexes) {
 			if (index.isPrimaryKey) continue;
-			const desiredSig = indexSignature(index.name, index.columns, index.isUnique, index.order, index.where);
-			const liveSig = liveIdxSignatures.get(index.name);
+			const desiredSig = indexSignature(
+				pgTruncate(index.name),
+				index.columns,
+				index.isUnique,
+				index.order,
+				index.where
+			);
+			const liveSig = liveIdxSignatures.get(pgTruncate(index.name));
 			if (!liveSig || liveSig !== desiredSig) {
 				statements.push(buildCreateIndex(desired.name, index));
 			}
@@ -381,10 +399,10 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		const liveFkNames = new Set(live.foreignKeys.map((fk) => fk.name));
 		for (const fk of desired.foreignKeys) {
 			if (
-				!liveFkNames.has(fk.name) ||
+				!liveFkNames.has(pgTruncate(fk.name)) ||
 				isFkChanged(
 					desired,
-					liveTableMap.get(desired.name)!.foreignKeys.find((liveFk) => liveFk.name === fk.name)!
+					liveTableMap.get(desired.name)!.foreignKeys.find((liveFk) => liveFk.name === pgTruncate(fk.name))!
 				)
 			) {
 				statements.push(buildAddForeignKey(desired.name, fk));
@@ -397,13 +415,13 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		const liveCheckNames = new Set(live.checkConstraints.map((check) => check.name));
 		const changedChecks = changedChecksPerTable.get(desired.name) ?? new Set<string>();
 		for (const check of desired.checkConstraints) {
-			if (!liveCheckNames.has(check.name) || changedChecks.has(check.name)) {
+			if (!liveCheckNames.has(pgTruncate(check.name)) || changedChecks.has(pgTruncate(check.name))) {
 				statements.push(buildAddCheckConstraint(desired.name, check));
 			}
 		}
 		for (const col of desired.columns) {
 			if (col.type === 'ENUM' && col.value) {
-				const checkName = `${desired.name}_${col.name}_check`;
+				const checkName = pgTruncate(`${desired.name}_${col.name}_check`);
 				if (!liveCheckNames.has(checkName) || changedChecks.has(checkName)) {
 					statements.push(
 						`ALTER TABLE "${desired.name}" ADD CONSTRAINT "${checkName}" CHECK ("${col.name}" IN (${col.value}));`
@@ -468,8 +486,8 @@ interface TopologicalSortResult {
 }
 
 function topologicalSortTables(tables: ResturaSchema['database']): TopologicalSortResult {
-	const tableNames = new Set(tables.map((t) => t.name));
-	const tableMap = new Map(tables.map((t) => [t.name, t]));
+	const tableNames = new Set(tables.map((table) => table.name));
+	const tableMap = new Map(tables.map((table) => [table.name, table]));
 
 	const inDegree = new Map<string, number>();
 	const tableDeps = new Map<string, Set<string>>();
@@ -483,7 +501,11 @@ function topologicalSortTables(tables: ResturaSchema['database']): TopologicalSo
 
 	for (const table of tables) {
 		for (const fk of table.foreignKeys) {
-			if (tableNames.has(fk.refTable) && fk.refTable !== table.name && !tableDeps.get(table.name)!.has(fk.refTable)) {
+			if (
+				tableNames.has(fk.refTable) &&
+				fk.refTable !== table.name &&
+				!tableDeps.get(table.name)!.has(fk.refTable)
+			) {
 				tableDeps.get(table.name)!.add(fk.refTable);
 				inDegree.set(table.name, (inDegree.get(table.name) ?? 0) + 1);
 				reverseDeps.get(fk.refTable)!.add(table.name);
@@ -509,7 +531,7 @@ function topologicalSortTables(tables: ResturaSchema['database']): TopologicalSo
 
 	const sortedSet = new Set(sorted);
 	const deferredFkNames = new Set<string>();
-	const cycleTables = tables.filter((t) => !sortedSet.has(t.name));
+	const cycleTables = tables.filter((table) => !sortedSet.has(table.name));
 
 	const placed = new Set(sorted);
 	for (const table of cycleTables) {
@@ -530,7 +552,8 @@ function buildCreateTable(table: ResturaSchema['database'][0], deferredFkNames: 
 	for (const column of table.columns) {
 		let definition = `"${column.name}" ${buildColumnType(column)}`;
 		if (column.isPrimary) definition += ' PRIMARY KEY';
-		if (column.isUnique) definition += ` CONSTRAINT "${table.name}_${column.name}_unique_index" UNIQUE`;
+		if (column.isUnique)
+			definition += ` CONSTRAINT "${pgTruncate(`${table.name}_${column.name}_unique_index`)}" UNIQUE`;
 		if (!column.isNullable) definition += ' NOT NULL';
 		else definition += ' NULL';
 		if (column.default) definition += ` DEFAULT ${column.default}`;
@@ -539,16 +562,16 @@ function buildCreateTable(table: ResturaSchema['database'][0], deferredFkNames: 
 	for (const fk of table.foreignKeys) {
 		if (deferredFkNames.has(fk.name)) continue;
 		definitions.push(
-			`CONSTRAINT "${fk.name}" FOREIGN KEY ("${fk.column}") REFERENCES "${fk.refTable}" ("${fk.refColumn}") ON DELETE ${fk.onDelete} ON UPDATE ${fk.onUpdate}`
+			`CONSTRAINT "${pgTruncate(fk.name)}" FOREIGN KEY ("${fk.column}") REFERENCES "${fk.refTable}" ("${fk.refColumn}") ON DELETE ${fk.onDelete} ON UPDATE ${fk.onUpdate}`
 		);
 	}
 	for (const check of table.checkConstraints) {
-		definitions.push(`CONSTRAINT "${check.name}" CHECK (${check.check})`);
+		definitions.push(`CONSTRAINT "${pgTruncate(check.name)}" CHECK (${check.check})`);
 	}
 	for (const col of table.columns) {
 		if (col.type === 'ENUM' && col.value) {
 			definitions.push(
-				`CONSTRAINT "${table.name}_${col.name}_check" CHECK ("${col.name}" IN (${col.value}))`
+				`CONSTRAINT "${pgTruncate(`${table.name}_${col.name}_check`)}" CHECK ("${col.name}" IN (${col.value}))`
 			);
 		}
 	}
@@ -572,7 +595,7 @@ function buildColumnType(column: ColumnData): string {
 function buildAddColumn(tableName: string, column: ColumnData): string {
 	let definition = `ALTER TABLE "${tableName}" ADD COLUMN "${column.name}" ${buildColumnType(column)}`;
 	if (column.isPrimary) definition += ' PRIMARY KEY';
-	if (column.isUnique) definition += ` CONSTRAINT "${tableName}_${column.name}_unique_index" UNIQUE`;
+	if (column.isUnique) definition += ` CONSTRAINT "${pgTruncate(`${tableName}_${column.name}_unique_index`)}" UNIQUE`;
 	if (!column.isNullable) definition += ' NOT NULL';
 	else definition += ' NULL';
 	if (column.default) definition += ` DEFAULT ${column.default}`;
@@ -591,7 +614,7 @@ interface IndexLike {
 
 function buildCreateIndex(tableName: string, index: IndexLike): string {
 	const unique = index.isUnique ? 'UNIQUE ' : '';
-	let sql = `CREATE ${unique}INDEX "${index.name}" ON "${tableName}" (${index.columns.map((column) => `"${column}" ${index.order}`).join(', ')})`;
+	let sql = `CREATE ${unique}INDEX "${pgTruncate(index.name)}" ON "${tableName}" (${index.columns.map((column) => `"${column}" ${index.order}`).join(', ')})`;
 	if (index.where) sql += ` WHERE ${index.where}`;
 	sql += ';';
 	return sql;
@@ -607,7 +630,7 @@ interface FkLike {
 }
 
 function buildAddForeignKey(tableName: string, foreignKey: FkLike): string {
-	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${foreignKey.name}" FOREIGN KEY ("${foreignKey.column}") REFERENCES "${foreignKey.refTable}" ("${foreignKey.refColumn}") ON DELETE ${foreignKey.onDelete} ON UPDATE ${foreignKey.onUpdate};`;
+	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${pgTruncate(foreignKey.name)}" FOREIGN KEY ("${foreignKey.column}") REFERENCES "${foreignKey.refTable}" ("${foreignKey.refColumn}") ON DELETE ${foreignKey.onDelete} ON UPDATE ${foreignKey.onUpdate};`;
 }
 
 interface CheckLike {
@@ -616,42 +639,46 @@ interface CheckLike {
 }
 
 function buildAddCheckConstraint(tableName: string, constraint: CheckLike): string {
-	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${constraint.name}" CHECK (${constraint.check});`;
+	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${pgTruncate(constraint.name)}" CHECK (${constraint.check});`;
 }
 
-function indexSignature(
-	name: string,
-	columns: string[],
-	isUnique: boolean,
-	order: string,
-	where?: string | null
-): string {
-	return `${name}|${columns.join(',')}|${isUnique}|${order}|${where || ''}`;
+function lowercaseOutsideStrings(s: string): string {
+	return s.replace(/'(?:[^']|'')*'|[^']+/g, (match) => {
+		if (match.startsWith("'")) return match;
+		return match.toLowerCase();
+	});
 }
 
-function isFkChanged(desired: ResturaSchema['database'][0], liveFk: DbForeignKey): boolean {
-	const desiredFk = desired.foreignKeys.find((fk) => fk.name === liveFk.name);
-	if (!desiredFk) return true;
-	return (
-		desiredFk.column !== liveFk.column ||
-		desiredFk.refTable !== liveFk.refTable ||
-		desiredFk.refColumn !== liveFk.refColumn ||
-		desiredFk.onDelete !== liveFk.onDelete ||
-		desiredFk.onUpdate !== liveFk.onUpdate
-	);
+/**
+ * Recursively strips parentheses around leaf conditions (those containing no AND/OR
+ * and no nested parens). PostgreSQL wraps individual conditions in redundant parens
+ * (e.g., `(a = 1) AND (b = 2)`) while the Restura schema stores them without.
+ * Parens around sub-expressions that contain AND/OR are kept to preserve precedence.
+ */
+function stripLeafParens(expr: string): string {
+	let prev = '';
+	let curr = expr;
+	while (prev !== curr) {
+		prev = curr;
+		curr = curr.replace(/\(([^()]*)\)/g, (match, inner) => {
+			if (/\b(?:and|or)\b/i.test(inner)) return match;
+			return inner;
+		});
+	}
+	return curr;
 }
 
-function normalizeCheckExpression(expr: string): string {
-	let s = expr;
-	const checkMatch = s.match(/^CHECK\s*\(([\s\S]*)\)\s*$/i);
-	if (checkMatch) s = checkMatch[1];
-	s = s.replace(/::\w+(\[\])?/g, '');
-	s = s.replace(/=\s*ANY\s*\(\s*\(?\s*ARRAY\s*\[([^\]]*)\]\s*\)?\s*\)/gi, 'IN ($1)');
-	s = s.replace(/"(\w+)"/g, '$1');
-	s = s.replace(/\((\w+)\)/g, '$1');
-	s = s.replace(/\s+/g, ' ').trim().toLowerCase();
-	while (s.startsWith('(') && s.endsWith(')')) {
-		const inner = s.slice(1, -1);
+function normalizeWhere(whereExpr: string | null | undefined): string {
+	if (!whereExpr) return '';
+	let normalized = whereExpr
+		.replace(/::\w+(\[\])?/g, '')
+		.replace(/"(\w+)"/g, '$1')
+		.replace(/\((\w+)\)/g, '$1')
+		.replace(/\s+/g, ' ')
+		.trim();
+	normalized = lowercaseOutsideStrings(normalized);
+	while (normalized.startsWith('(') && normalized.endsWith(')')) {
+		const inner = normalized.slice(1, -1);
 		let depth = 0;
 		let balanced = true;
 		for (const char of inner) {
@@ -662,11 +689,74 @@ function normalizeCheckExpression(expr: string): string {
 				break;
 			}
 		}
-		if (balanced && depth === 0) s = inner.trim();
+		if (balanced && depth === 0) normalized = inner.trim();
 		else break;
 	}
-	s = s.replace(/\s*,\s*/g, ', ');
-	return s;
+	normalized = stripLeafParens(normalized);
+	return normalized;
+}
+
+function indexSignature(
+	name: string,
+	columns: string[],
+	isUnique: boolean,
+	order: string,
+	where?: string | null
+): string {
+	return `${name}|${columns.join(',')}|${isUnique}|${order}|${normalizeWhere(where)}`;
+}
+
+function isFkChanged(desired: ResturaSchema['database'][0], liveFk: DbForeignKey): boolean {
+	const desiredFk = desired.foreignKeys.find((fk) => pgTruncate(fk.name) === liveFk.name);
+	if (!desiredFk) return true;
+	return (
+		desiredFk.column !== liveFk.column ||
+		desiredFk.refTable !== liveFk.refTable ||
+		desiredFk.refColumn !== liveFk.refColumn ||
+		desiredFk.onDelete !== liveFk.onDelete ||
+		desiredFk.onUpdate !== liveFk.onUpdate
+	);
+}
+
+const PG_MAX_IDENTIFIER = 63;
+function pgTruncate(name: string): string {
+	const buf = Buffer.from(name, 'utf8');
+	if (buf.length <= PG_MAX_IDENTIFIER) return name;
+	let end = PG_MAX_IDENTIFIER;
+	while (end > 0 && (buf[end] & 0xc0) === 0x80) end--;
+	return buf.subarray(0, end).toString('utf8');
+}
+
+function normalizeCheckExpression(expr: string): string {
+	let normalized = expr;
+	const checkMatch = normalized.match(/^CHECK\s*\(([\s\S]*)\)\s*$/i);
+	if (checkMatch) normalized = checkMatch[1];
+	normalized = normalized.replace(/::\w+(\[\])?/g, '');
+	normalized = normalized.replace(/=\s*ANY\s*\(\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)\s*\)/gi, 'IN ($1)');
+	normalized = normalized.replace(/=\s*ANY\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)/gi, 'IN ($1)');
+	normalized = normalized.replace(/"(\w+)"/g, '$1');
+	normalized = normalized.replace(/\((\w+)\)/g, '$1');
+	normalized = normalized.replace(/\s+/g, ' ').trim();
+	normalized = lowercaseOutsideStrings(normalized);
+	normalized = normalized.replace(/<>/g, '!=');
+	while (normalized.startsWith('(') && normalized.endsWith(')')) {
+		const inner = normalized.slice(1, -1);
+		let depth = 0;
+		let balanced = true;
+		for (const char of inner) {
+			if (char === '(') depth++;
+			if (char === ')') depth--;
+			if (depth < 0) {
+				balanced = false;
+				break;
+			}
+		}
+		if (balanced && depth === 0) normalized = inner.trim();
+		else break;
+	}
+	normalized = stripLeafParens(normalized);
+	normalized = normalized.replace(/\s*,\s*/g, ', ');
+	return normalized;
 }
 
 function isSerialMatch(column: ColumnData, liveCol: DbColumn): boolean {
@@ -682,7 +772,7 @@ function modifiersDiffer(column: ColumnData, liveColumn: DbColumn): boolean {
 	if (desiredLength !== liveColumn.characterMaximumLength) return true;
 
 	if (column.type === 'DECIMAL' && column.value) {
-		const parts = column.value.replace(/['"]/g, '').split('-');
+		const parts = column.value.replace(/['"]/g, '').split(/[-,]/);
 		const desiredPrecision = parseInt(parts[0], 10);
 		const desiredScale = parts.length > 1 ? parseInt(parts[1], 10) : 0;
 		if (liveColumn.numericPrecision !== desiredPrecision || liveColumn.numericScale !== desiredScale) return true;
@@ -721,6 +811,6 @@ function defaultsMatch(desired: string | null, live: string | null, column: Colu
 	if (column.hasAutoIncrement || column.type === 'BIGSERIAL' || column.type === 'SERIAL') return true;
 	if (desired === null && live === null) return true;
 	if (desired === null || live === null) return false;
-	const normalizedLive = live.replace(/::[^\s]+$/g, '').trim();
-	return desired.trim() === normalizedLive;
+	const normalizedLive = live.replace(/::[a-z][a-z0-9_ ]*(\[\])?$/gi, '').trim();
+	return lowercaseOutsideStrings(desired.trim()) === lowercaseOutsideStrings(normalizedLive);
 }

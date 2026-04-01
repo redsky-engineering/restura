@@ -1,6 +1,6 @@
 # restura-cli
 
-Command-line interface for Restura. Provides tooling for generating TypeScript types and diffing a Restura schema against a live database.
+Command-line interface for Restura. Provides tooling for generating TypeScript types, diffing a Restura schema against a live database, and generating the full SQL schema from a Restura schema file.
 
 ## Prerequisites
 
@@ -100,6 +100,26 @@ RESTURA_DB_URL=... restura diff -s ./restura.schema.json > migrations/001_change
 | ---------------- | -------------------------------------------------- | -------- |
 | `RESTURA_DB_URL` | Postgres connection string for the target database | Yes      |
 
+### `sql` (alias: `s`)
+
+Generates the full SQL `CREATE TABLE` schema from a `restura.schema.json` file. The output represents the complete database structure — useful for bootstrapping a new database or reviewing the schema as raw SQL.
+
+Output goes to stdout so it can be inspected, piped, or redirected as needed.
+
+```bash
+restura sql --schema ./restura.schema.json
+restura s -s ./restura.schema.json
+
+# Redirect output to a file
+restura sql -s ./restura.schema.json > schema.sql
+```
+
+**Options:**
+
+| Flag              | Alias | Description                            | Required |
+| ----------------- | ----- | -------------------------------------- | -------- |
+| `--schema <path>` | `-s`  | Path to the `restura.schema.json` file | Yes      |
+
 ## Building
 
 Produces a single self-contained binary with no runtime dependency:
@@ -114,6 +134,7 @@ pnpm build
 # Run directly without linking
 pnpm dev -- types -s ./restura.schema.json -o ./generated-types
 pnpm dev -- diff -s ./restura.schema.json
+pnpm dev -- sql -s ./restura.schema.json
 
 # Run tests
 pnpm test

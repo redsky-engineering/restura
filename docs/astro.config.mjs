@@ -38,8 +38,7 @@ export default defineConfig({
 					items: [
 						{ label: 'Create a Database Table', slug: 'guides/database-table' },
 						{ label: 'Create a Standard Endpoint', slug: 'guides/standard-endpoint' },
-						{ label: 'Create a Custom Endpoint', slug: 'guides/custom-endpoint' },
-						{ label: 'Logging', slug: 'guides/logging' }
+						{ label: 'Create a Custom Endpoint', slug: 'guides/custom-endpoint' }
 					]
 				},
 				{
@@ -47,6 +46,7 @@ export default defineConfig({
 					items: [
 						{ label: 'CLI', slug: 'cli' },
 						{ label: 'Config', slug: 'reference/config' },
+						{ label: 'Logging', slug: 'reference/logging' },
 						{ label: 'Schema', slug: 'reference/schema' },
 						{
 							label: 'Database',
