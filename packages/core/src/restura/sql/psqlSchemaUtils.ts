@@ -393,7 +393,7 @@ export async function diffDatabaseToSchema(
 	try {
 		scratchPool = await getNewPublicSchemaAndScratchPool(targetPool, scratchDbName);
 		const sqlFullStatement = generateDatabaseSchemaFromSchema(schema);
-		await scratchPool.pool.query(sqlFullStatement);
+		await scratchPool.runQuery(sqlFullStatement, [], systemUser);
 
 		const connectionConfig = {
 			host: targetPool.poolConfig.host,
