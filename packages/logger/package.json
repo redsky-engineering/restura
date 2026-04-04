@@ -1,6 +1,6 @@
 {
 	"name": "@restura/logger",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Pino-based logger implementation for Restura",
 	"type": "module",
 	"types": "./dist/index.d.ts",
