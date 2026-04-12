@@ -94,6 +94,26 @@ describe('PsqlEngine', function () {
 		if (psqlTransaction) await psqlTransaction.close();
 	});
 
+	describe('trigger listener setup', () => {
+		it('should not emit a pg DeprecationWarning when registering multiple LISTEN channels', async () => {
+			const warnings: Error[] = [];
+			const onWarning = (warning: Error) => warnings.push(warning);
+			process.on('warning', onWarning);
+			try {
+				const pool = new PsqlPool(clientConfig);
+				const engine = new PsqlEngine(pool, true);
+				await engine.setupTriggerListeners;
+				await engine.close();
+				pool.pool.end();
+			} finally {
+				process.off('warning', onWarning);
+			}
+			const deprecation = warnings.find(
+				(w) => w.name === 'DeprecationWarning' && /client\.query\(\)/.test(w.message)
+			);
+			expect(deprecation, deprecation?.message).to.equal(undefined);
+		});
+	});
 	describe('db transaction', () => {
 		it('db transaction', async () => {
 			const psqlTransaction = getPsqlTransaction();

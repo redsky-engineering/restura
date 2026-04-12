@@ -130,11 +130,9 @@ export class PsqlEngine extends SqlEngine {
 		try {
 			await this.triggerClient.connect();
 
-			const promises = [];
-			promises.push(this.triggerClient.query('LISTEN insert'));
-			promises.push(this.triggerClient.query('LISTEN update'));
-			promises.push(this.triggerClient.query('LISTEN delete'));
-			await Promise.all(promises);
+			for (const channel of ['insert', 'update', 'delete']) {
+				await this.triggerClient.query(`LISTEN ${channel}`);
+			}
 
 			// Add error handling for the connection
 			this.triggerClient.on('error', async (error) => {
