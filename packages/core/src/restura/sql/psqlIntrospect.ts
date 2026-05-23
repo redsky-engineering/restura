@@ -224,8 +224,8 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 			? columnMatch[1].split(',').map((colExpr) =>
 					colExpr
 						.trim()
-						.replace(/^"(.*)"$/, '$1')
 						.replace(/\s+(ASC|DESC)$/i, '')
+						.replace(/^"(.*)"$/, '$1')
 				)
 			: [];
 		const whereClause = columnMatch?.[2] ?? null;
@@ -734,6 +734,9 @@ function normalizeCheckExpression(expr: string): string {
 	normalized = normalized.replace(/::\w+(\[\])?/g, '');
 	normalized = normalized.replace(/=\s*ANY\s*\(\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)\s*\)/gi, 'IN ($1)');
 	normalized = normalized.replace(/=\s*ANY\s*\(\s*ARRAY\s*\[([^\]]*)\]\s*\)/gi, 'IN ($1)');
+	// PostgreSQL rewrites a single-value `x IN ('a')` as `x = 'a'`, so collapse the
+	// single-value IN form on both sides to keep single-value enum checks from diffing.
+	normalized = normalized.replace(/\bIN\s*\(\s*('(?:[^']|'')*')\s*\)/gi, '= $1');
 	normalized = normalized.replace(/"(\w+)"/g, '$1');
 	normalized = normalized.replace(/\((\w+)\)/g, '$1');
 	normalized = normalized.replace(/\s+/g, ' ').trim();

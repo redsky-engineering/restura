@@ -1,5 +1,6 @@
 import { expect } from 'chai';
-import { diffSchemaToDatabase, type DbSnapshot, type DbTable } from '../sql/psqlIntrospect.js';
+import { diffSchemaToDatabase, introspectDatabase, type DbSnapshot, type DbTable } from '../sql/psqlIntrospect.js';
+import type { PsqlPool } from '../sql/PsqlPool.js';
 import type { ResturaSchema } from '../schemas/resturaSchema.js';
 
 function makeDbTable(overrides: Partial<DbTable> & { name: string }): DbTable {
@@ -899,6 +900,63 @@ describe('diffSchemaToDatabase', () => {
 			const statements = diffSchemaToDatabase(schema, snapshot);
 
 			const checkStatements = statements.filter((s) => s.includes('subscription_status_check'));
+			expect(checkStatements).to.have.length(0);
+		});
+
+		it('should not drop or re-add a single-value ENUM check (PostgreSQL stores it as equality)', () => {
+			const snapshot: DbSnapshot = {
+				tables: [
+					makeDbTable({
+						name: 'userPushToken',
+						columns: [
+							{
+								name: 'id',
+								udtName: 'int4',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: 32,
+								numericScale: 0
+							},
+							{
+								name: 'platform',
+								udtName: 'text',
+								isNullable: false,
+								columnDefault: null,
+								characterMaximumLength: null,
+								numericPrecision: null,
+								numericScale: null
+							}
+						],
+						checkConstraints: [
+							{
+								name: 'userPushToken_platform_check',
+								tableName: 'userPushToken',
+								expression: "CHECK (((platform)::text = 'ios'::text))"
+							}
+						]
+					})
+				]
+			};
+
+			const schema = makeSchema([
+				{
+					name: 'userPushToken',
+					columns: [
+						{ name: 'id', type: 'INTEGER', isNullable: false, roles: [], scopes: [], isPrimary: true },
+						{ name: 'platform', type: 'ENUM', isNullable: false, roles: [], scopes: [], value: "'ios'" }
+					],
+					indexes: [],
+					foreignKeys: [],
+					checkConstraints: [],
+					roles: [],
+					scopes: []
+				}
+			]);
+
+			const statements = diffSchemaToDatabase(schema, snapshot);
+
+			const checkStatements = statements.filter((s) => s.includes('userPushToken_platform_check'));
 			expect(checkStatements).to.have.length(0);
 		});
 
@@ -3747,5 +3805,140 @@ describe('diffSchemaToDatabase', () => {
 			const checkStatements = statements.filter((s) => s.includes('coupon_date_order_chk'));
 			expect(checkStatements).to.have.length(0);
 		});
+	});
+});
+
+describe('introspectDatabase', () => {
+	function makeMockPool(rows: {
+		tables: unknown[];
+		columns: unknown[];
+		indexes: unknown[];
+		fks: unknown[];
+		checks: unknown[];
+	}): PsqlPool {
+		return {
+			runQuery: async (sql: string) => {
+				if (sql.includes('information_schema.tables')) return rows.tables;
+				if (sql.includes('information_schema.columns')) return rows.columns;
+				if (sql.includes('pg_indexes')) return rows.indexes;
+				if (sql.includes("contype = 'f'")) return rows.fks;
+				if (sql.includes("contype = 'c'")) return rows.checks;
+				return [];
+			}
+		} as unknown as PsqlPool;
+	}
+
+	it('parses a multi-column DESC index into clean, unquoted column names', async () => {
+		const pool = makeMockPool({
+			tables: [{ table_name: 'formSubmission' }],
+			columns: [
+				{
+					table_name: 'formSubmission',
+					column_name: 'submittedById',
+					udt_name: 'int4',
+					is_nullable: 'NO',
+					column_default: null,
+					character_maximum_length: null,
+					numeric_precision: 32,
+					numeric_scale: 0
+				},
+				{
+					table_name: 'formSubmission',
+					column_name: 'submittedAt',
+					udt_name: 'timestamptz',
+					is_nullable: 'NO',
+					column_default: null,
+					character_maximum_length: null,
+					numeric_precision: null,
+					numeric_scale: null
+				}
+			],
+			indexes: [
+				{
+					tablename: 'formSubmission',
+					indexname: 'formSubmission_submittedById_submittedAt_index',
+					indexdef:
+						'CREATE INDEX "formSubmission_submittedById_submittedAt_index" ON public."formSubmission" USING btree ("submittedById" DESC, "submittedAt" DESC)',
+					indisprimary: false
+				}
+			],
+			fks: [],
+			checks: []
+		});
+
+		const snapshot = await introspectDatabase(pool);
+		const liveIndex = snapshot.tables[0]!.indexes[0]!;
+
+		// Regression: the order suffix (DESC) must not leave quotes on the column names.
+		expect(liveIndex.columns).to.deep.equal(['submittedById', 'submittedAt']);
+		expect(liveIndex.order).to.equal('DESC');
+	});
+
+	it('does not diff a multi-column DESC index that is unchanged in the schema', async () => {
+		const pool = makeMockPool({
+			tables: [{ table_name: 'formSubmission' }],
+			columns: [
+				{
+					table_name: 'formSubmission',
+					column_name: 'submittedById',
+					udt_name: 'int4',
+					is_nullable: 'NO',
+					column_default: null,
+					character_maximum_length: null,
+					numeric_precision: 32,
+					numeric_scale: 0
+				},
+				{
+					table_name: 'formSubmission',
+					column_name: 'submittedAt',
+					udt_name: 'timestamptz',
+					is_nullable: 'NO',
+					column_default: null,
+					character_maximum_length: null,
+					numeric_precision: null,
+					numeric_scale: null
+				}
+			],
+			indexes: [
+				{
+					tablename: 'formSubmission',
+					indexname: 'formSubmission_submittedById_submittedAt_index',
+					indexdef:
+						'CREATE INDEX "formSubmission_submittedById_submittedAt_index" ON public."formSubmission" USING btree ("submittedById" DESC, "submittedAt" DESC)',
+					indisprimary: false
+				}
+			],
+			fks: [],
+			checks: []
+		});
+
+		const snapshot = await introspectDatabase(pool);
+
+		const schema = makeSchema([
+			{
+				name: 'formSubmission',
+				columns: [
+					{ name: 'submittedById', type: 'INTEGER', isNullable: false, roles: [], scopes: [] },
+					{ name: 'submittedAt', type: 'TIMESTAMPTZ', isNullable: false, roles: [], scopes: [] }
+				],
+				indexes: [
+					{
+						name: 'formSubmission_submittedById_submittedAt_index',
+						columns: ['submittedById', 'submittedAt'],
+						isPrimaryKey: false,
+						isUnique: false,
+						order: 'DESC'
+					}
+				],
+				foreignKeys: [],
+				checkConstraints: [],
+				roles: [],
+				scopes: []
+			}
+		]);
+
+		const statements = diffSchemaToDatabase(schema, snapshot);
+		const indexStatements = statements.filter((s) => s.includes('formSubmission_submittedById_submittedAt_index'));
+		expect(indexStatements).to.have.length(0);
 	});
 });
