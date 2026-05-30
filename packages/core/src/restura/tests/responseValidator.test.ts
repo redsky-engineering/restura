@@ -66,7 +66,19 @@ function enumColumn(value: string, isNullable = false): ColumnData {
 	};
 }
 
+function jsonColumn(type: ColumnData['type'], value: string, isNullable = false): ColumnData {
+	return {
+		name: 'settings',
+		type,
+		value,
+		roles: [],
+		scopes: [],
+		isNullable
+	};
+}
+
 const SELECTOR_RESPONSE: ResponseData[] = [{ name: 'dynamicBehavior', selector: 'myTable.dynamicBehavior' }];
+const JSON_SELECTOR_RESPONSE: ResponseData[] = [{ name: 'settings', selector: 'myTable.settings' }];
 
 describe('ResponseValidator', () => {
 	describe('single-value ENUM columns (issue #147)', () => {
@@ -75,7 +87,11 @@ describe('ResponseValidator', () => {
 				buildSchema(enumColumn("'COMMISSION_HANDLE_AVAILABILITY'"), SELECTOR_RESPONSE)
 			);
 			expect(() =>
-				validator.validateResponseParams([{ dynamicBehavior: 'COMMISSION_HANDLE_AVAILABILITY' }], BASE_URL, ROUTE)
+				validator.validateResponseParams(
+					[{ dynamicBehavior: 'COMMISSION_HANDLE_AVAILABILITY' }],
+					BASE_URL,
+					ROUTE
+				)
 			).to.not.throw();
 		});
 
@@ -84,7 +100,11 @@ describe('ResponseValidator', () => {
 				buildSchema(enumColumn("'COMMISSION_HANDLE_AVAILABILITY'"), SELECTOR_RESPONSE)
 			);
 			expect(() =>
-				validator.validateResponseParams([{ dynamicBehavior: 'COMMISSION_HANDLE_AVAILABILITY' }], BASE_URL, ROUTE)
+				validator.validateResponseParams(
+					[{ dynamicBehavior: 'COMMISSION_HANDLE_AVAILABILITY' }],
+					BASE_URL,
+					ROUTE
+				)
 			).to.not.throw(/is of the wrong type/);
 		});
 
@@ -118,6 +138,44 @@ describe('ResponseValidator', () => {
 			expect(() => validator.validateResponseParams([{ dynamicBehavior: 'NOPE' }], BASE_URL, ROUTE)).to.throw(
 				/is not one of the enum options/
 			);
+		});
+	});
+
+	describe('typed JSON/JSONB columns (issue #149)', () => {
+		const STORE_SETTINGS = { theme: { color: { primary: '#000', secondary: '#fff' } } };
+
+		it('passes a non-empty object value through unchanged for a custom-typed JSON column', () => {
+			const validator = new ResponseValidator(
+				buildSchema(jsonColumn('JSON', "'CustomTypes.StoreSettings'"), JSON_SELECTOR_RESPONSE)
+			);
+			expect(() =>
+				validator.validateResponseParams([{ settings: STORE_SETTINGS }], BASE_URL, ROUTE)
+			).to.not.throw();
+		});
+
+		it('does not throw "is not allowed" for a custom-typed JSON column', () => {
+			const validator = new ResponseValidator(
+				buildSchema(jsonColumn('JSON', "'CustomTypes.StoreSettings'"), JSON_SELECTOR_RESPONSE)
+			);
+			expect(() =>
+				validator.validateResponseParams([{ settings: STORE_SETTINGS }], BASE_URL, ROUTE)
+			).to.not.throw(/is not allowed/);
+		});
+
+		it('passes an array value through for a custom-typed JSONB column', () => {
+			const validator = new ResponseValidator(
+				buildSchema(jsonColumn('JSONB', "'CustomTypes.PdfTemplateVariable[]'"), JSON_SELECTOR_RESPONSE)
+			);
+			expect(() =>
+				validator.validateResponseParams([{ settings: [{ key: 'a' }, { key: 'b' }] }], BASE_URL, ROUTE)
+			).to.not.throw();
+		});
+
+		it('accepts NULL for a nullable JSON column', () => {
+			const validator = new ResponseValidator(
+				buildSchema(jsonColumn('JSON', "'CustomTypes.StoreSettings'", true), JSON_SELECTOR_RESPONSE)
+			);
+			expect(() => validator.validateResponseParams([{ settings: null }], BASE_URL, ROUTE)).to.not.throw();
 		});
 	});
 

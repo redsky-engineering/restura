@@ -167,16 +167,24 @@ export default class ResponseValidator {
 			return { validator: 'any', isOptionalOrNullable: false };
 		}
 
+		const isOptionalOrNullable =
+			isNullable || column.roles.length > 0 || column.scopes.length > 0 || column.isNullable;
+
+		const columnType = column.type.toLowerCase();
+		if (columnType === 'json' || columnType === 'jsonb') {
+			// A JSON/JSONB column is an opaque blob to the runtime validator and should never be recursed
+			// into. A custom-type override (e.g. column.value = "'CustomTypes.Foo'") is only meaningful to
+			// the type generators, so resolve it to the 'object' validator which passes the value through.
+			return { validator: 'object', isOptionalOrNullable };
+		}
+
 		let validator: ValidatorString | string | string[] = SqlUtils.convertDatabaseTypeToTypescript(
 			column.type,
 			column.value
 		);
 		if (!ResponseValidator.validatorIsValidString(validator)) validator = this.parseValidationEnum(validator);
 
-		return {
-			validator,
-			isOptionalOrNullable: isNullable || column.roles.length > 0 || column.scopes.length > 0 || column.isNullable
-		};
+		return { validator, isOptionalOrNullable };
 	}
 
 	private parseValidationEnum(validator: string): string[] {
