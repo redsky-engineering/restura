@@ -3,7 +3,9 @@ import ResponseValidator from '../validators/ResponseValidator.js';
 import { ColumnData, ResponseData, ResturaSchema, RouteData } from '../schemas/resturaSchema.js';
 
 const BASE_URL = '/api/v1';
-const ROUTE: RouteData = { method: 'GET', path: '/test' } as RouteData;
+// validateResponseParams only reads `method` and `path`, so we provide just those.
+const ROUTE_PARTIAL: Pick<RouteData, 'method' | 'path'> = { method: 'GET', path: '/test' };
+const ROUTE = ROUTE_PARTIAL as RouteData;
 
 /**
  * Build a minimal schema with a single table `myTable` (containing `column`) and a single
@@ -73,11 +75,7 @@ describe('ResponseValidator', () => {
 				buildSchema(enumColumn("'COMMISSION_HANDLE_AVAILABILITY'"), SELECTOR_RESPONSE)
 			);
 			expect(() =>
-				validator.validateResponseParams(
-					[{ dynamicBehavior: 'COMMISSION_HANDLE_AVAILABILITY' }],
-					BASE_URL,
-					ROUTE
-				)
+				validator.validateResponseParams([{ dynamicBehavior: 'COMMISSION_HANDLE_AVAILABILITY' }], BASE_URL, ROUTE)
 			).to.not.throw();
 		});
 
@@ -86,11 +84,7 @@ describe('ResponseValidator', () => {
 				buildSchema(enumColumn("'COMMISSION_HANDLE_AVAILABILITY'"), SELECTOR_RESPONSE)
 			);
 			expect(() =>
-				validator.validateResponseParams(
-					[{ dynamicBehavior: 'COMMISSION_HANDLE_AVAILABILITY' }],
-					BASE_URL,
-					ROUTE
-				)
+				validator.validateResponseParams([{ dynamicBehavior: 'COMMISSION_HANDLE_AVAILABILITY' }], BASE_URL, ROUTE)
 			).to.not.throw(/is of the wrong type/);
 		});
 
