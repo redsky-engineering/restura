@@ -258,6 +258,8 @@ export default class ResponseValidator {
 	}
 
 	private static validatorIsValidString(validator: string): validator is ValidatorString {
-		return !validator.includes('|');
+		return (['boolean', 'string', 'number', 'object', 'any'] as ValidatorString[]).includes(
+			validator as ValidatorString
+		);
 	}
 }
