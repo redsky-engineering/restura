@@ -257,7 +257,9 @@ export default class ResponseValidator {
 		return route.type === 'CUSTOM_ONE' || route.type === 'CUSTOM_ARRAY' || route.type === 'CUSTOM_PAGED';
 	}
 
+	private static readonly VALIDATOR_STRINGS: ValidatorString[] = ['boolean', 'string', 'number', 'object', 'any'];
+
 	private static validatorIsValidString(validator: string): validator is ValidatorString {
-		return !validator.includes('|');
+		return ResponseValidator.VALIDATOR_STRINGS.includes(validator as ValidatorString);
 	}
 }
