@@ -103,7 +103,7 @@ describe('query metadata with missing requesterDetails', () => {
 			);
 			expect(rows[0].one).to.equal(1);
 		} finally {
-			pool.pool.end();
+			await pool.pool.end();
 		}
 	});
 });
@@ -170,7 +170,7 @@ describe('EventOutboxConsumer round trip', function () {
 	after(async function () {
 		await pool.runQuery(`DROP TABLE IF EXISTS "${TEST_TABLE}";`, [], requesterDetails);
 		await pool.runQuery(`DELETE FROM "${OUTBOX_TABLE_NAME}";`, [], requesterDetails);
-		pool.pool.end();
+		await pool.pool.end();
 	});
 
 	it('should deliver an insert through the outbox with query metadata', async function () {
