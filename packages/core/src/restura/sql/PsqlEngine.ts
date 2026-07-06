@@ -17,40 +17,83 @@ import { PageQuery } from '../types/resturaTypes.js';
 import { PsqlPool } from './PsqlPool.js';
 import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
 import SqlEngine from './SqlEngine.js';
+import { EventDeliveryConfig, EventOutboxConsumer } from './eventOutbox.js';
 import filterPsqlParser from './filterPsqlParser.js';
 import {
 	diffDatabaseToSchema as diffDatabaseToSchemaUtil,
 	generateDatabaseSchemaFromSchema as generateDatabaseSchemaFromSchemaUtil,
+	SchemaGenerationOptions,
 	systemUser
 } from './psqlSchemaUtils.js';
 const { Client, types } = pg;
+
+export interface EventListenerHealth {
+	connected: boolean;
+	lastHeartbeatOn: string | null;
+	reconnectAttempts: number;
+}
 
 export class PsqlEngine extends SqlEngine {
 	setupTriggerListeners: Promise<void> | undefined;
 	private triggerClient: ClientType | undefined;
 	private scratchDbName: string = '';
 	private reconnectAttempts = 0;
-	private readonly MAX_RECONNECT_ATTEMPTS = 5;
-	private readonly INITIAL_RECONNECT_DELAY = 5000; // 5 seconds
+	private readonly INITIAL_RECONNECT_DELAY = 5000;
+	private readonly MAX_RECONNECT_DELAY = 60000;
+	private readonly HEARTBEAT_INTERVAL_MS = 30000;
+	private eventDelivery: EventDeliveryConfig;
+	private outboxConsumer: EventOutboxConsumer | undefined;
+	private heartbeatTimer: NodeJS.Timeout | undefined;
+	private isListenerConnected = false;
+	private isReconnecting = false;
+	private isClosed = false;
+	private lastHeartbeatOn: string | null = null;
 
 	constructor(
 		private psqlConnectionPool: PsqlPool,
 		shouldListenForDbTriggers: boolean = false,
-		scratchDatabaseSuffix: string = ''
+		scratchDatabaseSuffix: string = '',
+		eventDelivery?: EventDeliveryConfig
 	) {
 		super();
 
+		this.eventDelivery = eventDelivery || { mode: 'direct' };
 		this.setupPgReturnTypes();
+		if (this.eventDelivery.mode === 'outbox') {
+			this.outboxConsumer = new EventOutboxConsumer(psqlConnectionPool, this.eventDelivery.outbox);
+		}
 		if (shouldListenForDbTriggers) {
-			this.setupTriggerListeners = this.listenForDbTriggers();
+			this.setupTriggerListeners = this.listenForDbTriggers().catch((error) => {
+				logger.error(`Failed to setup trigger listeners: ${error}`);
+				void this.reconnectTriggerClient();
+			});
+			// The consumer's poller works even while the LISTEN connection is down
+			this.outboxConsumer?.start();
 		}
 
 		this.scratchDbName = `${psqlConnectionPool.poolConfig.database}_scratch${scratchDatabaseSuffix ? `_${scratchDatabaseSuffix}` : ''}`;
 	}
+
 	async close() {
+		this.isClosed = true;
+		if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+		if (this.outboxConsumer) await this.outboxConsumer.stop();
 		if (this.triggerClient) {
 			await this.triggerClient.end();
 		}
+		this.isListenerConnected = false;
+	}
+
+	getEventListenerHealth(): EventListenerHealth {
+		return {
+			connected: this.isListenerConnected,
+			lastHeartbeatOn: this.lastHeartbeatOn,
+			reconnectAttempts: this.reconnectAttempts
+		};
+	}
+
+	getOutboxConsumer(): EventOutboxConsumer | undefined {
+		return this.outboxConsumer;
 	}
 
 	/**
@@ -82,43 +125,61 @@ export class PsqlEngine extends SqlEngine {
 	}
 
 	private async reconnectTriggerClient() {
-		if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
-			logger.error('Max reconnection attempts reached for trigger client. Stopping reconnection attempts.');
-			return;
-		}
-
-		if (this.triggerClient) {
-			try {
-				await this.triggerClient.end();
-			} catch (error) {
-				logger.error(`Error closing trigger client: ${error}`);
-			}
-		}
-
-		// Exponential backoff: 5s, 10s, 20s, 40s, 80s
-		const delay = this.INITIAL_RECONNECT_DELAY * Math.pow(2, this.reconnectAttempts);
-		logger.info(
-			`Attempting to reconnect trigger client in ${delay / 1000} seconds... (Attempt ${this.reconnectAttempts + 1}/${this.MAX_RECONNECT_ATTEMPTS})`
-		);
-
-		await new Promise((resolve) => setTimeout(resolve, delay));
-
-		this.reconnectAttempts++;
+		if (this.isReconnecting || this.isClosed) return;
+		this.isReconnecting = true;
+		this.isListenerConnected = false;
+		if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
 
 		try {
-			await this.listenForDbTriggers();
-			// Reset reconnect attempts on successful connection
-			this.reconnectAttempts = 0;
-		} catch (error) {
-			logger.error(`Reconnection attempt ${this.reconnectAttempts} failed: ${error}`);
-			if (this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS) {
-				await this.reconnectTriggerClient();
+			// Keep trying forever — a dead listener must never be a permanent state
+			while (!this.isClosed) {
+				if (this.triggerClient) {
+					try {
+						await this.triggerClient.end();
+					} catch (error) {
+						logger.error(`Error closing trigger client: ${error}`);
+					}
+					this.triggerClient = undefined;
+				}
+
+				const exponentialDelay = this.INITIAL_RECONNECT_DELAY * Math.pow(2, this.reconnectAttempts);
+				const delay = Math.min(exponentialDelay, this.MAX_RECONNECT_DELAY) + Math.floor(Math.random() * 1000);
+				logger.info(
+					`Attempting to reconnect trigger client in ${Math.round(delay / 1000)} seconds... (attempt ${this.reconnectAttempts + 1})`
+				);
+				await new Promise((resolve) => setTimeout(resolve, delay));
+				if (this.isClosed) return;
+
+				this.reconnectAttempts++;
+				try {
+					await this.listenForDbTriggers();
+					this.reconnectAttempts = 0;
+					return;
+				} catch (error) {
+					logger.error(`Reconnection attempt ${this.reconnectAttempts} failed: ${error}`);
+				}
 			}
+		} finally {
+			this.isReconnecting = false;
 		}
 	}
 
+	private startHeartbeat() {
+		if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+		this.heartbeatTimer = setInterval(async () => {
+			if (!this.triggerClient || this.isClosed) return;
+			try {
+				await this.triggerClient.query('SELECT 1');
+				this.lastHeartbeatOn = new Date().toISOString();
+			} catch (error) {
+				logger.error(`Trigger client heartbeat failed, reconnecting: ${error}`);
+				void this.reconnectTriggerClient();
+			}
+		}, this.HEARTBEAT_INTERVAL_MS);
+	}
+
 	private async listenForDbTriggers() {
-		this.triggerClient = new Client({
+		const client = new Client({
 			user: this.psqlConnectionPool.poolConfig.user,
 			host: this.psqlConnectionPool.poolConfig.host,
 			database: this.psqlConnectionPool.poolConfig.database,
@@ -126,35 +187,37 @@ export class PsqlEngine extends SqlEngine {
 			port: this.psqlConnectionPool.poolConfig.port,
 			connectionTimeoutMillis: this.psqlConnectionPool.poolConfig.connectionTimeoutMillis
 		});
+		this.triggerClient = client;
 
-		try {
-			await this.triggerClient.connect();
+		// Attach before connect so errors during connection setup are never unhandled
+		client.on('error', (error) => {
+			logger.error(`Trigger client error: ${error}`);
+			void this.reconnectTriggerClient();
+		});
 
-			for (const channel of ['insert', 'update', 'delete']) {
-				await this.triggerClient.query(`LISTEN ${channel}`);
+		client.on('notification', async (msg) => {
+			if (this.outboxConsumer && msg.channel === this.outboxConsumer.channel) {
+				// Outbox notifications are a bare wakeup; the id is read from the table, not the payload
+				await this.outboxConsumer.drain();
+			} else if (msg.channel === 'insert' || msg.channel === 'update' || msg.channel === 'delete') {
+				const payload: TriggerResult = ObjectUtils.safeParse(msg.payload) as TriggerResult;
+				await this.handleTrigger(payload, msg.channel.toUpperCase() as MutationType);
 			}
+		});
 
-			// Add error handling for the connection
-			this.triggerClient.on('error', async (error) => {
-				logger.error(`Trigger client error: ${error}`);
-				// Attempt to reconnect
-				await this.reconnectTriggerClient();
-			});
+		await client.connect();
 
-			// Handle notifications
-			this.triggerClient.on('notification', async (msg) => {
-				if (msg.channel === 'insert' || msg.channel === 'update' || msg.channel === 'delete') {
-					const payload: TriggerResult = ObjectUtils.safeParse(msg.payload) as TriggerResult;
-					await this.handleTrigger(payload, msg.channel.toUpperCase() as MutationType);
-				}
-			});
-
-			logger.info('Successfully connected to database triggers');
-		} catch (error) {
-			logger.error(`Failed to setup trigger listeners: ${error}`);
-			// Attempt to reconnect
-			await this.reconnectTriggerClient();
+		// Legacy channels stay subscribed in outbox mode so un-migrated trigger functions keep working
+		const channels = ['insert', 'update', 'delete'];
+		if (this.outboxConsumer) channels.push(this.outboxConsumer.channel);
+		for (const channel of channels) {
+			await client.query(`LISTEN ${escapeColumnName(channel)}`);
 		}
+
+		this.isListenerConnected = true;
+		this.lastHeartbeatOn = new Date().toISOString();
+		this.startHeartbeat();
+		logger.info('Successfully connected to database triggers');
 	}
 
 	private async handleTrigger(payload: TriggerResult, mutationType: MutationType) {
@@ -173,11 +236,23 @@ export class PsqlEngine extends SqlEngine {
 	}
 
 	generateDatabaseSchemaFromSchema(schema: ResturaSchema): string {
-		return generateDatabaseSchemaFromSchemaUtil(schema);
+		return generateDatabaseSchemaFromSchemaUtil(schema, this.schemaGenerationOptions());
 	}
 
 	async diffDatabaseToSchema(schema: ResturaSchema): Promise<string> {
-		return diffDatabaseToSchemaUtil(schema, this.psqlConnectionPool, this.scratchDbName);
+		return diffDatabaseToSchemaUtil(
+			schema,
+			this.psqlConnectionPool,
+			this.scratchDbName,
+			this.schemaGenerationOptions()
+		);
+	}
+
+	private schemaGenerationOptions(): SchemaGenerationOptions {
+		return {
+			eventDelivery: this.eventDelivery.mode,
+			outboxChannel: this.eventDelivery.outbox?.channel
+		};
 	}
 
 	protected createNestedSelect(

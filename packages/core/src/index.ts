@@ -11,6 +11,7 @@ export { isSchemaValid, resturaSchema, type ResturaSchema } from './restura/sche
 export { default as filterPsqlParser } from './restura/sql/filterPsqlParser.js';
 export * from './restura/sql/PsqlConnection.js';
 export * from './restura/sql/PsqlEngine.js';
+export * from './restura/sql/eventOutbox.js';
 export * from './restura/sql/psqlIntrospect.js';
 export * from './restura/sql/PsqlPool.js';
 export * from './restura/sql/psqlSchemaUtils.js';

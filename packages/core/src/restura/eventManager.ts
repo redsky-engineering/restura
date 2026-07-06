@@ -1,6 +1,7 @@
 import Bluebird from 'bluebird';
 import { UUID } from 'crypto';
 import { logger } from '../logger/logger.js';
+import type { ResturaSchema } from './schemas/resturaSchema.js';
 import { DynamicObject, RequesterDetails } from './types/customExpressTypes.js';
 
 export type EventType = 'DATABASE_ROW_DELETE' | 'DATABASE_ROW_INSERT' | 'DATABASE_COLUMN_UPDATE' | 'WEBHOOK';
@@ -56,11 +57,24 @@ export type TriggerResult = {
 	requesterId: number;
 };
 
-export type QueryMetadata = RequesterDetails & {
-	connectionInstanceId: UUID;
-};
+/**
+ * Metadata carried in the --QUERY_METADATA() comment on every query. Only an allowlisted
+ * subset of requesterDetails is included (see PsqlConnection.setQueryMetadataKeys); rows
+ * written outside the engine (psql, migrations) have no metadata at all.
+ */
+export type QueryMetadata = Partial<RequesterDetails> &
+	DynamicObject & {
+		connectionInstanceId?: UUID;
+	};
 
-class EventManager {
+export type NotifyValidationMode = 'off' | 'warn' | 'strict';
+
+export interface FireActionOptions {
+	/** When true, handler failures reject instead of being swallowed — required for outbox retry semantics */
+	rethrowHandlerErrors?: boolean;
+}
+
+export class EventManager {
 	private actionHandlers: {
 		DATABASE_ROW_DELETE: {
 			callback: (data: ActionRowDeleteData, queryMetadata: QueryMetadata) => Promise<void>;
@@ -110,17 +124,25 @@ class EventManager {
 		});
 	}
 
-	async fireActionFromDbTrigger(sqlMutationData: SqlMutationData, result: TriggerResult) {
+	async fireActionFromDbTrigger(
+		sqlMutationData: SqlMutationData,
+		result: TriggerResult,
+		options?: FireActionOptions
+	) {
+		const handlerErrors: unknown[] = [];
 		if (sqlMutationData.mutationType === 'INSERT') {
-			await this.fireInsertActions(sqlMutationData, result);
+			await this.fireInsertActions(sqlMutationData, result, handlerErrors);
 		} else if (sqlMutationData.mutationType === 'UPDATE') {
-			await this.fireUpdateActions(sqlMutationData, result);
+			await this.fireUpdateActions(sqlMutationData, result, handlerErrors);
 		} else if (sqlMutationData.mutationType === 'DELETE') {
-			await this.fireDeleteActions(sqlMutationData, result);
+			await this.fireDeleteActions(sqlMutationData, result, handlerErrors);
+		}
+		if (options?.rethrowHandlerErrors && handlerErrors.length) {
+			throw handlerErrors[0];
 		}
 	}
 
-	private async fireInsertActions(data: SqlMutationData, triggerResult: TriggerResult) {
+	private async fireInsertActions(data: SqlMutationData, triggerResult: TriggerResult, handlerErrors: unknown[]) {
 		await Bluebird.map(
 			this.actionHandlers.DATABASE_ROW_INSERT,
 			async ({ callback, filter }) => {
@@ -136,12 +158,13 @@ class EventManager {
 					await callback(insertData, data.queryMetadata);
 				} catch (error) {
 					logger.error(`Error firing insert action for table ${triggerResult.table}`, error);
+					handlerErrors.push(error);
 				}
 			},
 			{ concurrency: 10 }
 		);
 	}
-	private async fireDeleteActions(data: SqlMutationData, triggerResult: TriggerResult) {
+	private async fireDeleteActions(data: SqlMutationData, triggerResult: TriggerResult, handlerErrors: unknown[]) {
 		await Bluebird.map(
 			this.actionHandlers.DATABASE_ROW_DELETE,
 			async ({ callback, filter }) => {
@@ -157,12 +180,13 @@ class EventManager {
 					await callback(deleteData, data.queryMetadata);
 				} catch (error) {
 					logger.error(`Error firing delete action for table ${triggerResult.table}`, error);
+					handlerErrors.push(error);
 				}
 			},
 			{ concurrency: 10 }
 		);
 	}
-	private async fireUpdateActions(data: SqlMutationData, triggerResult: TriggerResult) {
+	private async fireUpdateActions(data: SqlMutationData, triggerResult: TriggerResult, handlerErrors: unknown[]) {
 		await Bluebird.map(
 			this.actionHandlers.DATABASE_COLUMN_UPDATE,
 			async ({ callback, filter }) => {
@@ -179,10 +203,62 @@ class EventManager {
 					await callback(columnChangeData, data.queryMetadata);
 				} catch (error) {
 					logger.error(`Error firing update action for table ${triggerResult.table}`, error);
+					handlerErrors.push(error);
 				}
 			},
 			{ concurrency: 10 }
 		);
+	}
+
+	/**
+	 * Verifies every registered handler's filter matches a table with a notify config and, for
+	 * column-change handlers, that each filtered column is included in that table's notify list.
+	 * A mismatched handler silently never fires (or fires with undefined data) — this surfaces it at boot.
+	 */
+	validateHandlersAgainstSchema(schema: ResturaSchema, mode: NotifyValidationMode) {
+		if (mode === 'off') return;
+		const problems: string[] = [];
+
+		const checkTable = (
+			tableName: string | undefined,
+			handlerKind: string
+		): ResturaSchema['database'][0] | undefined => {
+			if (!tableName) return undefined;
+			const table = schema.database.find((item) => item.name === tableName);
+			if (!table) {
+				problems.push(`${handlerKind} handler registered for unknown table "${tableName}"`);
+				return undefined;
+			}
+			if (!table.notify) {
+				problems.push(
+					`${handlerKind} handler registered for table "${tableName}" which has no notify config — it will never fire`
+				);
+				return undefined;
+			}
+			return table;
+		};
+
+		this.actionHandlers.DATABASE_ROW_INSERT.forEach(({ filter }) => checkTable(filter?.tableName, 'Row-insert'));
+		this.actionHandlers.DATABASE_ROW_DELETE.forEach(({ filter }) => checkTable(filter?.tableName, 'Row-delete'));
+		this.actionHandlers.DATABASE_COLUMN_UPDATE.forEach(({ filter }) => {
+			const table = checkTable(filter?.tableName, 'Column-change');
+			if (!table || !filter || table.notify === 'ALL') return;
+			const notifyColumns = (table.notify as string[]).map((entry) => entry.replace(/^!/, ''));
+			for (const column of filter.columns) {
+				if (column === '*') continue;
+				if (!notifyColumns.includes(column)) {
+					problems.push(
+						`Column-change handler on "${filter.tableName}" filters column "${column}" which is not in the table's notify list — it will never fire`
+					);
+				}
+			}
+		});
+
+		if (!problems.length) return;
+		if (mode === 'strict') {
+			throw new Error(`Notify handler validation failed:\n- ${problems.join('\n- ')}`);
+		}
+		problems.forEach((problem) => logger.warn(`Notify handler validation: ${problem}`));
 	}
 
 	private hasHandlersForEventType(

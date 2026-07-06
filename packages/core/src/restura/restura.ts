@@ -15,6 +15,7 @@ import { logger, setLogger } from '../logger/logger.js';
 import { RsError } from './RsError.js';
 import compareSchema from './compareSchema.js';
 import customApiFactory from './customApiFactory.js';
+import eventManager from './eventManager.js';
 import apiGenerator from './generators/apiGenerator.js';
 import customTypeValidationGenerator from './generators/customTypeValidationGenerator.js';
 import modelGenerator from './generators/modelGenerator.js';
@@ -33,6 +34,7 @@ import {
 	type ResturaSchema,
 	type RouteData
 } from './schemas/resturaSchema.js';
+import { PsqlConnection } from './sql/PsqlConnection.js';
 import { PsqlEngine } from './sql/PsqlEngine.js';
 import { PsqlPool } from './sql/PsqlPool.js';
 import type { RsRequest, RsResponse } from './types/customExpressTypes.js';
@@ -84,7 +86,13 @@ class ResturaEngine {
 		this.multerCommonUpload = getMulterUpload(this.resturaConfig.fileTempCachePath);
 		new TempCache(this.resturaConfig.fileTempCachePath);
 		this.psqlConnectionPool = psqlConnectionPool;
-		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool, true, this.resturaConfig.scratchDatabaseSuffix);
+		if (this.resturaConfig.queryMetadataKeys) {
+			PsqlConnection.setQueryMetadataKeys(this.resturaConfig.queryMetadataKeys);
+		}
+		this.psqlEngine = new PsqlEngine(this.psqlConnectionPool, true, this.resturaConfig.scratchDatabaseSuffix, {
+			mode: this.resturaConfig.eventDelivery,
+			outbox: this.resturaConfig.eventOutbox
+		});
 
 		await customApiFactory.loadApiFiles(this.resturaConfig.customApiFolderPath);
 
@@ -120,6 +128,8 @@ class ResturaEngine {
 
 		await this.reloadEndpoints();
 		await this.initializeGeneratedTypesFolder();
+
+		eventManager.validateHandlersAgainstSchema(this.schema, this.resturaConfig.notifyValidation);
 
 		logger.info('Restura Engine Initialized');
 	}

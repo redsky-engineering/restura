@@ -43,6 +43,9 @@ program
 	.alias('s')
 	.description('Generate SQL to create the full database schema from a restura.schema.json file')
 	.option('-s, --schema <path>', 'Path to the restura.schema.json file', 'restura.schema.json')
+	.option('--event-delivery <mode>', "Trigger event delivery mode: 'direct' or 'outbox'", 'direct')
+	.option('--outbox-channel <channel>', 'pg_notify channel used in outbox mode')
+	.option('--triggers-only', 'Emit only the notify trigger functions/triggers (and outbox table in outbox mode)')
 	.action(sqlCommand);
 
 program.parseAsync().catch((err) => {

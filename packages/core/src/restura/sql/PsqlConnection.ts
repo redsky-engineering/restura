@@ -8,10 +8,47 @@ import { QueryMetadata } from '../eventManager.js';
 import { RequesterDetails } from '../types/customExpressTypes.js';
 import { questionMarksToOrderedParams, toSqlLiteral } from './PsqlUtils.js';
 
+/**
+ * Only these requesterDetails keys travel in the --QUERY_METADATA() SQL comment. The comment is
+ * visible in pg_stat_activity/query logs and re-broadcast in trigger payloads, so it must never
+ * carry the full requesterDetails (JWTs, emails, session tokens).
+ */
+const DEFAULT_QUERY_METADATA_KEYS = [
+	'userId',
+	'adminUserId',
+	'isSystemUser',
+	'role',
+	'host',
+	'ipAddress',
+	'storeId',
+	'storeCustomerId',
+	'appTokenId',
+	'requestId'
+];
+
 export abstract class PsqlConnection {
+	private static queryMetadataKeys: string[] | 'ALL' = DEFAULT_QUERY_METADATA_KEYS;
+
+	/** 'ALL' restores the legacy full-requesterDetails spread — only for apps that depend on extra keys. */
+	static setQueryMetadataKeys(keys: string[] | 'ALL') {
+		PsqlConnection.queryMetadataKeys = keys;
+	}
+
 	readonly instanceId: UUID;
 	protected constructor(instanceId?: UUID) {
 		this.instanceId = instanceId || crypto.randomUUID();
+	}
+
+	private buildQueryMetadata(requesterDetails: RequesterDetails): QueryMetadata {
+		if (PsqlConnection.queryMetadataKeys === 'ALL') {
+			return { connectionInstanceId: this.instanceId, ...requesterDetails };
+		}
+		const meta: QueryMetadata = { connectionInstanceId: this.instanceId };
+		const details = requesterDetails as unknown as Record<string, unknown>;
+		for (const key of PsqlConnection.queryMetadataKeys) {
+			if (details[key] !== undefined) meta[key] = details[key];
+		}
+		return meta;
 	}
 
 	protected abstract query<R extends QueryResultRow = QueryResultRow, T extends Array<unknown> = unknown[]>(
@@ -21,7 +58,7 @@ export abstract class PsqlConnection {
 
 	async queryOne<T>(query: string, options: unknown[], requesterDetails: RequesterDetails): Promise<T> {
 		const formattedQuery = questionMarksToOrderedParams(query);
-		const meta: QueryMetadata = { connectionInstanceId: this.instanceId, ...requesterDetails };
+		const meta = this.buildQueryMetadata(requesterDetails);
 		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(meta)})\n`;
 
 		const startTime = process.hrtime();
@@ -70,7 +107,7 @@ export abstract class PsqlConnection {
 
 	async runQuery<T>(query: string, options: unknown[], requesterDetails: RequesterDetails): Promise<T[]> {
 		const formattedQuery = questionMarksToOrderedParams(query);
-		const meta: QueryMetadata = { connectionInstanceId: this.instanceId, ...requesterDetails };
+		const meta = this.buildQueryMetadata(requesterDetails);
 		const queryMetadata = `--QUERY_METADATA(${JSON.stringify(meta)})\n`;
 		const startTime = process.hrtime();
 		try {
