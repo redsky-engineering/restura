@@ -1,13 +1,9 @@
 import {
-	createDeleteTriggerSql,
-	createInsertTriggerSql,
-	createOutboxTableSql,
-	createUpdateTriggerSql,
 	generateDatabaseSchemaFromSchema,
+	generateNotifyTriggersSql,
 	isSchemaValid,
 	type ResturaSchema,
-	type SchemaGenerationOptions,
-	type TriggerSqlOptions
+	type SchemaGenerationOptions
 } from '@restura/core';
 import fs from 'node:fs';
 
@@ -46,25 +42,9 @@ export async function sqlCommand(options: {
 	};
 
 	try {
-		if (options.triggersOnly) {
-			const statements: string[] = [];
-			if (options.eventDelivery === 'outbox') statements.push(createOutboxTableSql());
-			for (const table of validSchema.database) {
-				if (!table.notify) continue;
-				const triggerOptions: TriggerSqlOptions = {
-					delivery: options.eventDelivery,
-					channel: options.outboxChannel,
-					tableColumns: table.columns.map((column) => column.name)
-				};
-				statements.push(createInsertTriggerSql(table.name, table.notify, triggerOptions));
-				statements.push(createUpdateTriggerSql(table.name, table.notify, triggerOptions));
-				statements.push(createDeleteTriggerSql(table.name, table.notify, triggerOptions));
-			}
-			console.log(statements.join('\n'));
-			return;
-		}
-
-		const sql = generateDatabaseSchemaFromSchema(validSchema, generationOptions);
+		const sql = options.triggersOnly
+			? generateNotifyTriggersSql(validSchema, generationOptions).join('\n')
+			: generateDatabaseSchemaFromSchema(validSchema, generationOptions);
 		console.log(sql);
 	} catch (err) {
 		console.error(`Error: SQL generation failed: ${err instanceof Error ? err.message : err}`);

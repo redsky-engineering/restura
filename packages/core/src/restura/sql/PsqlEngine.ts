@@ -221,7 +221,6 @@ export class PsqlEngine extends SqlEngine {
 		void this.warnIfOutboxBacklogInDirectMode();
 	}
 
-	// Direct mode with outbox triggers still installed accumulates rows nobody consumes
 	private async warnIfOutboxBacklogInDirectMode() {
 		if (this.eventDelivery.mode !== 'direct') return;
 		try {

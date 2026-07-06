@@ -199,28 +199,32 @@ export function createDeleteTriggerSql(
 	return buildTriggerFunctionSql(tableName, 'delete', notify, options);
 }
 
+export function generateNotifyTriggersSql(schema: ResturaSchema, options?: SchemaGenerationOptions): string[] {
+	const statements: string[] = [];
+	const hasNotifyTables = schema.database.some((table) => table.notify);
+	if (options?.eventDelivery === 'outbox' && hasNotifyTables) {
+		statements.push(createOutboxTableSql());
+	}
+	for (const table of schema.database) {
+		if (!table.notify) continue;
+		const triggerOptions: TriggerSqlOptions = {
+			delivery: options?.eventDelivery,
+			channel: options?.outboxChannel,
+			tableColumns: table.columns.map((column) => column.name)
+		};
+		statements.push(createInsertTriggerSql(table.name, table.notify, triggerOptions));
+		statements.push(createUpdateTriggerSql(table.name, table.notify, triggerOptions));
+		statements.push(createDeleteTriggerSql(table.name, table.notify, triggerOptions));
+	}
+	return statements;
+}
+
 export function generateDatabaseSchemaFromSchema(schema: ResturaSchema, options?: SchemaGenerationOptions): string {
 	const sqlStatements = [];
 	const indexes = [];
-	const triggers = [];
-
-	const hasNotifyTables = schema.database.some((table) => table.notify);
-	if (options?.eventDelivery === 'outbox' && hasNotifyTables) {
-		sqlStatements.push(createOutboxTableSql());
-	}
+	const triggers = generateNotifyTriggersSql(schema, options);
 
 	for (const table of schema.database) {
-		if (table.notify) {
-			const triggerOptions: TriggerSqlOptions = {
-				delivery: options?.eventDelivery,
-				channel: options?.outboxChannel,
-				tableColumns: table.columns.map((column) => column.name)
-			};
-			triggers.push(createInsertTriggerSql(table.name, table.notify, triggerOptions));
-			triggers.push(createUpdateTriggerSql(table.name, table.notify, triggerOptions));
-			triggers.push(createDeleteTriggerSql(table.name, table.notify, triggerOptions));
-		}
-
 		let sql = `CREATE TABLE "${table.name}"
 				   ( `;
 		const tableColumns = [];
