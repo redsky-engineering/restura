@@ -280,6 +280,8 @@ class ResturaEngine {
 	@boundMethod
 	private async updateSchema(req: RsRequest<ResturaSchema>, res: express.Response) {
 		try {
+			// In strict mode this rejects a live schema update that would orphan registered handlers
+			eventManager.validateHandlersAgainstSchema(req.data, this.resturaConfig.notifyValidation);
 			this.schema = sortObjectKeysAlphabetically(req.data);
 			await this.storeFileSystemSchema();
 			await this.reloadEndpoints();

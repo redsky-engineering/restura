@@ -57,11 +57,7 @@ export type TriggerResult = {
 	requesterId: number;
 };
 
-/**
- * Metadata carried in the --QUERY_METADATA() comment on every query. Only an allowlisted
- * subset of requesterDetails is included (see PsqlConnection.setQueryMetadataKeys); rows
- * written outside the engine (psql, migrations) have no metadata at all.
- */
+// Only allowlisted requesterDetails keys are present; writes from outside the engine (psql, migrations) carry none
 export type QueryMetadata = Partial<RequesterDetails> &
 	DynamicObject & {
 		connectionInstanceId?: UUID;
@@ -70,7 +66,7 @@ export type QueryMetadata = Partial<RequesterDetails> &
 export type NotifyValidationMode = 'off' | 'warn' | 'strict';
 
 export interface FireActionOptions {
-	/** When true, handler failures reject instead of being swallowed — required for outbox retry semantics */
+	// Outbox retry semantics require handler failures to propagate instead of being swallowed
 	rethrowHandlerErrors?: boolean;
 }
 
@@ -210,11 +206,7 @@ export class EventManager {
 		);
 	}
 
-	/**
-	 * Verifies every registered handler's filter matches a table with a notify config and, for
-	 * column-change handlers, that each filtered column is included in that table's notify list.
-	 * A mismatched handler silently never fires (or fires with undefined data) — this surfaces it at boot.
-	 */
+	// A handler whose filter doesn't match the schema's notify config silently never fires — surface it at startup
 	validateHandlersAgainstSchema(schema: ResturaSchema, mode: NotifyValidationMode) {
 		if (mode === 'off') return;
 		const problems: string[] = [];

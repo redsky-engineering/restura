@@ -69,6 +69,10 @@ describe('sensitive column denylist', () => {
 		expect(sql).to.contain(`'email', NEW."email"`);
 		expect(sql).to.not.contain('password');
 	});
+
+	it('should throw when ALL is used without tableColumns instead of falling back to whole-row payloads', () => {
+		expect(() => createUpdateTriggerSql('user', 'ALL')).to.throw(/requires tableColumns/);
+	});
 });
 
 describe('outbox trigger sql generation', () => {

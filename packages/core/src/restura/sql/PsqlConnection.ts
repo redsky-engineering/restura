@@ -8,11 +8,7 @@ import { QueryMetadata } from '../eventManager.js';
 import { RequesterDetails } from '../types/customExpressTypes.js';
 import { questionMarksToOrderedParams, toSqlLiteral } from './PsqlUtils.js';
 
-/**
- * Only these requesterDetails keys travel in the --QUERY_METADATA() SQL comment. The comment is
- * visible in pg_stat_activity/query logs and re-broadcast in trigger payloads, so it must never
- * carry the full requesterDetails (JWTs, emails, session tokens).
- */
+// The metadata comment lands in pg_stat_activity and trigger payloads — never include full requesterDetails
 const DEFAULT_QUERY_METADATA_KEYS = [
 	'userId',
 	'adminUserId',
@@ -29,7 +25,6 @@ const DEFAULT_QUERY_METADATA_KEYS = [
 export abstract class PsqlConnection {
 	private static queryMetadataKeys: string[] | 'ALL' = DEFAULT_QUERY_METADATA_KEYS;
 
-	/** 'ALL' restores the legacy full-requesterDetails spread — only for apps that depend on extra keys. */
 	static setQueryMetadataKeys(keys: string[] | 'ALL') {
 		PsqlConnection.queryMetadataKeys = keys;
 	}

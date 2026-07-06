@@ -62,21 +62,23 @@ CREATE TABLE IF NOT EXISTS "${OUTBOX_TABLE_NAME}"
 	"nextAttemptOn" TIMESTAMPTZ NULL,
 	"isDeadLetter" BOOLEAN NOT NULL DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS "${OUTBOX_TABLE_NAME}_unprocessed_index" ON "${OUTBOX_TABLE_NAME}" ("id") WHERE "processedOn" IS NULL;
+CREATE INDEX IF NOT EXISTS "${OUTBOX_TABLE_NAME}_unprocessed_index" ON "${OUTBOX_TABLE_NAME}" ("id") WHERE "processedOn" IS NULL AND "isDeadLetter" = FALSE;
+CREATE INDEX IF NOT EXISTS "${OUTBOX_TABLE_NAME}_processedOn_index" ON "${OUTBOX_TABLE_NAME}" ("processedOn") WHERE "processedOn" IS NOT NULL;
 `;
 }
 
 type NotifyConfig = ResturaSchema['database'][0]['notify'];
 
-/**
- * Resolves a table's notify config into the concrete column list included in trigger payloads.
- * 'ALL' expands to every column minus sensitive-named ones (or legacy whole-row when columns are unknown).
- * Explicitly listing a sensitive-named column throws; prefix with '!' to force-include it.
- */
-function resolveNotifyColumns(tableName: string, notify: NotifyConfig, tableColumns?: string[]): string[] | 'ALL' {
+// Sensitive-named columns throw unless '!'-prefixed to force-include; 'ALL' expands minus sensitive names
+function resolveNotifyColumns(tableName: string, notify: NotifyConfig, tableColumns?: string[]): string[] {
 	if (!notify) return [];
 	if (notify === 'ALL') {
-		if (!tableColumns) return 'ALL';
+		if (!tableColumns) {
+			throw new Error(
+				`notify: "ALL" on table "${tableName}" requires tableColumns so the sensitive-column denylist can be applied. ` +
+					`Pass options.tableColumns or list columns explicitly.`
+			);
+		}
 		return tableColumns.filter((column) => !isSensitiveColumnName(column));
 	}
 	return notify.map((entry) => {
@@ -91,8 +93,7 @@ function resolveNotifyColumns(tableName: string, notify: NotifyConfig, tableColu
 	});
 }
 
-function buildRowJson(rowVariable: 'NEW' | 'OLD', columns: string[] | 'ALL'): string {
-	if (columns === 'ALL') return `to_jsonb(${rowVariable})`;
+function buildRowJson(rowVariable: 'NEW' | 'OLD', columns: string[]): string {
 	return `jsonb_build_object(
 							${columns.map((column) => `'${column}', ${rowVariable}."${column}"`).join(',\n							')}
 						)`;

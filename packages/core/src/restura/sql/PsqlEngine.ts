@@ -218,6 +218,33 @@ export class PsqlEngine extends SqlEngine {
 		this.lastHeartbeatOn = new Date().toISOString();
 		this.startHeartbeat();
 		logger.info('Successfully connected to database triggers');
+		void this.warnIfOutboxBacklogInDirectMode();
+	}
+
+	// Direct mode with outbox triggers still installed accumulates rows nobody consumes
+	private async warnIfOutboxBacklogInDirectMode() {
+		if (this.eventDelivery.mode !== 'direct') return;
+		try {
+			const tableExists = await this.psqlConnectionPool.runQuery<{ exists: string | null }>(
+				`SELECT to_regclass('public."dbEventOutbox"') AS exists;`,
+				[],
+				systemUser
+			);
+			if (!tableExists[0]?.exists) return;
+			const pending = await this.psqlConnectionPool.runQuery<{ count: number }>(
+				`SELECT COUNT(*)::int AS count FROM "dbEventOutbox" WHERE "processedOn" IS NULL;`,
+				[],
+				systemUser
+			);
+			if (Number(pending[0]?.count) > 0) {
+				logger.warn(
+					`eventDelivery is 'direct' but "dbEventOutbox" exists with ${pending[0].count} unprocessed rows — ` +
+						`the database appears to have outbox-mode triggers installed. Switch eventDelivery to 'outbox' or regenerate direct-mode triggers.`
+				);
+			}
+		} catch (error) {
+			logger.warn(`Could not check dbEventOutbox backlog: ${error}`);
+		}
 	}
 
 	private async handleTrigger(payload: TriggerResult, mutationType: MutationType) {

@@ -191,7 +191,6 @@ export class EventOutboxConsumer {
 					`Event outbox row ${row.id} (${row.tableName} ${row.operation}) attempt ${attempts} failed: ${error}`
 				);
 			}
-			// Exponential retry backoff: 30s, 60s, 120s, ...
 			const backoffSeconds = 30 * Math.pow(2, row.attempts);
 			await transaction.runQuery(
 				`UPDATE "${OUTBOX_TABLE_NAME}"
