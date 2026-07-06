@@ -72,6 +72,7 @@ type NotifyConfig = ResturaSchema['database'][0]['notify'];
 // Sensitive-named columns throw unless '!'-prefixed to force-include; 'ALL' expands minus sensitive names
 function resolveNotifyColumns(tableName: string, notify: NotifyConfig, tableColumns?: string[]): string[] {
 	if (!notify) return [];
+	let columns: string[];
 	if (notify === 'ALL') {
 		if (!tableColumns) {
 			throw new Error(
@@ -79,18 +80,25 @@ function resolveNotifyColumns(tableName: string, notify: NotifyConfig, tableColu
 					`Pass options.tableColumns or list columns explicitly.`
 			);
 		}
-		return tableColumns.filter((column) => !isSensitiveColumnName(column));
+		columns = tableColumns.filter((column) => !isSensitiveColumnName(column));
+	} else {
+		columns = notify.map((entry) => {
+			if (entry.startsWith('!')) return entry.slice(1);
+			if (isSensitiveColumnName(entry)) {
+				throw new Error(
+					`Refusing to include sensitive column "${tableName}"."${entry}" in notify trigger payloads. ` +
+						`Remove it from the notify list or prefix it with '!' to force-include it.`
+				);
+			}
+			return entry;
+		});
 	}
-	return notify.map((entry) => {
-		if (entry.startsWith('!')) return entry.slice(1);
-		if (isSensitiveColumnName(entry)) {
-			throw new Error(
-				`Refusing to include sensitive column "${tableName}"."${entry}" in notify trigger payloads. ` +
-					`Remove it from the notify list or prefix it with '!' to force-include it.`
-			);
-		}
-		return entry;
-	});
+	if (!columns.length) {
+		throw new Error(
+			`notify config on table "${tableName}" resolves to no columns — remove the notify key or list at least one column.`
+		);
+	}
+	return columns;
 }
 
 function sqlStringLiteral(value: string): string {
@@ -159,7 +167,12 @@ function buildTriggerFunctionSql(
 		operation === 'update' && tableName !== tableName.toLowerCase()
 			? `DROP TRIGGER IF EXISTS ${tableName}_update ON "${tableName}";\n`
 			: '';
-	const updateGuard = operation === 'update' ? '\n	WHEN (OLD.* IS DISTINCT FROM NEW.*)' : '';
+	let updateScope = '';
+	let updateGuard = '';
+	if (operation === 'update') {
+		updateScope = ` OF ${columns.map((column) => `"${column}"`).join(', ')}`;
+		updateGuard = `\n	WHEN (${columns.map((column) => `OLD."${column}" IS DISTINCT FROM NEW."${column}"`).join(' OR ')})`;
+	}
 
 	return `
 CREATE OR REPLACE FUNCTION ${functionName}()
@@ -175,7 +188,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 ${legacyDrop}CREATE OR REPLACE TRIGGER "${tableName}_${operation}"
-	AFTER ${operation.toUpperCase()} ON "${tableName}"
+	AFTER ${operation.toUpperCase()}${updateScope} ON "${tableName}"
 	FOR EACH ROW${updateGuard}
 EXECUTE FUNCTION ${functionName}();
 `;

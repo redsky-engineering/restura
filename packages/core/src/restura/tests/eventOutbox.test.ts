@@ -11,6 +11,7 @@ import {
 	isSensitiveColumnName,
 	OUTBOX_TABLE_NAME
 } from '../sql/psqlSchemaUtils.js';
+import { SqlUtils } from '../sql/SqlUtils.js';
 import { RequesterDetails } from '../types/customExpressTypes.js';
 
 const clientConfig = {
@@ -73,6 +74,13 @@ describe('sensitive column denylist', () => {
 	it('should throw when ALL is used without tableColumns instead of falling back to whole-row payloads', () => {
 		expect(() => createUpdateTriggerSql('user', 'ALL')).to.throw(/requires tableColumns/);
 	});
+
+	it('should throw when the notify config resolves to no columns', () => {
+		expect(() => createUpdateTriggerSql('user', [])).to.throw(/resolves to no columns/);
+		expect(() => createUpdateTriggerSql('user', 'ALL', { tableColumns: ['password', 'secretKey'] })).to.throw(
+			/resolves to no columns/
+		);
+	});
 });
 
 describe('outbox trigger sql generation', () => {
@@ -86,9 +94,26 @@ describe('outbox trigger sql generation', () => {
 	it('should include previousRecord on update and null record on delete', () => {
 		const updateSql = createUpdateTriggerSql('user', ['email'], { delivery: 'outbox' });
 		expect(updateSql).to.contain(`'UPDATE', NEW.id, jsonb_build_object`);
-		expect(updateSql).to.contain('WHEN (OLD.* IS DISTINCT FROM NEW.*)');
 		const deleteSql = createDeleteTriggerSql('user', ['email'], { delivery: 'outbox' });
 		expect(deleteSql).to.contain(`'DELETE', OLD.id, NULL, jsonb_build_object`);
+	});
+
+	it('should scope the update trigger to the notify columns only', () => {
+		const updateSql = createUpdateTriggerSql('user', ['email', 'status'], { delivery: 'outbox' });
+		expect(updateSql).to.contain(`AFTER UPDATE OF "email", "status" ON "user"`);
+		expect(updateSql).to.contain(
+			`WHEN (OLD."email" IS DISTINCT FROM NEW."email" OR OLD."status" IS DISTINCT FROM NEW."status")`
+		);
+		expect(updateSql).to.not.contain('OLD.* IS DISTINCT FROM NEW.*');
+	});
+});
+
+describe('jsonb typescript mapping', () => {
+	it('should map JSONB with a value to the declared custom type, like JSON', () => {
+		expect(SqlUtils.convertDatabaseTypeToTypescript('JSONB', "'CustomTypes.ActivityLogChangeData'")).to.equal(
+			'CustomTypes.ActivityLogChangeData'
+		);
+		expect(SqlUtils.convertDatabaseTypeToTypescript('JSONB')).to.equal('object');
 	});
 });
 
@@ -238,6 +263,26 @@ describe('EventOutboxConsumer round trip', function () {
 	it('should not fire the update trigger for no-op updates', async function () {
 		await pool.runQuery(`DELETE FROM "${OUTBOX_TABLE_NAME}";`, [], requesterDetails);
 		await pool.runQuery(`UPDATE "${TEST_TABLE}" SET "status" = "status";`, [], requesterDetails);
+		const rows = await pool.runQuery<{ count: number }>(
+			`SELECT COUNT(*)::int AS count FROM "${OUTBOX_TABLE_NAME}";`,
+			[],
+			requesterDetails
+		);
+		expect(rows[0].count).to.equal(0);
+	});
+
+	it('should not fire the update trigger when only non-notify columns change', async function () {
+		await pool.runQuery(
+			`ALTER TABLE "${TEST_TABLE}" ADD COLUMN IF NOT EXISTS "internalCounter" INT NOT NULL DEFAULT 0;`,
+			[],
+			requesterDetails
+		);
+		await pool.runQuery(`DELETE FROM "${OUTBOX_TABLE_NAME}";`, [], requesterDetails);
+		await pool.runQuery(
+			`UPDATE "${TEST_TABLE}" SET "internalCounter" = "internalCounter" + 1;`,
+			[],
+			requesterDetails
+		);
 		const rows = await pool.runQuery<{ count: number }>(
 			`SELECT COUNT(*)::int AS count FROM "${OUTBOX_TABLE_NAME}";`,
 			[],
