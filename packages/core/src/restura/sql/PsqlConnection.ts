@@ -171,8 +171,8 @@ export abstract class PsqlConnection {
 		const durationMs = seconds * 1000 + nanoseconds / 1000000;
 
 		let initiator = 'Anonymous';
-		if ('userId' in queryMetadata && queryMetadata.userId)
-			initiator = `User Id (${queryMetadata.userId.toString()})`;
+		const initiatorId = queryMetadata.userId ?? (queryMetadata.adminUserId as number | undefined);
+		if (initiatorId) initiator = `User Id (${initiatorId.toString()})`;
 		if ('isSystemUser' in queryMetadata && queryMetadata.isSystemUser) initiator = 'SYSTEM';
 
 		logger.trace(`${prefix}query by ${initiator}, Query ->\n${formattedSql}`, {
