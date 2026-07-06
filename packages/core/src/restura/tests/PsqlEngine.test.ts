@@ -277,9 +277,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER "order_update"
-	AFTER UPDATE ON "order"
+	AFTER UPDATE OF "id", "amountCents", "userId" ON "order"
 	FOR EACH ROW
-	WHEN (OLD.* IS DISTINCT FROM NEW.*)
+	WHEN (OLD."id" IS DISTINCT FROM NEW."id" OR OLD."amountCents" IS DISTINCT FROM NEW."amountCents" OR OLD."userId" IS DISTINCT FROM NEW."userId")
 EXECUTE FUNCTION notify_order_update();
 
 
@@ -403,9 +403,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER "user_update"
-	AFTER UPDATE ON "user"
+	AFTER UPDATE OF "firstName", "lastName", "email", "role", "phone", "accountStatus", "onboardingStatus" ON "user"
 	FOR EACH ROW
-	WHEN (OLD.* IS DISTINCT FROM NEW.*)
+	WHEN (OLD."firstName" IS DISTINCT FROM NEW."firstName" OR OLD."lastName" IS DISTINCT FROM NEW."lastName" OR OLD."email" IS DISTINCT FROM NEW."email" OR OLD."role" IS DISTINCT FROM NEW."role" OR OLD."phone" IS DISTINCT FROM NEW."phone" OR OLD."accountStatus" IS DISTINCT FROM NEW."accountStatus" OR OLD."onboardingStatus" IS DISTINCT FROM NEW."onboardingStatus")
 EXECUTE FUNCTION notify_user_update();
 
 

@@ -159,7 +159,13 @@ function buildTriggerFunctionSql(
 		operation === 'update' && tableName !== tableName.toLowerCase()
 			? `DROP TRIGGER IF EXISTS ${tableName}_update ON "${tableName}";\n`
 			: '';
-	const updateGuard = operation === 'update' ? '\n	WHEN (OLD.* IS DISTINCT FROM NEW.*)' : '';
+	// Scoped to the notify columns so hot unrelated columns (heartbeats, lastLoginOn) never produce events
+	let updateScope = '';
+	let updateGuard = '';
+	if (operation === 'update') {
+		updateScope = ` OF ${columns.map((column) => `"${column}"`).join(', ')}`;
+		updateGuard = `\n	WHEN (${columns.map((column) => `OLD."${column}" IS DISTINCT FROM NEW."${column}"`).join(' OR ')})`;
+	}
 
 	return `
 CREATE OR REPLACE FUNCTION ${functionName}()
@@ -175,7 +181,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 ${legacyDrop}CREATE OR REPLACE TRIGGER "${tableName}_${operation}"
-	AFTER ${operation.toUpperCase()} ON "${tableName}"
+	AFTER ${operation.toUpperCase()}${updateScope} ON "${tableName}"
 	FOR EACH ROW${updateGuard}
 EXECUTE FUNCTION ${functionName}();
 `;

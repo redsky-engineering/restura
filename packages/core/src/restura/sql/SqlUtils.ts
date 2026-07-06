@@ -16,7 +16,7 @@ class SqlUtils {
 			type.startsWith('double precision')
 		)
 			return 'number';
-		if (type === 'json') {
+		if (type === 'json' || type === 'jsonb') {
 			if (!value) return 'object';
 			// Split the value by comma and remove any single or double quote characters, and then join with " | "
 			return value
