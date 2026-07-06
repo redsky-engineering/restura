@@ -74,6 +74,13 @@ describe('sensitive column denylist', () => {
 	it('should throw when ALL is used without tableColumns instead of falling back to whole-row payloads', () => {
 		expect(() => createUpdateTriggerSql('user', 'ALL')).to.throw(/requires tableColumns/);
 	});
+
+	it('should throw when the notify config resolves to no columns', () => {
+		expect(() => createUpdateTriggerSql('user', [])).to.throw(/resolves to no columns/);
+		expect(() => createUpdateTriggerSql('user', 'ALL', { tableColumns: ['password', 'secretKey'] })).to.throw(
+			/resolves to no columns/
+		);
+	});
 });
 
 describe('outbox trigger sql generation', () => {
