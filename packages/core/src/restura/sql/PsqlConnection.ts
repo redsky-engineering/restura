@@ -34,12 +34,13 @@ export abstract class PsqlConnection {
 		this.instanceId = instanceId || crypto.randomUUID();
 	}
 
-	private buildQueryMetadata(requesterDetails: RequesterDetails): QueryMetadata {
+	private buildQueryMetadata(requesterDetails: RequesterDetails | undefined): QueryMetadata {
 		if (PsqlConnection.queryMetadataKeys === 'ALL') {
 			return { connectionInstanceId: this.instanceId, ...requesterDetails };
 		}
 		const meta: QueryMetadata = { connectionInstanceId: this.instanceId };
-		const details = requesterDetails as unknown as Record<string, unknown>;
+		// Pre-auth middleware (e.g. store/context resolvers) legitimately queries without requesterDetails
+		const details = (requesterDetails ?? {}) as unknown as Record<string, unknown>;
 		for (const key of PsqlConnection.queryMetadataKeys) {
 			if (details[key] !== undefined) meta[key] = details[key];
 		}

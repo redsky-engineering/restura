@@ -92,6 +92,22 @@ describe('outbox trigger sql generation', () => {
 	});
 });
 
+describe('query metadata with missing requesterDetails', () => {
+	it('should still execute queries when requesterDetails is undefined (pre-auth middleware)', async () => {
+		const pool = new PsqlPool(clientConfig);
+		try {
+			const rows = await pool.runQuery<{ one: number }>(
+				`SELECT 1 AS one;`,
+				[],
+				undefined as unknown as RequesterDetails
+			);
+			expect(rows[0].one).to.equal(1);
+		} finally {
+			pool.pool.end();
+		}
+	});
+});
+
 describe('notify handler validation', () => {
 	const fakeSchema = {
 		database: [
