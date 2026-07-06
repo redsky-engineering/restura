@@ -24,238 +24,213 @@ export function schemaToPsqlType(column: ColumnData): string {
 	return column.type;
 }
 
-export function createInsertTriggerSql(tableName: string, notify: ResturaSchema['database'][0]['notify']): string {
-	if (!notify) return '';
-	if (notify === 'ALL') {
-		return `
-CREATE OR REPLACE FUNCTION notify_${tableName}_insert()
-	RETURNS TRIGGER AS $$
-DECLARE
-	query_metadata JSON;
-BEGIN
-	SELECT INTO query_metadata
-			(regexp_match(
-					current_query(),
-					'^--QUERY_METADATA\\(({.*})', 'n'
-			))[1]::json;
+export const OUTBOX_TABLE_NAME = 'dbEventOutbox';
+export const DEFAULT_OUTBOX_CHANNEL = 'restura_outbox';
 
-	PERFORM pg_notify(
-		'insert',
-		json_build_object(
-						'table', '${tableName}',
-						'queryMetadata', query_metadata,
-						'insertedId', NEW.id,
-						'record', NEW
-		)::text
-		);
+// Columns whose names suggest secrets are excluded from trigger payloads (OWASP never-log list)
+const SENSITIVE_COLUMN_PATTERN = /password|token|secret|credential|guid|key$/i;
 
-	RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+export function isSensitiveColumnName(columnName: string): boolean {
+	return SENSITIVE_COLUMN_PATTERN.test(columnName);
+}
 
-CREATE OR REPLACE TRIGGER "${tableName}_insert"
-	AFTER INSERT ON "${tableName}"
-	FOR EACH ROW
-EXECUTE FUNCTION notify_${tableName}_insert();
-`;
-	}
+export interface TriggerSqlOptions {
+	delivery?: 'direct' | 'outbox';
+	channel?: string;
+	tableColumns?: string[];
+}
 
-	const notifyColumnNewBuildString = notify.map((column) => `'${column}', NEW."${column}"`).join(',\n');
+export interface SchemaGenerationOptions {
+	eventDelivery?: 'direct' | 'outbox';
+	outboxChannel?: string;
+}
 
+export function createOutboxTableSql(): string {
 	return `
-CREATE OR REPLACE FUNCTION notify_${tableName}_insert()
-	RETURNS TRIGGER AS $$
-DECLARE
-	query_metadata JSON;
-BEGIN
-	SELECT INTO query_metadata
-			(regexp_match(
-					current_query(),
-					'^--QUERY_METADATA\\(({.*})', 'n'
-			))[1]::json;
-
-	PERFORM pg_notify(
-		'insert',
-		json_build_object(
-						'table', '${tableName}',
-						'queryMetadata', query_metadata,
-						'insertedId', NEW.id,
-						'record', json_build_object(
-							${notifyColumnNewBuildString}
-						)
-		)::text
-		);
-
-	RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE TRIGGER "${tableName}_insert"
-	AFTER INSERT ON "${tableName}"
-	FOR EACH ROW
-EXECUTE FUNCTION notify_${tableName}_insert();
+CREATE TABLE IF NOT EXISTS "${OUTBOX_TABLE_NAME}"
+(
+	"id" BIGSERIAL PRIMARY KEY,
+	"createdOn" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"tableName" TEXT NOT NULL,
+	"operation" TEXT NOT NULL,
+	"recordId" BIGINT NULL,
+	"record" JSONB NULL,
+	"previousRecord" JSONB NULL,
+	"queryMetadata" JSONB NULL,
+	"processedOn" TIMESTAMPTZ NULL,
+	"attempts" INT NOT NULL DEFAULT 0,
+	"nextAttemptOn" TIMESTAMPTZ NULL,
+	"isDeadLetter" BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS "${OUTBOX_TABLE_NAME}_unprocessed_index" ON "${OUTBOX_TABLE_NAME}" ("id") WHERE "processedOn" IS NULL AND "isDeadLetter" = FALSE;
+CREATE INDEX IF NOT EXISTS "${OUTBOX_TABLE_NAME}_processedOn_index" ON "${OUTBOX_TABLE_NAME}" ("processedOn") WHERE "processedOn" IS NOT NULL;
 `;
 }
 
-export function createUpdateTriggerSql(tableName: string, notify: ResturaSchema['database'][0]['notify']): string {
-	if (!notify) return '';
+type NotifyConfig = ResturaSchema['database'][0]['notify'];
+
+// Sensitive-named columns throw unless '!'-prefixed to force-include; 'ALL' expands minus sensitive names
+function resolveNotifyColumns(tableName: string, notify: NotifyConfig, tableColumns?: string[]): string[] {
+	if (!notify) return [];
 	if (notify === 'ALL') {
-		return `
-CREATE OR REPLACE FUNCTION notify_${tableName}_update()
-	RETURNS TRIGGER AS $$
-DECLARE
-	query_metadata JSON;
-BEGIN
-	SELECT INTO query_metadata
-				(regexp_match(
-						current_query(),
-						'^--QUERY_METADATA\\(({.*})', 'n'
-				))[1]::json;
-
-	PERFORM pg_notify(
-		'update',
-		json_build_object(
-						'table', '${tableName}',
-						'queryMetadata', query_metadata,
-						'changedId', NEW.id,
-						'record', NEW,
-						'previousRecord', OLD
-		)::text
-		);
-	RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE TRIGGER ${tableName}_update
-	AFTER UPDATE ON "${tableName}"
-	FOR EACH ROW
-EXECUTE FUNCTION notify_${tableName}_update();
-`;
+		if (!tableColumns) {
+			throw new Error(
+				`notify: "ALL" on table "${tableName}" requires tableColumns so the sensitive-column denylist can be applied. ` +
+					`Pass options.tableColumns or list columns explicitly.`
+			);
+		}
+		return tableColumns.filter((column) => !isSensitiveColumnName(column));
 	}
-
-	const notifyColumnNewBuildString = notify.map((column) => `'${column}', NEW."${column}"`).join(',\n');
-	const notifyColumnOldBuildString = notify.map((column) => `'${column}', OLD."${column}"`).join(',\n');
-
-	return `
-CREATE OR REPLACE FUNCTION notify_${tableName}_update()
-	RETURNS TRIGGER AS $$
-DECLARE
-	query_metadata JSON;
-BEGIN
-	SELECT INTO query_metadata
-				(regexp_match(
-						current_query(),
-						'^--QUERY_METADATA\\(({.*})', 'n'
-				))[1]::json;
-
-	PERFORM pg_notify(
-		'update',
-		json_build_object(
-						'table', '${tableName}',
-						'queryMetadata', query_metadata,
-						'changedId', NEW.id,
-						'record', json_build_object(
-							${notifyColumnNewBuildString}
-						),
-						'previousRecord', json_build_object(
-							${notifyColumnOldBuildString}
-						)
-		)::text
-		);
-	RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE TRIGGER ${tableName}_update
-	AFTER UPDATE ON "${tableName}"
-	FOR EACH ROW
-EXECUTE FUNCTION notify_${tableName}_update();
-		`;
+	return notify.map((entry) => {
+		if (entry.startsWith('!')) return entry.slice(1);
+		if (isSensitiveColumnName(entry)) {
+			throw new Error(
+				`Refusing to include sensitive column "${tableName}"."${entry}" in notify trigger payloads. ` +
+					`Remove it from the notify list or prefix it with '!' to force-include it.`
+			);
+		}
+		return entry;
+	});
 }
 
-export function createDeleteTriggerSql(tableName: string, notify: ResturaSchema['database'][0]['notify']): string {
-	if (!notify) return '';
-	if (notify === 'ALL') {
-		return `
-CREATE OR REPLACE FUNCTION notify_${tableName}_delete()
-	RETURNS TRIGGER AS $$
-DECLARE
-	query_metadata JSON;
-BEGIN
+function sqlStringLiteral(value: string): string {
+	return value.replace(/'/g, "''");
+}
+
+function buildRowJson(rowVariable: 'NEW' | 'OLD', columns: string[]): string {
+	return `jsonb_build_object(
+							${columns.map((column) => `'${sqlStringLiteral(column)}', ${rowVariable}."${column}"`).join(',\n							')}
+						)`;
+}
+
+const QUERY_METADATA_DECLARE_BLOCK = `
 	SELECT INTO query_metadata
 			(regexp_match(
 					current_query(),
 					'^--QUERY_METADATA\\(({.*})', 'n'
 			))[1]::json;
-
-	PERFORM pg_notify(
-		'delete',
-		json_build_object(
-						'table', '${tableName}',
-						'queryMetadata', query_metadata,
-						'deletedId', OLD.id,
-						'previousRecord', OLD
-		)::text
-		);
-	RETURN OLD;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE TRIGGER "${tableName}_delete"
-	AFTER DELETE ON "${tableName}"
-	FOR EACH ROW
-EXECUTE FUNCTION notify_${tableName}_delete();
 `;
+
+function buildTriggerFunctionSql(
+	tableName: string,
+	operation: 'insert' | 'update' | 'delete',
+	notify: NotifyConfig,
+	options?: TriggerSqlOptions
+): string {
+	if (!notify) return '';
+	const columns = resolveNotifyColumns(tableName, notify, options?.tableColumns);
+	const delivery = options?.delivery || 'direct';
+	const channel = options?.channel || DEFAULT_OUTBOX_CHANNEL;
+	const tableNameLiteral = sqlStringLiteral(tableName);
+	const channelLiteral = sqlStringLiteral(channel);
+	const functionName = `notify_${tableName}_${operation}`;
+	const rowVariable = operation === 'delete' ? 'OLD' : 'NEW';
+
+	let body: string;
+	if (delivery === 'outbox') {
+		const recordJson = operation === 'delete' ? 'NULL' : buildRowJson('NEW', columns);
+		const previousRecordJson = operation === 'insert' ? 'NULL' : buildRowJson('OLD', columns);
+		body = `	INSERT INTO "${OUTBOX_TABLE_NAME}" ("tableName", "operation", "recordId", "record", "previousRecord", "queryMetadata")
+	VALUES ('${tableNameLiteral}', '${operation.toUpperCase()}', ${rowVariable}.id, ${recordJson}, ${previousRecordJson}, query_metadata::jsonb)
+	RETURNING "id" INTO outbox_id;
+
+	PERFORM pg_notify('${channelLiteral}', outbox_id::text);`;
+	} else {
+		const idField =
+			operation === 'insert'
+				? `'insertedId', NEW.id`
+				: operation === 'update'
+					? `'changedId', NEW.id`
+					: `'deletedId', OLD.id`;
+		const payloadFields = [`'table', '${tableNameLiteral}'`, `'queryMetadata', query_metadata`, idField];
+		if (operation !== 'delete') payloadFields.push(`'record', ${buildRowJson('NEW', columns)}`);
+		if (operation !== 'insert') payloadFields.push(`'previousRecord', ${buildRowJson('OLD', columns)}`);
+		body = `	PERFORM pg_notify(
+		'${operation}',
+		json_build_object(
+						${payloadFields.join(',\n						')}
+		)::text
+		);`;
 	}
 
-	const notifyColumnOldBuildString = notify.map((column) => `'${column}', OLD."${column}"`).join(',\n');
+	const outboxDeclare = delivery === 'outbox' ? '\n	outbox_id BIGINT;' : '';
+	// DROP heals the pre-existing unquoted (case-folded) update trigger name before creating the quoted one
+	const legacyDrop =
+		operation === 'update' && tableName !== tableName.toLowerCase()
+			? `DROP TRIGGER IF EXISTS ${tableName}_update ON "${tableName}";\n`
+			: '';
+	const updateGuard = operation === 'update' ? '\n	WHEN (OLD.* IS DISTINCT FROM NEW.*)' : '';
 
 	return `
-CREATE OR REPLACE FUNCTION notify_${tableName}_delete()
+CREATE OR REPLACE FUNCTION ${functionName}()
 	RETURNS TRIGGER AS $$
 DECLARE
-	query_metadata JSON;
+	query_metadata JSON;${outboxDeclare}
 BEGIN
-	SELECT INTO query_metadata
-			(regexp_match(
-					current_query(),
-					'^--QUERY_METADATA\\(({.*})', 'n'
-			))[1]::json;
+${QUERY_METADATA_DECLARE_BLOCK}
+${body}
 
-	PERFORM pg_notify(
-		'delete',
-		json_build_object(
-						'table', '${tableName}',
-						'queryMetadata', query_metadata,
-						'deletedId', OLD.id,
-						'previousRecord', json_build_object(
-							${notifyColumnOldBuildString}
-						)
-		)::text
-		);
-	RETURN OLD;
+	RETURN ${rowVariable};
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER "${tableName}_delete"
-	AFTER DELETE ON "${tableName}"
-	FOR EACH ROW
-EXECUTE FUNCTION notify_${tableName}_delete();
-		`;
+${legacyDrop}CREATE OR REPLACE TRIGGER "${tableName}_${operation}"
+	AFTER ${operation.toUpperCase()} ON "${tableName}"
+	FOR EACH ROW${updateGuard}
+EXECUTE FUNCTION ${functionName}();
+`;
 }
 
-export function generateDatabaseSchemaFromSchema(schema: ResturaSchema): string {
+export function createInsertTriggerSql(
+	tableName: string,
+	notify: ResturaSchema['database'][0]['notify'],
+	options?: TriggerSqlOptions
+): string {
+	return buildTriggerFunctionSql(tableName, 'insert', notify, options);
+}
+
+export function createUpdateTriggerSql(
+	tableName: string,
+	notify: ResturaSchema['database'][0]['notify'],
+	options?: TriggerSqlOptions
+): string {
+	return buildTriggerFunctionSql(tableName, 'update', notify, options);
+}
+
+export function createDeleteTriggerSql(
+	tableName: string,
+	notify: ResturaSchema['database'][0]['notify'],
+	options?: TriggerSqlOptions
+): string {
+	return buildTriggerFunctionSql(tableName, 'delete', notify, options);
+}
+
+export function generateNotifyTriggersSql(schema: ResturaSchema, options?: SchemaGenerationOptions): string[] {
+	const statements: string[] = [];
+	const hasNotifyTables = schema.database.some((table) => table.notify);
+	if (options?.eventDelivery === 'outbox' && hasNotifyTables) {
+		statements.push(createOutboxTableSql());
+	}
+	for (const table of schema.database) {
+		if (!table.notify) continue;
+		const triggerOptions: TriggerSqlOptions = {
+			delivery: options?.eventDelivery,
+			channel: options?.outboxChannel,
+			tableColumns: table.columns.map((column) => column.name)
+		};
+		statements.push(createInsertTriggerSql(table.name, table.notify, triggerOptions));
+		statements.push(createUpdateTriggerSql(table.name, table.notify, triggerOptions));
+		statements.push(createDeleteTriggerSql(table.name, table.notify, triggerOptions));
+	}
+	return statements;
+}
+
+export function generateDatabaseSchemaFromSchema(schema: ResturaSchema, options?: SchemaGenerationOptions): string {
 	const sqlStatements = [];
 	const indexes = [];
-	const triggers = [];
+	const triggers = generateNotifyTriggersSql(schema, options);
 
 	for (const table of schema.database) {
-		if (table.notify) {
-			triggers.push(createInsertTriggerSql(table.name, table.notify));
-			triggers.push(createUpdateTriggerSql(table.name, table.notify));
-			triggers.push(createDeleteTriggerSql(table.name, table.notify));
-		}
-
 		let sql = `CREATE TABLE "${table.name}"
 				   ( `;
 		const tableColumns = [];
@@ -384,7 +359,8 @@ export async function getNewPublicSchemaAndScratchPool(targetPool: PsqlPool, scr
 export async function diffDatabaseToSchema(
 	schema: ResturaSchema,
 	targetPool: PsqlPool,
-	scratchDbName: string
+	scratchDbName: string,
+	options?: SchemaGenerationOptions
 ): Promise<string> {
 	let scratchPool: PsqlPool | undefined;
 	let originalClient: InstanceType<typeof Client> | undefined;
@@ -392,7 +368,7 @@ export async function diffDatabaseToSchema(
 
 	try {
 		scratchPool = await getNewPublicSchemaAndScratchPool(targetPool, scratchDbName);
-		const sqlFullStatement = generateDatabaseSchemaFromSchema(schema);
+		const sqlFullStatement = generateDatabaseSchemaFromSchema(schema, options);
 		await scratchPool.runQuery(sqlFullStatement, [], systemUser);
 
 		const connectionConfig = {

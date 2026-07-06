@@ -2,6 +2,11 @@ packages:
     - apps/*
     - packages/*
     - docs
+allowBuilds:
+    esbuild: true
+    husky: true
+    nx: true
+    sharp: false
 ignoredBuiltDependencies:
     - sharp
 onlyBuiltDependencies:

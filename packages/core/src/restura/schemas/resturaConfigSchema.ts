@@ -11,6 +11,18 @@ export const resturaConfigSchema = z.object({
 	customApiFolderPath: z.string().default(process.cwd() + customApiFolderPath),
 	generatedTypesPath: z.string().default(process.cwd() + '/src/@types'),
 	fileTempCachePath: z.string().optional(),
-	scratchDatabaseSuffix: z.string().optional()
+	scratchDatabaseSuffix: z.string().optional(),
+	eventDelivery: z.enum(['direct', 'outbox']).default('direct'),
+	eventOutbox: z
+		.object({
+			channel: z.string().default('restura_outbox'),
+			pollIntervalMs: z.number().default(15000),
+			batchSize: z.number().default(50),
+			maxAttempts: z.number().default(5),
+			pruneAfterDays: z.number().default(7)
+		})
+		.prefault({}),
+	notifyValidation: z.enum(['off', 'warn', 'strict']).default('warn'),
+	queryMetadataKeys: z.union([z.literal('ALL'), z.array(z.string())]).optional()
 });
 export type ResturaConfigSchema = z.infer<typeof resturaConfigSchema>;
