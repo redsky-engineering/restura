@@ -93,9 +93,13 @@ function resolveNotifyColumns(tableName: string, notify: NotifyConfig, tableColu
 	});
 }
 
+function sqlStringLiteral(value: string): string {
+	return value.replace(/'/g, "''");
+}
+
 function buildRowJson(rowVariable: 'NEW' | 'OLD', columns: string[]): string {
 	return `jsonb_build_object(
-							${columns.map((column) => `'${column}', ${rowVariable}."${column}"`).join(',\n							')}
+							${columns.map((column) => `'${sqlStringLiteral(column)}', ${rowVariable}."${column}"`).join(',\n							')}
 						)`;
 }
 
@@ -117,6 +121,8 @@ function buildTriggerFunctionSql(
 	const columns = resolveNotifyColumns(tableName, notify, options?.tableColumns);
 	const delivery = options?.delivery || 'direct';
 	const channel = options?.channel || DEFAULT_OUTBOX_CHANNEL;
+	const tableNameLiteral = sqlStringLiteral(tableName);
+	const channelLiteral = sqlStringLiteral(channel);
 	const functionName = `notify_${tableName}_${operation}`;
 	const rowVariable = operation === 'delete' ? 'OLD' : 'NEW';
 
@@ -125,10 +131,10 @@ function buildTriggerFunctionSql(
 		const recordJson = operation === 'delete' ? 'NULL' : buildRowJson('NEW', columns);
 		const previousRecordJson = operation === 'insert' ? 'NULL' : buildRowJson('OLD', columns);
 		body = `	INSERT INTO "${OUTBOX_TABLE_NAME}" ("tableName", "operation", "recordId", "record", "previousRecord", "queryMetadata")
-	VALUES ('${tableName}', '${operation.toUpperCase()}', ${rowVariable}.id, ${recordJson}, ${previousRecordJson}, query_metadata::jsonb)
+	VALUES ('${tableNameLiteral}', '${operation.toUpperCase()}', ${rowVariable}.id, ${recordJson}, ${previousRecordJson}, query_metadata::jsonb)
 	RETURNING "id" INTO outbox_id;
 
-	PERFORM pg_notify('${channel}', outbox_id::text);`;
+	PERFORM pg_notify('${channelLiteral}', outbox_id::text);`;
 	} else {
 		const idField =
 			operation === 'insert'
@@ -136,7 +142,7 @@ function buildTriggerFunctionSql(
 				: operation === 'update'
 					? `'changedId', NEW.id`
 					: `'deletedId', OLD.id`;
-		const payloadFields = [`'table', '${tableName}'`, `'queryMetadata', query_metadata`, idField];
+		const payloadFields = [`'table', '${tableNameLiteral}'`, `'queryMetadata', query_metadata`, idField];
 		if (operation !== 'delete') payloadFields.push(`'record', ${buildRowJson('NEW', columns)}`);
 		if (operation !== 'insert') payloadFields.push(`'previousRecord', ${buildRowJson('OLD', columns)}`);
 		body = `	PERFORM pg_notify(
