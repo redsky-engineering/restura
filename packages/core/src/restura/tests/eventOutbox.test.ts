@@ -106,6 +106,24 @@ describe('outbox trigger sql generation', () => {
 		);
 		expect(updateSql).to.not.contain('OLD.* IS DISTINCT FROM NEW.*');
 	});
+
+	it('should compare JSON columns as jsonb in the update guard (json has no equality operator)', () => {
+		const updateSql = createUpdateTriggerSql('store', ['name', 'settings'], {
+			delivery: 'outbox',
+			columnTypes: { name: 'VARCHAR', settings: 'JSON' }
+		});
+		expect(updateSql).to.contain(`OLD."settings"::jsonb IS DISTINCT FROM NEW."settings"::jsonb`);
+		expect(updateSql).to.contain(`OLD."name" IS DISTINCT FROM NEW."name"`);
+	});
+
+	it('should not cast JSONB columns in the update guard', () => {
+		const updateSql = createUpdateTriggerSql('store', ['settings'], {
+			delivery: 'outbox',
+			columnTypes: { settings: 'JSONB' }
+		});
+		expect(updateSql).to.contain(`OLD."settings" IS DISTINCT FROM NEW."settings"`);
+		expect(updateSql).to.not.contain('::jsonb IS DISTINCT');
+	});
 });
 
 describe('jsonb typescript mapping', () => {

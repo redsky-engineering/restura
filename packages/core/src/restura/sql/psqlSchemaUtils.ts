@@ -38,6 +38,7 @@ export interface TriggerSqlOptions {
 	delivery?: 'direct' | 'outbox';
 	channel?: string;
 	tableColumns?: string[];
+	columnTypes?: Record<string, string>;
 }
 
 export interface SchemaGenerationOptions {
@@ -171,7 +172,12 @@ function buildTriggerFunctionSql(
 	let updateGuard = '';
 	if (operation === 'update') {
 		updateScope = ` OF ${columns.map((column) => `"${column}"`).join(', ')}`;
-		updateGuard = `\n	WHEN (${columns.map((column) => `OLD."${column}" IS DISTINCT FROM NEW."${column}"`).join(' OR ')})`;
+		// json has no equality operator in Postgres, so JSON columns compare as jsonb
+		const columnComparison = (column: string) =>
+			options?.columnTypes?.[column] === 'JSON'
+				? `OLD."${column}"::jsonb IS DISTINCT FROM NEW."${column}"::jsonb`
+				: `OLD."${column}" IS DISTINCT FROM NEW."${column}"`;
+		updateGuard = `\n	WHEN (${columns.map(columnComparison).join(' OR ')})`;
 	}
 
 	return `
@@ -229,7 +235,8 @@ export function generateNotifyTriggersSql(schema: ResturaSchema, options?: Schem
 		const triggerOptions: TriggerSqlOptions = {
 			delivery: options?.eventDelivery,
 			channel: options?.outboxChannel,
-			tableColumns: table.columns.map((column) => column.name)
+			tableColumns: table.columns.map((column) => column.name),
+			columnTypes: Object.fromEntries(table.columns.map((column) => [column.name, column.type]))
 		};
 		statements.push(createInsertTriggerSql(table.name, table.notify, triggerOptions));
 		statements.push(createUpdateTriggerSql(table.name, table.notify, triggerOptions));
