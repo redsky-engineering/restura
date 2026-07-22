@@ -2,14 +2,13 @@
 import 'dotenv/config';
 
 import { Command } from 'commander';
-import { createRequire } from 'node:module';
 import { diffCommand } from './commands/diff.js';
 import { generateTypesCommand } from './commands/generateTypes.js';
 import { resetScratchCommand } from './commands/resetScratch.js';
 import { sqlCommand } from './commands/sql.js';
+import packageJson from '../package.json';
 
-const require = createRequire(import.meta.url);
-const { version } = require('../package.json') as { version: string };
+const { version } = packageJson;
 
 const program = new Command();
 
