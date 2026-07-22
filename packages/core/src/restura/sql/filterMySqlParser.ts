@@ -1,4 +1,5 @@
-import peg, { ParserBuildOptions } from 'pegjs';
+import mysql from 'mysql';
+import compilePegParser from './compilePegParser.js';
 
 const filterSqlGrammar = `
 start = expressionList
@@ -40,8 +41,5 @@ value = "value:" value:text { return value; }
 
 `;
 
-const filterMySqlParser = peg.generate(filterSqlGrammar, {
-	format: 'commonjs',
-	dependencies: { mysql: 'mysql' } // todo: figure out a better way
-} as ParserBuildOptions);
+const filterMySqlParser = compilePegParser(filterSqlGrammar, { mysql: 'mysql' }, { mysql });
 export default filterMySqlParser;

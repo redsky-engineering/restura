@@ -1,4 +1,5 @@
-import peg, { ParserBuildOptions } from 'pegjs';
+import format from 'pg-format';
+import compilePegParser from './compilePegParser.js';
 
 const initializers = `
     // Quotes a SQL identifier (column/table name) with double quotes, escaping any embedded quotes
@@ -340,8 +341,5 @@ ValueWithPipesChar
 
 const fullGrammar = entryGrammar + oldGrammar + newGrammar;
 
-const filterPsqlParser = peg.generate(fullGrammar, {
-	format: 'commonjs',
-	dependencies: { format: 'pg-format' }
-} as ParserBuildOptions);
+const filterPsqlParser = compilePegParser(fullGrammar, { format: 'pg-format' }, { 'pg-format': format });
 export default filterPsqlParser;
