@@ -1,6 +1,13 @@
-import { type ColumnData, type ResturaSchema } from '../schemas/resturaSchema.js';
+import {
+	indexColumnOpclass,
+	indexColumnText,
+	pgTruncate,
+	type ColumnData,
+	type IndexColumnData,
+	type ResturaSchema
+} from '../schemas/resturaSchema.js';
 import { PsqlPool } from './PsqlPool.js';
-import { schemaToPsqlType, systemUser } from './psqlSchemaUtils.js';
+import { buildIndexColumnSql, schemaToPsqlType, systemUser } from './psqlSchemaUtils.js';
 
 export interface DbColumn {
 	name: string;
@@ -18,6 +25,9 @@ export interface DbIndex {
 	isUnique: boolean;
 	isPrimary: boolean;
 	columns: string[];
+	using?: string;
+	opclasses?: (string | null)[];
+	isValid?: boolean;
 	order: 'ASC' | 'DESC';
 	where: string | null;
 }
@@ -48,6 +58,7 @@ export interface DbTable {
 
 export interface DbSnapshot {
 	tables: DbTable[];
+	extensions?: string[];
 }
 
 const RESTURA_TO_PG_UDT: Record<string, string> = {
@@ -95,7 +106,7 @@ const PG_FK_ACTION: Record<string, string> = {
 };
 
 export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
-	const [tableRows, columnRows, indexRows, fkRows, checkRows] = await Promise.all([
+	const [tableRows, columnRows, indexRows, fkRows, checkRows, extensionRows] = await Promise.all([
 		pool.runQuery<{ table_name: string }>(
 			`SELECT table_name
 			 FROM information_schema.tables
@@ -125,15 +136,38 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 		pool.runQuery<{
 			tablename: string;
 			indexname: string;
-			indexdef: string;
+			using_method: string;
+			indisunique: boolean;
 			indisprimary: boolean;
+			indisvalid: boolean;
+			position: number;
+			column_or_expression: string;
+			opclass: string | null;
+			opclass_is_default: boolean | null;
+			is_desc: boolean;
+			where_clause: string | null;
 		}>(
-			`SELECT pi.tablename, pi.indexname, pi.indexdef, ix.indisprimary
-			 FROM pg_indexes pi
-			 JOIN pg_class ic ON ic.relname = pi.indexname
-			 JOIN pg_index ix ON ix.indexrelid = ic.oid
-			 WHERE pi.schemaname = 'public'
-			 ORDER BY pi.tablename, pi.indexname`,
+			`SELECT
+				t.relname AS tablename,
+				i.relname AS indexname,
+				am.amname AS using_method,
+				x.indisunique,
+				x.indisprimary,
+				x.indisvalid,
+				col.n AS position,
+				pg_get_indexdef(x.indexrelid, col.n::int, true) AS column_or_expression,
+				opc.opcname AS opclass,
+				opc.opcdefault AS opclass_is_default,
+				COALESCE((x.indoption[col.n - 1] & 1) = 1, false) AS is_desc,
+				pg_get_expr(x.indpred, x.indrelid) AS where_clause
+			 FROM pg_index x
+			 JOIN pg_class i ON i.oid = x.indexrelid
+			 JOIN pg_class t ON t.oid = x.indrelid
+			 JOIN pg_am am ON am.oid = i.relam
+			 CROSS JOIN LATERAL generate_series(1, x.indnkeyatts) AS col(n)
+			 LEFT JOIN pg_opclass opc ON opc.oid = x.indclass[col.n - 1]
+			 WHERE t.relnamespace = 'public'::regnamespace
+			 ORDER BY t.relname, i.relname, col.n`,
 			[],
 			systemUser
 		),
@@ -182,6 +216,11 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 			 ORDER BY parent_table.relname, constraint_def.conname`,
 			[],
 			systemUser
+		),
+		pool.runQuery<{ extname: string }>(
+			`SELECT extname FROM pg_extension ORDER BY extname`,
+			[],
+			systemUser
 		)
 	]);
 
@@ -210,35 +249,33 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 		});
 	}
 
+	const indexMap = new Map<string, DbIndex>();
 	for (const row of indexRows) {
 		const table = tableMap.get(row.tablename);
 		if (!table) continue;
 
-		const isPrimary = row.indisprimary;
-
-		const unique = /CREATE UNIQUE INDEX/i.test(row.indexdef);
-		const order: 'ASC' | 'DESC' = row.indexdef.toUpperCase().includes(' DESC') ? 'DESC' : 'ASC';
-
-		const columnMatch = row.indexdef.match(/\((.+?)\)(?:\s+WHERE\s+(.+))?$/i);
-		const columns = columnMatch
-			? columnMatch[1].split(',').map((colExpr) =>
-					colExpr
-						.trim()
-						.replace(/\s+(ASC|DESC)$/i, '')
-						.replace(/^"(.*)"$/, '$1')
-				)
-			: [];
-		const whereClause = columnMatch?.[2] ?? null;
-
-		table.indexes.push({
-			name: row.indexname,
-			tableName: row.tablename,
-			isUnique: unique,
-			isPrimary,
-			columns,
-			order,
-			where: whereClause
-		});
+		const key = `${row.tablename}|${row.indexname}`;
+		let index = indexMap.get(key);
+		if (!index) {
+			index = {
+				name: row.indexname,
+				tableName: row.tablename,
+				isUnique: row.indisunique,
+				isPrimary: row.indisprimary,
+				isValid: row.indisvalid,
+				using: row.using_method,
+				columns: [],
+				opclasses: [],
+				// Ordering options only exist for btree; the first key column's DESC bit
+				// determines the index-wide order Restura models.
+				order: row.position === 1 && row.is_desc ? 'DESC' : 'ASC',
+				where: row.where_clause
+			};
+			indexMap.set(key, index);
+			table.indexes.push(index);
+		}
+		index.columns.push(row.column_or_expression.replace(/^"([^"]+)"$/, '$1'));
+		index.opclasses!.push(row.opclass_is_default === false ? row.opclass : null);
 	}
 
 	for (const row of fkRows) {
@@ -265,11 +302,17 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 		});
 	}
 
-	return { tables: Array.from(tableMap.values()) };
+	return { tables: Array.from(tableMap.values()), extensions: extensionRows.map((row) => row.extname) };
 }
 
 export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot): string[] {
 	const statements: string[] = [];
+	const liveExtensions = new Set(snapshot.extensions ?? []);
+	for (const extension of schema.extensions ?? []) {
+		if (!liveExtensions.has(extension)) {
+			statements.push(`CREATE EXTENSION IF NOT EXISTS "${extension}";`);
+		}
+	}
 	const desiredTables = new Map(schema.database.map((table) => [table.name, table]));
 	const liveTableMap = new Map(snapshot.tables.map((table) => [table.name, table]));
 
@@ -316,12 +359,11 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		changedChecksPerTable.set(desired.name, changedChecks);
 
 		const desiredIdxSignatures = new Map<string, string>();
+		const legacyIdxNames = new Set<string>();
 		for (const idx of desired.indexes) {
 			if (idx.isPrimaryKey) continue;
-			desiredIdxSignatures.set(
-				pgTruncate(idx.name),
-				indexSignature(pgTruncate(idx.name), idx.columns, idx.isUnique, idx.order, idx.where)
-			);
+			desiredIdxSignatures.set(pgTruncate(idx.name), schemaIndexSignature(pgTruncate(idx.name), idx));
+			if (hasLegacyFreeFormColumns(idx)) legacyIdxNames.add(pgTruncate(idx.name));
 		}
 		const autoUniqueNames = new Set<string>();
 		for (const col of desired.columns) {
@@ -332,13 +374,10 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		for (const liveIdx of live.indexes) {
 			if (liveIdx.isPrimary) continue;
 			if (autoUniqueNames.has(liveIdx.name)) continue;
-			const liveSig = indexSignature(
-				liveIdx.name,
-				liveIdx.columns,
-				liveIdx.isUnique,
-				liveIdx.order,
-				liveIdx.where
-			);
+			// Legacy free-form column strings (e.g. "email gin_trgm_ops") can't be compared
+			// structurally, so those indexes are matched by name only — never drop/recreate them.
+			if (legacyIdxNames.has(liveIdx.name)) continue;
+			const liveSig = liveIndexSignature(liveIdx);
 			const desiredSig = desiredIdxSignatures.get(liveIdx.name);
 			if (!desiredSig || desiredSig !== liveSig) {
 				statements.push(`DROP INDEX "${liveIdx.name}";`);
@@ -369,18 +408,14 @@ export function diffSchemaToDatabase(schema: ResturaSchema, snapshot: DbSnapshot
 		const live = liveTableMap.get(desired.name)!;
 		const liveIdxSignatures = new Map<string, string>();
 		for (const idx of live.indexes) {
-			liveIdxSignatures.set(idx.name, indexSignature(idx.name, idx.columns, idx.isUnique, idx.order, idx.where));
+			liveIdxSignatures.set(idx.name, liveIndexSignature(idx));
 		}
 		for (const index of desired.indexes) {
 			if (index.isPrimaryKey) continue;
-			const desiredSig = indexSignature(
-				pgTruncate(index.name),
-				index.columns,
-				index.isUnique,
-				index.order,
-				index.where
-			);
 			const liveSig = liveIdxSignatures.get(pgTruncate(index.name));
+			// Name-only matching for legacy free-form entries (see the drop pass above).
+			if (hasLegacyFreeFormColumns(index) && liveSig) continue;
+			const desiredSig = schemaIndexSignature(pgTruncate(index.name), index);
 			if (!liveSig || liveSig !== desiredSig) {
 				statements.push(buildCreateIndex(desired.name, index));
 			}
@@ -605,16 +640,20 @@ function buildAddColumn(tableName: string, column: ColumnData): string {
 
 interface IndexLike {
 	name: string;
-	columns: string[];
+	columns: IndexColumnData[];
 	isUnique: boolean;
 	isPrimaryKey: boolean;
 	order: string;
 	where?: string;
+	using?: string;
 }
 
 function buildCreateIndex(tableName: string, index: IndexLike): string {
 	const unique = index.isUnique ? 'UNIQUE ' : '';
-	let sql = `CREATE ${unique}INDEX "${pgTruncate(index.name)}" ON "${tableName}" (${index.columns.map((column) => `"${column}" ${index.order}`).join(', ')})`;
+	const method = index.using ?? 'btree';
+	const usingClause = method === 'btree' ? '' : ` USING ${method}`;
+	const columns = index.columns.map((column) => buildIndexColumnSql(column, method, index.order)).join(', ');
+	let sql = `CREATE ${unique}INDEX "${pgTruncate(index.name)}" ON "${tableName}"${usingClause} (${columns})`;
 	if (index.where) sql += ` WHERE ${index.where}`;
 	sql += ';';
 	return sql;
@@ -696,14 +735,50 @@ function normalizeWhere(whereExpr: string | null | undefined): string {
 	return normalized;
 }
 
+interface IndexSignatureColumn {
+	text: string;
+	opclass: string | null;
+}
+
 function indexSignature(
 	name: string,
-	columns: string[],
+	using: string | undefined,
+	columns: IndexSignatureColumn[],
 	isUnique: boolean,
 	order: string,
 	where?: string | null
 ): string {
-	return `${name}|${columns.join(',')}|${isUnique}|${order}|${normalizeWhere(where)}`;
+	const method = using ?? 'btree';
+	const columnParts = columns
+		.map((column) => (column.opclass ? `${column.text}:${column.opclass}` : column.text))
+		.join(',');
+	// Ordering options only apply to btree; other access methods reject them, so
+	// normalize to ASC to keep the schema's required `order` field from dirtying diffs.
+	const effectiveOrder = method === 'btree' ? order : 'ASC';
+	return `${name}|${method}|${columnParts}|${isUnique}|${effectiveOrder}|${normalizeWhere(where)}`;
+}
+
+function hasLegacyFreeFormColumns(index: ResturaSchema['database'][0]['indexes'][0]): boolean {
+	return index.columns.some((entry) => typeof entry === 'string' && /\s/.test(entry));
+}
+
+function schemaIndexSignature(name: string, index: ResturaSchema['database'][0]['indexes'][0]): string {
+	const columns = index.columns.map((entry) => ({
+		text: indexColumnText(entry),
+		opclass: indexColumnOpclass(entry)
+	}));
+	return indexSignature(name, index.using, columns, index.isUnique, index.order, index.where);
+}
+
+function liveIndexSignature(index: DbIndex): string {
+	const columns = index.columns.map((text, position) => ({
+		text,
+		opclass: index.opclasses?.[position] ?? null
+	}));
+	const signature = indexSignature(index.name, index.using, columns, index.isUnique, index.order, index.where);
+	// An invalid index (e.g. a failed CREATE INDEX CONCURRENTLY) can never satisfy the
+	// schema, so poison its signature to force a DROP + CREATE.
+	return index.isValid === false ? `${signature}|invalid` : signature;
 }
 
 function isFkChanged(desired: ResturaSchema['database'][0], liveFk: DbForeignKey): boolean {
@@ -716,15 +791,6 @@ function isFkChanged(desired: ResturaSchema['database'][0], liveFk: DbForeignKey
 		desiredFk.onDelete !== liveFk.onDelete ||
 		desiredFk.onUpdate !== liveFk.onUpdate
 	);
-}
-
-const PG_MAX_IDENTIFIER = 63;
-function pgTruncate(name: string): string {
-	const buf = Buffer.from(name, 'utf8');
-	if (buf.length <= PG_MAX_IDENTIFIER) return name;
-	let end = PG_MAX_IDENTIFIER;
-	while (end > 0 && (buf[end] & 0xc0) === 0x80) end--;
-	return buf.subarray(0, end).toString('utf8');
 }
 
 function normalizeCheckExpression(expr: string): string {

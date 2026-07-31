@@ -1,6 +1,7 @@
 import { ObjectUtils } from '@redskytech/core-utils';
 import { RsError } from '../RsError.js';
 import {
+	indexColumnText,
 	JoinData,
 	ResponseData,
 	ResturaSchema,
@@ -50,11 +51,20 @@ class MySqlEngine extends SqlEngine {
 				sql += ', \n';
 			}
 			for (const index of table.indexes) {
+				for (const item of index.columns) {
+					if (typeof item === 'object' && item.expression) {
+						throw new RsError(
+							'SCHEMA_ERROR',
+							`Index "${index.name}" on table "${table.name}" uses an expression column, which MySQL generation does not support.`
+						);
+					}
+				}
+				const columnNames = index.columns.map((item) => indexColumnText(item));
 				if (index.isPrimaryKey) {
-					sql += `\tPRIMARY KEY (\`${index.columns.join('`, `')}\`)`;
+					sql += `\tPRIMARY KEY (\`${columnNames.join('`, `')}\`)`;
 				} else {
 					if (index.isUnique) sql += ' UNIQUE';
-					sql += `\tINDEX \`${index.name}\` (${index.columns
+					sql += `\tINDEX \`${index.name}\` (${columnNames
 						.map((item) => {
 							return `\`${item}\` ${index.order}`;
 						})

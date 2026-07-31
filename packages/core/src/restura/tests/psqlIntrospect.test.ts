@@ -3815,53 +3815,80 @@ describe('introspectDatabase', () => {
 		indexes: unknown[];
 		fks: unknown[];
 		checks: unknown[];
+		extensions?: unknown[];
 	}): PsqlPool {
 		return {
 			runQuery: async (sql: string) => {
 				if (sql.includes('information_schema.tables')) return rows.tables;
 				if (sql.includes('information_schema.columns')) return rows.columns;
-				if (sql.includes('pg_indexes')) return rows.indexes;
+				if (sql.includes('pg_get_indexdef')) return rows.indexes;
 				if (sql.includes("contype = 'f'")) return rows.fks;
 				if (sql.includes("contype = 'c'")) return rows.checks;
+				if (sql.includes('pg_extension')) return rows.extensions ?? [];
 				return [];
 			}
 		} as unknown as PsqlPool;
 	}
 
+	const formSubmissionColumns = [
+		{
+			table_name: 'formSubmission',
+			column_name: 'submittedById',
+			udt_name: 'int4',
+			is_nullable: 'NO',
+			column_default: null,
+			character_maximum_length: null,
+			numeric_precision: 32,
+			numeric_scale: 0
+		},
+		{
+			table_name: 'formSubmission',
+			column_name: 'submittedAt',
+			udt_name: 'timestamptz',
+			is_nullable: 'NO',
+			column_default: null,
+			character_maximum_length: null,
+			numeric_precision: null,
+			numeric_scale: null
+		}
+	];
+
+	const descIndexRows = [
+		{
+			tablename: 'formSubmission',
+			indexname: 'formSubmission_submittedById_submittedAt_index',
+			using_method: 'btree',
+			indisunique: false,
+			indisprimary: false,
+			indisvalid: true,
+			position: 1,
+			column_or_expression: '"submittedById"',
+			opclass: 'int4_ops',
+			opclass_is_default: true,
+			is_desc: true,
+			where_clause: null
+		},
+		{
+			tablename: 'formSubmission',
+			indexname: 'formSubmission_submittedById_submittedAt_index',
+			using_method: 'btree',
+			indisunique: false,
+			indisprimary: false,
+			indisvalid: true,
+			position: 2,
+			column_or_expression: '"submittedAt"',
+			opclass: 'timestamptz_ops',
+			opclass_is_default: true,
+			is_desc: true,
+			where_clause: null
+		}
+	];
+
 	it('parses a multi-column DESC index into clean, unquoted column names', async () => {
 		const pool = makeMockPool({
 			tables: [{ table_name: 'formSubmission' }],
-			columns: [
-				{
-					table_name: 'formSubmission',
-					column_name: 'submittedById',
-					udt_name: 'int4',
-					is_nullable: 'NO',
-					column_default: null,
-					character_maximum_length: null,
-					numeric_precision: 32,
-					numeric_scale: 0
-				},
-				{
-					table_name: 'formSubmission',
-					column_name: 'submittedAt',
-					udt_name: 'timestamptz',
-					is_nullable: 'NO',
-					column_default: null,
-					character_maximum_length: null,
-					numeric_precision: null,
-					numeric_scale: null
-				}
-			],
-			indexes: [
-				{
-					tablename: 'formSubmission',
-					indexname: 'formSubmission_submittedById_submittedAt_index',
-					indexdef:
-						'CREATE INDEX "formSubmission_submittedById_submittedAt_index" ON public."formSubmission" USING btree ("submittedById" DESC, "submittedAt" DESC)',
-					indisprimary: false
-				}
-			],
+			columns: formSubmissionColumns,
+			indexes: descIndexRows,
 			fks: [],
 			checks: []
 		});
@@ -3869,45 +3896,19 @@ describe('introspectDatabase', () => {
 		const snapshot = await introspectDatabase(pool);
 		const liveIndex = snapshot.tables[0]!.indexes[0]!;
 
-		// Regression: the order suffix (DESC) must not leave quotes on the column names.
+		// Regression: quoted identifiers from pg_get_indexdef must come back bare.
 		expect(liveIndex.columns).to.deep.equal(['submittedById', 'submittedAt']);
 		expect(liveIndex.order).to.equal('DESC');
+		expect(liveIndex.using).to.equal('btree');
+		// Default opclasses must be recorded as null so they never enter the diff signature.
+		expect(liveIndex.opclasses).to.deep.equal([null, null]);
 	});
 
 	it('does not diff a multi-column DESC index that is unchanged in the schema', async () => {
 		const pool = makeMockPool({
 			tables: [{ table_name: 'formSubmission' }],
-			columns: [
-				{
-					table_name: 'formSubmission',
-					column_name: 'submittedById',
-					udt_name: 'int4',
-					is_nullable: 'NO',
-					column_default: null,
-					character_maximum_length: null,
-					numeric_precision: 32,
-					numeric_scale: 0
-				},
-				{
-					table_name: 'formSubmission',
-					column_name: 'submittedAt',
-					udt_name: 'timestamptz',
-					is_nullable: 'NO',
-					column_default: null,
-					character_maximum_length: null,
-					numeric_precision: null,
-					numeric_scale: null
-				}
-			],
-			indexes: [
-				{
-					tablename: 'formSubmission',
-					indexname: 'formSubmission_submittedById_submittedAt_index',
-					indexdef:
-						'CREATE INDEX "formSubmission_submittedById_submittedAt_index" ON public."formSubmission" USING btree ("submittedById" DESC, "submittedAt" DESC)',
-					indisprimary: false
-				}
-			],
+			columns: formSubmissionColumns,
+			indexes: descIndexRows,
 			fks: [],
 			checks: []
 		});
@@ -3940,5 +3941,228 @@ describe('introspectDatabase', () => {
 		const statements = diffSchemaToDatabase(schema, snapshot);
 		const indexStatements = statements.filter((s) => s.includes('formSubmission_submittedById_submittedAt_index'));
 		expect(indexStatements).to.have.length(0);
+	});
+
+	it('parses a GIN trigram index with column and expression opclasses', async () => {
+		const pool = makeMockPool({
+			tables: [{ table_name: 'storeCustomer' }],
+			columns: [
+				{
+					table_name: 'storeCustomer',
+					column_name: 'email',
+					udt_name: 'text',
+					is_nullable: 'NO',
+					column_default: null,
+					character_maximum_length: null,
+					numeric_precision: null,
+					numeric_scale: null
+				}
+			],
+			indexes: [
+				{
+					tablename: 'storeCustomer',
+					indexname: 'storeCustomer_email_trgm_index',
+					using_method: 'gin',
+					indisunique: false,
+					indisprimary: false,
+					indisvalid: true,
+					position: 1,
+					column_or_expression: 'email',
+					opclass: 'gin_trgm_ops',
+					opclass_is_default: false,
+					is_desc: false,
+					where_clause: null
+				},
+				{
+					tablename: 'storeCustomer',
+					indexname: 'storeCustomer_email_trgm_index',
+					using_method: 'gin',
+					indisunique: false,
+					indisprimary: false,
+					indisvalid: true,
+					position: 2,
+					column_or_expression: '(("orderNumber")::text)',
+					opclass: 'gin_trgm_ops',
+					opclass_is_default: false,
+					is_desc: false,
+					where_clause: null
+				}
+			],
+			fks: [],
+			checks: [],
+			extensions: [{ extname: 'pg_trgm' }, { extname: 'plpgsql' }]
+		});
+
+		const snapshot = await introspectDatabase(pool);
+		const liveIndex = snapshot.tables[0]!.indexes[0]!;
+
+		expect(liveIndex.using).to.equal('gin');
+		expect(liveIndex.columns).to.deep.equal(['email', '(("orderNumber")::text)']);
+		expect(liveIndex.opclasses).to.deep.equal(['gin_trgm_ops', 'gin_trgm_ops']);
+		expect(liveIndex.order).to.equal('ASC');
+		expect(snapshot.extensions).to.deep.equal(['pg_trgm', 'plpgsql']);
+	});
+});
+
+describe('diffSchemaToDatabase: index methods and operator classes', () => {
+	function makeGinSchemaTable(): ResturaSchema['database'][0] {
+		return {
+			name: 'storeCustomer',
+			columns: [{ name: 'email', type: 'TEXT', isNullable: false, roles: [], scopes: [] }],
+			indexes: [
+				{
+					name: 'storeCustomer_email_trgm_index',
+					using: 'gin',
+					columns: [{ column: 'email', opclass: 'gin_trgm_ops' }],
+					isPrimaryKey: false,
+					isUnique: false,
+					order: 'ASC'
+				}
+			],
+			foreignKeys: [],
+			checkConstraints: [],
+			roles: [],
+			scopes: []
+		};
+	}
+
+	function makeLiveGinTable(): DbTable {
+		return makeDbTable({
+			name: 'storeCustomer',
+			columns: [
+				{
+					name: 'email',
+					udtName: 'text',
+					isNullable: false,
+					columnDefault: null,
+					characterMaximumLength: null,
+					numericPrecision: null,
+					numericScale: null
+				}
+			],
+			indexes: [
+				{
+					name: 'storeCustomer_email_trgm_index',
+					tableName: 'storeCustomer',
+					isUnique: false,
+					isPrimary: false,
+					using: 'gin',
+					columns: ['email'],
+					opclasses: ['gin_trgm_ops'],
+					order: 'ASC',
+					where: null
+				}
+			]
+		});
+	}
+
+	it('does not diff an unchanged GIN index declared with the object column form', () => {
+		const statements = diffSchemaToDatabase(makeSchema([makeGinSchemaTable()]), {
+			tables: [makeLiveGinTable()],
+			extensions: ['pg_trgm']
+		});
+		expect(statements).to.deep.equal([]);
+	});
+
+	it('emits CREATE INDEX ... USING gin with opclass and no ASC/DESC for a missing GIN index', () => {
+		const liveTable = makeLiveGinTable();
+		liveTable.indexes = [];
+		const statements = diffSchemaToDatabase(makeSchema([makeGinSchemaTable()]), { tables: [liveTable] });
+		expect(statements).to.deep.equal([
+			'CREATE INDEX "storeCustomer_email_trgm_index" ON "storeCustomer" USING gin ("email" gin_trgm_ops);'
+		]);
+	});
+
+	it('emits DROP + CREATE when the access method changes', () => {
+		const liveTable = makeLiveGinTable();
+		liveTable.indexes[0] = { ...liveTable.indexes[0]!, using: 'btree', opclasses: [null] };
+		const schemaTable = makeGinSchemaTable();
+		const statements = diffSchemaToDatabase(makeSchema([schemaTable]), { tables: [liveTable] });
+		expect(statements).to.deep.equal([
+			'DROP INDEX "storeCustomer_email_trgm_index";',
+			'CREATE INDEX "storeCustomer_email_trgm_index" ON "storeCustomer" USING gin ("email" gin_trgm_ops);'
+		]);
+	});
+
+	it('emits DROP + CREATE when the operator class changes', () => {
+		const liveTable = makeLiveGinTable();
+		liveTable.indexes[0] = { ...liveTable.indexes[0]!, opclasses: ['gin_trgm_ops'] };
+		const schemaTable = makeGinSchemaTable();
+		schemaTable.indexes[0]!.columns = [{ column: 'email', opclass: 'jsonb_path_ops' }];
+		const statements = diffSchemaToDatabase(makeSchema([schemaTable]), { tables: [liveTable] });
+		expect(statements).to.deep.equal([
+			'DROP INDEX "storeCustomer_email_trgm_index";',
+			'CREATE INDEX "storeCustomer_email_trgm_index" ON "storeCustomer" USING gin ("email" jsonb_path_ops);'
+		]);
+	});
+
+	it('emits expression index columns verbatim without identifier quoting', () => {
+		const schemaTable = makeGinSchemaTable();
+		schemaTable.indexes[0]!.columns = [{ expression: '(("orderNumber")::text)', opclass: 'gin_trgm_ops' }];
+		const liveTable = makeLiveGinTable();
+		liveTable.indexes = [];
+		const statements = diffSchemaToDatabase(makeSchema([schemaTable]), { tables: [liveTable] });
+		expect(statements).to.deep.equal([
+			'CREATE INDEX "storeCustomer_email_trgm_index" ON "storeCustomer" USING gin ((("orderNumber")::text) gin_trgm_ops);'
+		]);
+	});
+
+	it('forces DROP + CREATE for an invalid live index even when the signature matches', () => {
+		const liveTable = makeLiveGinTable();
+		liveTable.indexes[0] = { ...liveTable.indexes[0]!, isValid: false };
+		const statements = diffSchemaToDatabase(makeSchema([makeGinSchemaTable()]), { tables: [liveTable] });
+		expect(statements).to.deep.equal([
+			'DROP INDEX "storeCustomer_email_trgm_index";',
+			'CREATE INDEX "storeCustomer_email_trgm_index" ON "storeCustomer" USING gin ("email" gin_trgm_ops);'
+		]);
+	});
+
+	it('matches legacy free-form string entries by name only, never dropping the live index', () => {
+		const schemaTable = makeGinSchemaTable();
+		schemaTable.indexes[0]! = {
+			name: 'storeCustomer_email_trgm_index',
+			columns: ['email gin_trgm_ops'],
+			isPrimaryKey: false,
+			isUnique: false,
+			order: 'ASC'
+		};
+		// Live index is GIN with an opclass; the legacy string can't express that, but a
+		// same-name legacy entry must be treated as unmanaged instead of drop/recreated.
+		const statements = diffSchemaToDatabase(makeSchema([schemaTable]), { tables: [makeLiveGinTable()] });
+		expect(statements).to.deep.equal([]);
+	});
+
+	it('still emits a best-effort CREATE for a legacy free-form entry with no live counterpart', () => {
+		const schemaTable = makeGinSchemaTable();
+		schemaTable.indexes[0]! = {
+			name: 'storeCustomer_email_trgm_index',
+			columns: ['email gin_trgm_ops'],
+			isPrimaryKey: false,
+			isUnique: false,
+			order: 'ASC'
+		};
+		const liveTable = makeLiveGinTable();
+		liveTable.indexes = [];
+		const statements = diffSchemaToDatabase(makeSchema([schemaTable]), { tables: [liveTable] });
+		expect(statements).to.deep.equal([
+			'CREATE INDEX "storeCustomer_email_trgm_index" ON "storeCustomer" (email gin_trgm_ops ASC);'
+		]);
+	});
+
+	it('emits CREATE EXTENSION IF NOT EXISTS before other statements when a declared extension is missing', () => {
+		const schema = makeSchema([makeGinSchemaTable()]);
+		schema.extensions = ['pg_trgm'];
+		const statements = diffSchemaToDatabase(schema, { tables: [makeLiveGinTable()] });
+		expect(statements).to.deep.equal(['CREATE EXTENSION IF NOT EXISTS "pg_trgm";']);
+	});
+
+	it('does not emit CREATE EXTENSION when the extension is already installed', () => {
+		const schema = makeSchema([makeGinSchemaTable()]);
+		schema.extensions = ['pg_trgm'];
+		const statements = diffSchemaToDatabase(schema, {
+			tables: [makeLiveGinTable()],
+			extensions: ['pg_trgm']
+		});
+		expect(statements).to.deep.equal([]);
 	});
 });
