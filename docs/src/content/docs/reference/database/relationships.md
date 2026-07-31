@@ -179,14 +179,37 @@ Foreign keys enforce referential integrity between tables.
 
 ### Foreign Key Properties
 
-| Property       | Description                                                  |
-| -------------- | ------------------------------------------------------------ |
-| **Name**       | Auto-generated: `{table}_{column}_{refTable}_{refColumn}_fk` |
-| **Column**     | The column in your table (must be BIGINT/BIGSERIAL)          |
-| **Ref Table**  | The table being referenced                                   |
-| **Ref Column** | The column being referenced (typically `id`)                 |
-| **On Delete**  | Action when the referenced row is deleted                    |
-| **On Update**  | Action when the referenced row is updated                    |
+| Property        | Description                                                               |
+| --------------- | ------------------------------------------------------------------------- |
+| **Name**        | Auto-generated: `{table}_{column}_{refTable}_{refColumn}_fk`              |
+| **Column**      | The column in your table (must be BIGINT/BIGSERIAL)                       |
+| **Columns**     | Composite alternative to **Column**: the referencing columns, in order    |
+| **Ref Table**   | The table being referenced                                                |
+| **Ref Column**  | The column being referenced (typically `id`)                              |
+| **Ref Columns** | Composite alternative to **Ref Column**: the referenced columns, in order |
+| **On Delete**   | Action when the referenced row is deleted                                 |
+| **On Update**   | Action when the referenced row is updated                                 |
+
+### Composite Foreign Keys
+
+A foreign key can span multiple columns by using `columns` / `refColumns` instead of `column` / `refColumn`. Both lists must be the same length, and the columns pair up **positionally**.
+
+The common use is same-tenant integrity when a tenant discriminator is denormalized onto child rows — the composite key makes a cross-tenant pairing impossible:
+
+```json
+{
+	"name": "customerProperty_customerPropertyDefinitionId_fk",
+	"columns": ["customerPropertyDefinitionId", "storeId"],
+	"refTable": "customerPropertyDefinition",
+	"refColumns": ["id", "storeId"],
+	"onDelete": "CASCADE",
+	"onUpdate": "CASCADE"
+}
+```
+
+The referenced table needs a unique constraint on exactly the referenced columns — here, an `indexes` entry on `customerPropertyDefinition` with `"columns": ["id", "storeId"]` and `"isUnique": true`. PostgreSQL rejects the foreign key without it, and schema validation warns when the schema doesn't declare one.
+
+Composite foreign keys are authored directly in `restura.schema.json`; the schema editor UI creates and edits single-column foreign keys only.
 
 ---
 

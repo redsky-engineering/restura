@@ -1,13 +1,16 @@
 import {
+	foreignKeyColumns,
+	foreignKeyRefColumns,
 	indexColumnOpclass,
 	indexColumnText,
 	pgTruncate,
 	type ColumnData,
+	type ForeignKeyData,
 	type IndexColumnData,
 	type ResturaSchema
 } from '../schemas/resturaSchema.js';
 import { PsqlPool } from './PsqlPool.js';
-import { buildIndexColumnSql, schemaToPsqlType, systemUser } from './psqlSchemaUtils.js';
+import { buildForeignKeyClause, buildIndexColumnSql, schemaToPsqlType, systemUser } from './psqlSchemaUtils.js';
 
 export interface DbColumn {
 	name: string;
@@ -35,9 +38,9 @@ export interface DbIndex {
 export interface DbForeignKey {
 	name: string;
 	tableName: string;
-	column: string;
+	columns: string[];
 	refTable: string;
-	refColumn: string;
+	refColumns: string[];
 	onDelete: string;
 	onUpdate: string;
 }
@@ -179,7 +182,11 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 			ref_column: string;
 			delete_rule: string;
 			update_rule: string;
+			position: number;
 		}>(
+			// unnest(conkey, confkey) WITH ORDINALITY walks both column arrays in lockstep, so a
+			// composite key comes back as one ordered row per column pair instead of the cartesian
+			// product an `attnum = ANY(...)` join would produce.
 			`SELECT
 				constraint_def.conname AS constraint_name,
 				source_table.relname AS table_name,
@@ -187,15 +194,17 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 				referenced_table.relname AS ref_table,
 				referenced_column.attname AS ref_column,
 				constraint_def.confdeltype AS delete_rule,
-				constraint_def.confupdtype AS update_rule
+				constraint_def.confupdtype AS update_rule,
+				key_pair.position AS position
 			 FROM pg_constraint constraint_def
 			 JOIN pg_class source_table ON source_table.oid = constraint_def.conrelid
 			 JOIN pg_namespace schema_ns ON schema_ns.oid = source_table.relnamespace
 			 JOIN pg_class referenced_table ON referenced_table.oid = constraint_def.confrelid
-			 JOIN pg_attribute source_column ON source_column.attrelid = constraint_def.conrelid AND source_column.attnum = ANY(constraint_def.conkey)
-			 JOIN pg_attribute referenced_column ON referenced_column.attrelid = constraint_def.confrelid AND referenced_column.attnum = ANY(constraint_def.confkey)
+			 CROSS JOIN LATERAL unnest(constraint_def.conkey, constraint_def.confkey) WITH ORDINALITY AS key_pair(source_attnum, ref_attnum, position)
+			 JOIN pg_attribute source_column ON source_column.attrelid = constraint_def.conrelid AND source_column.attnum = key_pair.source_attnum
+			 JOIN pg_attribute referenced_column ON referenced_column.attrelid = constraint_def.confrelid AND referenced_column.attnum = key_pair.ref_attnum
 			 WHERE constraint_def.contype = 'f' AND schema_ns.nspname = 'public'
-			 ORDER BY source_table.relname, constraint_def.conname`,
+			 ORDER BY source_table.relname, constraint_def.conname, key_pair.position`,
 			[],
 			systemUser
 		),
@@ -217,11 +226,7 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 			[],
 			systemUser
 		),
-		pool.runQuery<{ extname: string }>(
-			`SELECT extname FROM pg_extension ORDER BY extname`,
-			[],
-			systemUser
-		)
+		pool.runQuery<{ extname: string }>(`SELECT extname FROM pg_extension ORDER BY extname`, [], systemUser)
 	]);
 
 	const tableMap = new Map<string, DbTable>();
@@ -278,18 +283,28 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 		index.opclasses!.push(row.opclass_is_default === false ? row.opclass : null);
 	}
 
+	const fkMap = new Map<string, DbForeignKey>();
 	for (const row of fkRows) {
 		const table = tableMap.get(row.table_name);
 		if (!table) continue;
-		table.foreignKeys.push({
-			name: row.constraint_name,
-			tableName: row.table_name,
-			column: row.column_name,
-			refTable: row.ref_table,
-			refColumn: row.ref_column,
-			onDelete: PG_FK_ACTION[row.delete_rule] ?? 'NO ACTION',
-			onUpdate: PG_FK_ACTION[row.update_rule] ?? 'NO ACTION'
-		});
+
+		const key = `${row.table_name}|${row.constraint_name}`;
+		let foreignKey = fkMap.get(key);
+		if (!foreignKey) {
+			foreignKey = {
+				name: row.constraint_name,
+				tableName: row.table_name,
+				columns: [],
+				refTable: row.ref_table,
+				refColumns: [],
+				onDelete: PG_FK_ACTION[row.delete_rule] ?? 'NO ACTION',
+				onUpdate: PG_FK_ACTION[row.update_rule] ?? 'NO ACTION'
+			};
+			fkMap.set(key, foreignKey);
+			table.foreignKeys.push(foreignKey);
+		}
+		foreignKey.columns.push(row.column_name);
+		foreignKey.refColumns.push(row.ref_column);
 	}
 
 	for (const row of checkRows) {
@@ -596,9 +611,7 @@ function buildCreateTable(table: ResturaSchema['database'][0], deferredFkNames: 
 	}
 	for (const fk of table.foreignKeys) {
 		if (deferredFkNames.has(fk.name)) continue;
-		definitions.push(
-			`CONSTRAINT "${pgTruncate(fk.name)}" FOREIGN KEY ("${fk.column}") REFERENCES "${fk.refTable}" ("${fk.refColumn}") ON DELETE ${fk.onDelete} ON UPDATE ${fk.onUpdate}`
-		);
+		definitions.push(`CONSTRAINT "${pgTruncate(fk.name)}" ${buildForeignKeyClause(fk)}`);
 	}
 	for (const check of table.checkConstraints) {
 		definitions.push(`CONSTRAINT "${pgTruncate(check.name)}" CHECK (${check.check})`);
@@ -659,17 +672,8 @@ function buildCreateIndex(tableName: string, index: IndexLike): string {
 	return sql;
 }
 
-interface FkLike {
-	name: string;
-	column: string;
-	refTable: string;
-	refColumn: string;
-	onDelete: string;
-	onUpdate: string;
-}
-
-function buildAddForeignKey(tableName: string, foreignKey: FkLike): string {
-	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${pgTruncate(foreignKey.name)}" FOREIGN KEY ("${foreignKey.column}") REFERENCES "${foreignKey.refTable}" ("${foreignKey.refColumn}") ON DELETE ${foreignKey.onDelete} ON UPDATE ${foreignKey.onUpdate};`;
+function buildAddForeignKey(tableName: string, foreignKey: ForeignKeyData): string {
+	return `ALTER TABLE "${tableName}" ADD CONSTRAINT "${pgTruncate(foreignKey.name)}" ${buildForeignKeyClause(foreignKey)};`;
 }
 
 interface CheckLike {
@@ -781,16 +785,44 @@ function liveIndexSignature(index: DbIndex): string {
 	return index.isValid === false ? `${signature}|invalid` : signature;
 }
 
+function fkSignature(
+	name: string,
+	columns: string[],
+	refTable: string,
+	refColumns: string[],
+	onDelete: string,
+	onUpdate: string
+): string {
+	// Column pairing is positional, so the vectors are compared in order.
+	return `${name}|${columns.join(',')}|${refTable}|${refColumns.join(',')}|${onDelete}|${onUpdate}`;
+}
+
+function schemaFkSignature(foreignKey: ResturaSchema['database'][0]['foreignKeys'][0]): string {
+	return fkSignature(
+		pgTruncate(foreignKey.name),
+		foreignKeyColumns(foreignKey),
+		foreignKey.refTable,
+		foreignKeyRefColumns(foreignKey),
+		foreignKey.onDelete,
+		foreignKey.onUpdate
+	);
+}
+
+function liveFkSignature(foreignKey: DbForeignKey): string {
+	return fkSignature(
+		foreignKey.name,
+		foreignKey.columns,
+		foreignKey.refTable,
+		foreignKey.refColumns,
+		foreignKey.onDelete,
+		foreignKey.onUpdate
+	);
+}
+
 function isFkChanged(desired: ResturaSchema['database'][0], liveFk: DbForeignKey): boolean {
 	const desiredFk = desired.foreignKeys.find((fk) => pgTruncate(fk.name) === liveFk.name);
 	if (!desiredFk) return true;
-	return (
-		desiredFk.column !== liveFk.column ||
-		desiredFk.refTable !== liveFk.refTable ||
-		desiredFk.refColumn !== liveFk.refColumn ||
-		desiredFk.onDelete !== liveFk.onDelete ||
-		desiredFk.onUpdate !== liveFk.onUpdate
-	);
+	return schemaFkSignature(desiredFk) !== liveFkSignature(liveFk);
 }
 
 function normalizeCheckExpression(expr: string): string {

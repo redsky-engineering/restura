@@ -101,18 +101,18 @@ describe('diffSchemaToDatabase', () => {
 							{
 								name: 'order_userId_user_id_fk',
 								tableName: 'order',
-								column: 'userId',
+								columns: ['userId'],
 								refTable: 'user',
-								refColumn: 'id',
+								refColumns: ['id'],
 								onDelete: 'CASCADE',
 								onUpdate: 'NO ACTION'
 							},
 							{
 								name: 'order_productId_product_id_fk',
 								tableName: 'order',
-								column: 'productId',
+								columns: ['productId'],
 								refTable: 'product',
-								refColumn: 'id',
+								refColumns: ['id'],
 								onDelete: 'RESTRICT',
 								onUpdate: 'NO ACTION'
 							}
@@ -200,9 +200,9 @@ describe('diffSchemaToDatabase', () => {
 							{
 								name: 'cart_currencyId_currency_id_fk',
 								tableName: 'cart',
-								column: 'currencyId',
+								columns: ['currencyId'],
 								refTable: 'currency',
-								refColumn: 'id',
+								refColumns: ['id'],
 								onDelete: 'CASCADE',
 								onUpdate: 'NO ACTION'
 							}
@@ -255,9 +255,9 @@ describe('diffSchemaToDatabase', () => {
 							{
 								name: 'cart_userId_user_id_fk',
 								tableName: 'cart',
-								column: 'userId',
+								columns: ['userId'],
 								refTable: 'user',
-								refColumn: 'id',
+								refColumns: ['id'],
 								onDelete: 'CASCADE',
 								onUpdate: 'NO ACTION'
 							}
@@ -2462,9 +2462,9 @@ describe('diffSchemaToDatabase', () => {
 							{
 								name: truncatedName,
 								tableName: 'subscription',
-								column: 'customerPaymentMethodId',
+								columns: ['customerPaymentMethodId'],
 								refTable: 'customerPaymentMethod',
-								refColumn: 'id',
+								refColumns: ['id'],
 								onDelete: 'NO ACTION',
 								onUpdate: 'NO ACTION'
 							}
@@ -2831,9 +2831,9 @@ describe('diffSchemaToDatabase', () => {
 							{
 								name: 'post_authorId_user_id_fk',
 								tableName: 'post',
-								column: 'authorId',
+								columns: ['authorId'],
 								refTable: 'user',
-								refColumn: 'id',
+								refColumns: ['id'],
 								onDelete: 'CASCADE',
 								onUpdate: 'NO ACTION'
 							}
@@ -4002,6 +4002,60 @@ describe('introspectDatabase', () => {
 		expect(liveIndex.order).to.equal('ASC');
 		expect(snapshot.extensions).to.deep.equal(['pg_trgm', 'plpgsql']);
 	});
+
+	it('groups a composite foreign key into a single constraint with ordered column pairs', async () => {
+		const pool = makeMockPool({
+			tables: [{ table_name: 'customerProperty' }],
+			columns: [],
+			indexes: [],
+			fks: [
+				{
+					constraint_name: 'customerProperty_customerPropertyDefinitionId_fk',
+					table_name: 'customerProperty',
+					column_name: 'customerPropertyDefinitionId',
+					ref_table: 'customerPropertyDefinition',
+					ref_column: 'id',
+					delete_rule: 'c',
+					update_rule: 'c',
+					position: 1
+				},
+				{
+					constraint_name: 'customerProperty_customerPropertyDefinitionId_fk',
+					table_name: 'customerProperty',
+					column_name: 'storeId',
+					ref_table: 'customerPropertyDefinition',
+					ref_column: 'storeId',
+					delete_rule: 'c',
+					update_rule: 'c',
+					position: 2
+				},
+				{
+					constraint_name: 'customerProperty_storeId_store_id_fk',
+					table_name: 'customerProperty',
+					column_name: 'storeId',
+					ref_table: 'store',
+					ref_column: 'id',
+					delete_rule: 'a',
+					update_rule: 'a',
+					position: 1
+				}
+			],
+			checks: []
+		});
+
+		const snapshot = await introspectDatabase(pool);
+		const foreignKeys = snapshot.tables[0]!.foreignKeys;
+
+		expect(foreignKeys).to.have.length(2);
+		expect(foreignKeys[0]!.columns).to.deep.equal(['customerPropertyDefinitionId', 'storeId']);
+		expect(foreignKeys[0]!.refColumns).to.deep.equal(['id', 'storeId']);
+		expect(foreignKeys[0]!.onDelete).to.equal('CASCADE');
+		expect(foreignKeys[0]!.onUpdate).to.equal('CASCADE');
+		// A single-column FK on the same table stays its own one-element constraint.
+		expect(foreignKeys[1]!.columns).to.deep.equal(['storeId']);
+		expect(foreignKeys[1]!.refColumns).to.deep.equal(['id']);
+		expect(foreignKeys[1]!.onDelete).to.equal('NO ACTION');
+	});
 });
 
 describe('diffSchemaToDatabase: index methods and operator classes', () => {
@@ -4163,6 +4217,204 @@ describe('diffSchemaToDatabase: index methods and operator classes', () => {
 			tables: [makeLiveGinTable()],
 			extensions: ['pg_trgm']
 		});
+		expect(statements).to.deep.equal([]);
+	});
+});
+
+describe('diffSchemaToDatabase: composite foreign keys', () => {
+	const COMPOSITE_FK_NAME = 'customerProperty_customerPropertyDefinitionId_fk';
+	const COMPOSITE_FK_CLAUSE =
+		'FOREIGN KEY ("customerPropertyDefinitionId", "storeId") ' +
+		'REFERENCES "customerPropertyDefinition" ("id", "storeId") ON DELETE CASCADE ON UPDATE CASCADE';
+
+	function liveColumn(name: string, isNullable = false): DbTable['columns'][0] {
+		return {
+			name,
+			udtName: 'int4',
+			isNullable,
+			columnDefault: null,
+			characterMaximumLength: null,
+			numericPrecision: 32,
+			numericScale: 0
+		};
+	}
+
+	function schemaColumn(name: string, isPrimary = false): ResturaSchema['database'][0]['columns'][0] {
+		return { name, type: 'INTEGER', isNullable: false, roles: [], scopes: [], isPrimary };
+	}
+
+	function definitionSchemaTable(): ResturaSchema['database'][0] {
+		return {
+			name: 'customerPropertyDefinition',
+			columns: [schemaColumn('id', true), schemaColumn('storeId')],
+			indexes: [
+				{
+					name: 'customerPropertyDefinition_id_storeId_unique',
+					columns: ['id', 'storeId'],
+					isUnique: true,
+					isPrimaryKey: false,
+					order: 'ASC'
+				}
+			],
+			foreignKeys: [],
+			checkConstraints: [],
+			roles: [],
+			scopes: []
+		};
+	}
+
+	function childSchemaTable(
+		foreignKey: ResturaSchema['database'][0]['foreignKeys'][0]
+	): ResturaSchema['database'][0] {
+		return {
+			name: 'customerProperty',
+			columns: [schemaColumn('id', true), schemaColumn('customerPropertyDefinitionId'), schemaColumn('storeId')],
+			indexes: [],
+			foreignKeys: [foreignKey],
+			checkConstraints: [],
+			roles: [],
+			scopes: []
+		};
+	}
+
+	function compositeSchemaFk(
+		overrides: Partial<ResturaSchema['database'][0]['foreignKeys'][0]> = {}
+	): ResturaSchema['database'][0]['foreignKeys'][0] {
+		return {
+			name: COMPOSITE_FK_NAME,
+			columns: ['customerPropertyDefinitionId', 'storeId'],
+			refTable: 'customerPropertyDefinition',
+			refColumns: ['id', 'storeId'],
+			onDelete: 'CASCADE',
+			onUpdate: 'CASCADE',
+			...overrides
+		};
+	}
+
+	function liveSnapshot(foreignKeys: DbTable['foreignKeys']): DbSnapshot {
+		return {
+			tables: [
+				makeDbTable({
+					name: 'customerPropertyDefinition',
+					columns: [liveColumn('id'), liveColumn('storeId')],
+					indexes: [
+						{
+							name: 'customerPropertyDefinition_id_storeId_unique',
+							tableName: 'customerPropertyDefinition',
+							isUnique: true,
+							isPrimary: false,
+							columns: ['id', 'storeId'],
+							order: 'ASC',
+							where: null
+						}
+					]
+				}),
+				makeDbTable({
+					name: 'customerProperty',
+					columns: [liveColumn('id'), liveColumn('customerPropertyDefinitionId'), liveColumn('storeId')],
+					foreignKeys
+				})
+			]
+		};
+	}
+
+	function liveCompositeFk(overrides: Partial<DbTable['foreignKeys'][0]> = {}): DbTable['foreignKeys'][0] {
+		return {
+			name: COMPOSITE_FK_NAME,
+			tableName: 'customerProperty',
+			columns: ['customerPropertyDefinitionId', 'storeId'],
+			refTable: 'customerPropertyDefinition',
+			refColumns: ['id', 'storeId'],
+			onDelete: 'CASCADE',
+			onUpdate: 'CASCADE',
+			...overrides
+		};
+	}
+
+	it('should inline a composite FK in CREATE TABLE', () => {
+		const schema = makeSchema([definitionSchemaTable(), childSchemaTable(compositeSchemaFk())]);
+
+		const statements = diffSchemaToDatabase(schema, { tables: [] });
+		const createChild = statements.find((s) => s.startsWith('CREATE TABLE "customerProperty"'))!;
+
+		expect(createChild).to.contain(`CONSTRAINT "${COMPOSITE_FK_NAME}" ${COMPOSITE_FK_CLAUSE}`);
+		// The referenced table must be created first for the inline constraint to resolve.
+		expect(statements.findIndex((s) => s.startsWith('CREATE TABLE "customerPropertyDefinition"'))).to.be.lessThan(
+			statements.indexOf(createChild)
+		);
+	});
+
+	it('should ADD a composite FK on an existing table', () => {
+		const schema = makeSchema([definitionSchemaTable(), childSchemaTable(compositeSchemaFk())]);
+
+		const statements = diffSchemaToDatabase(schema, liveSnapshot([]));
+
+		expect(statements).to.deep.equal([
+			`ALTER TABLE "customerProperty" ADD CONSTRAINT "${COMPOSITE_FK_NAME}" ${COMPOSITE_FK_CLAUSE};`
+		]);
+	});
+
+	it('should emit nothing when a live composite FK already matches the schema', () => {
+		const schema = makeSchema([definitionSchemaTable(), childSchemaTable(compositeSchemaFk())]);
+
+		const statements = diffSchemaToDatabase(schema, liveSnapshot([liveCompositeFk()]));
+
+		expect(statements).to.deep.equal([]);
+	});
+
+	it('should drop and re-add when the column vector is reordered', () => {
+		const schema = makeSchema([
+			definitionSchemaTable(),
+			childSchemaTable(
+				compositeSchemaFk({
+					columns: ['storeId', 'customerPropertyDefinitionId'],
+					refColumns: ['storeId', 'id']
+				})
+			)
+		]);
+
+		const statements = diffSchemaToDatabase(schema, liveSnapshot([liveCompositeFk()]));
+
+		expect(statements).to.deep.equal([
+			`ALTER TABLE "customerProperty" DROP CONSTRAINT "${COMPOSITE_FK_NAME}";`,
+			`ALTER TABLE "customerProperty" ADD CONSTRAINT "${COMPOSITE_FK_NAME}" FOREIGN KEY ("storeId", "customerPropertyDefinitionId") REFERENCES "customerPropertyDefinition" ("storeId", "id") ON DELETE CASCADE ON UPDATE CASCADE;`
+		]);
+	});
+
+	it('should drop and re-add when a single-column FK gains a second column', () => {
+		const schema = makeSchema([definitionSchemaTable(), childSchemaTable(compositeSchemaFk())]);
+		const liveSingleColumnFk = liveCompositeFk({
+			columns: ['customerPropertyDefinitionId'],
+			refColumns: ['id']
+		});
+
+		const statements = diffSchemaToDatabase(schema, liveSnapshot([liveSingleColumnFk]));
+
+		expect(statements).to.deep.equal([
+			`ALTER TABLE "customerProperty" DROP CONSTRAINT "${COMPOSITE_FK_NAME}";`,
+			`ALTER TABLE "customerProperty" ADD CONSTRAINT "${COMPOSITE_FK_NAME}" ${COMPOSITE_FK_CLAUSE};`
+		]);
+	});
+
+	it('should emit nothing for a scalar-form FK that matches a live single-column FK', () => {
+		const schema = makeSchema([
+			definitionSchemaTable(),
+			childSchemaTable(
+				compositeSchemaFk({
+					columns: undefined,
+					refColumns: undefined,
+					column: 'customerPropertyDefinitionId',
+					refColumn: 'id'
+				})
+			)
+		]);
+		const liveSingleColumnFk = liveCompositeFk({
+			columns: ['customerPropertyDefinitionId'],
+			refColumns: ['id']
+		});
+
+		const statements = diffSchemaToDatabase(schema, liveSnapshot([liveSingleColumnFk]));
+
 		expect(statements).to.deep.equal([]);
 	});
 });

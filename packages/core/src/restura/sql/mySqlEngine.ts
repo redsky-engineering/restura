@@ -1,6 +1,8 @@
 import { ObjectUtils } from '@redskytech/core-utils';
 import { RsError } from '../RsError.js';
 import {
+	foreignKeyColumns,
+	foreignKeyRefColumns,
 	indexColumnText,
 	JoinData,
 	ResponseData,
@@ -83,7 +85,13 @@ class MySqlEngine extends SqlEngine {
 			const sql = `ALTER TABLE \`${table.name}\`  `;
 			const constraints: string[] = [];
 			for (const foreignKey of table.foreignKeys) {
-				let constraint = `\tADD CONSTRAINT \`${foreignKey.name}\` FOREIGN KEY (\`${foreignKey.column}\`) REFERENCES \`${foreignKey.refTable}\`(\`${foreignKey.refColumn}\`)`;
+				const columns = foreignKeyColumns(foreignKey)
+					.map((column) => `\`${column}\``)
+					.join(', ');
+				const refColumns = foreignKeyRefColumns(foreignKey)
+					.map((column) => `\`${column}\``)
+					.join(', ');
+				let constraint = `\tADD CONSTRAINT \`${foreignKey.name}\` FOREIGN KEY (${columns}) REFERENCES \`${foreignKey.refTable}\`(${refColumns})`;
 				constraint += ` ON DELETE ${foreignKey.onDelete}`;
 				constraint += ` ON UPDATE ${foreignKey.onUpdate}`;
 				constraints.push(constraint);

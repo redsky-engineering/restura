@@ -2,10 +2,13 @@ import getDiff from '@wmfs/pg-diff-sync';
 import pgInfo from '@wmfs/pg-info';
 import pg from 'pg';
 import {
+	foreignKeyColumns,
+	foreignKeyRefColumns,
 	indexColumnOpclass,
 	indexColumnText,
 	pgTruncate,
 	type ColumnData,
+	type ForeignKeyData,
 	type IndexColumnData,
 	type ResturaSchema
 } from '../schemas/resturaSchema.js';
@@ -38,6 +41,21 @@ export function buildIndexColumnSql(entry: IndexColumnData, method: string, orde
 	if (opclass) sql += ` ${opclass}`;
 	if (method === 'btree') sql += ` ${order}`;
 	return sql;
+}
+
+// Foreign key columns pair positionally with the referenced columns, so both lists are
+// emitted in schema order: FOREIGN KEY ("a", "b") REFERENCES "t" ("c", "d").
+export function buildForeignKeyClause(foreignKey: ForeignKeyData): string {
+	const columns = foreignKeyColumns(foreignKey)
+		.map((column) => `"${column}"`)
+		.join(', ');
+	const refColumns = foreignKeyRefColumns(foreignKey)
+		.map((column) => `"${column}"`)
+		.join(', ');
+	return (
+		`FOREIGN KEY (${columns}) REFERENCES "${foreignKey.refTable}" (${refColumns})` +
+		` ON DELETE ${foreignKey.onDelete} ON UPDATE ${foreignKey.onUpdate}`
+	);
 }
 
 export const OUTBOX_TABLE_NAME = 'dbEventOutbox';
@@ -331,11 +349,9 @@ export function generateDatabaseSchemaFromSchema(schema: ResturaSchema, options?
 		const sql = `ALTER TABLE "${table.name}" `;
 		const constraints: string[] = [];
 		for (const foreignKey of table.foreignKeys) {
-			let constraint = `\t ADD CONSTRAINT "${pgTruncate(foreignKey.name)}"
-        FOREIGN KEY ("${foreignKey.column}") REFERENCES "${foreignKey.refTable}" ("${foreignKey.refColumn}")`;
-			constraint += ` ON DELETE ${foreignKey.onDelete}`;
-			constraint += ` ON UPDATE ${foreignKey.onUpdate}`;
-			constraints.push(constraint);
+			constraints.push(
+				`\t ADD CONSTRAINT "${pgTruncate(foreignKey.name)}"\n        ${buildForeignKeyClause(foreignKey)}`
+			);
 		}
 		sqlStatements.push(sql + constraints.join(',\n') + ';');
 	}
