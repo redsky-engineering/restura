@@ -46,8 +46,7 @@ export function buildIndexColumnSql(entry: IndexColumnData, method: string, orde
 export function buildForeignKeyClause(foreignKey: ForeignKeyData): string {
 	const columns = foreignKeyColumns(foreignKey);
 	const refColumns = foreignKeyRefColumns(foreignKey);
-	// The Zod refinements enforce this, but a schema object built in TypeScript never goes
-	// through parse — fail loudly instead of emitting `FOREIGN KEY ()`.
+	// Zod already refines this; a schema object built in TypeScript never goes through parse.
 	if (columns.length === 0 || columns.length !== refColumns.length) {
 		throw new Error(
 			`Foreign key "${foreignKey.name}" must declare an equal, non-zero number of columns and refColumns`
