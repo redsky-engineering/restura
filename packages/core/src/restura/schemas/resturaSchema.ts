@@ -260,18 +260,57 @@ const columnDataSchema = z
 
 export type ColumnData = z.infer<typeof columnDataSchema>;
 
+export const indexMethodsSchema = z.enum(['btree', 'gin', 'gist', 'brin', 'hash']);
+export type IndexMethod = z.infer<typeof indexMethodsSchema>;
+
+const indexColumnObjectSchema = z
+	.object({
+		column: z.string().optional(),
+		expression: z.string().optional(),
+		opclass: z.string().optional()
+	})
+	.strict()
+	.refine((entry) => (entry.column === undefined) !== (entry.expression === undefined), {
+		message: 'Index column object must have exactly one of "column" or "expression"'
+	});
+
+const indexColumnSchema = z.union([z.string(), indexColumnObjectSchema]);
+export type IndexColumnData = z.infer<typeof indexColumnSchema>;
+
 const indexDataSchema = z
 	.object({
 		name: z.string(),
-		columns: z.array(z.string()),
+		columns: z.array(indexColumnSchema),
 		isUnique: z.boolean(),
 		isPrimaryKey: z.boolean(),
 		order: z.enum(['ASC', 'DESC']),
-		where: z.string().optional()
+		where: z.string().optional(),
+		using: indexMethodsSchema.optional()
 	})
 	.strict();
 
 export type IndexData = z.infer<typeof indexDataSchema>;
+
+export function indexColumnText(entry: IndexColumnData): string {
+	if (typeof entry === 'string') return entry;
+	return entry.column ?? entry.expression ?? '';
+}
+
+export function indexColumnOpclass(entry: IndexColumnData): string | null {
+	if (typeof entry === 'string') return null;
+	return entry.opclass ?? null;
+}
+
+export const PG_MAX_IDENTIFIER = 63;
+
+/** Truncates an identifier to PostgreSQL's 63-byte limit without splitting a multi-byte character. */
+export function pgTruncate(name: string): string {
+	const buf = Buffer.from(name, 'utf8');
+	if (buf.length <= PG_MAX_IDENTIFIER) return name;
+	let end = PG_MAX_IDENTIFIER;
+	while (end > 0 && (buf[end] & 0xc0) === 0x80) end--;
+	return buf.subarray(0, end).toString('utf8');
+}
 
 // ForeignKeyActions Zod enum with PascalCase values
 export const foreignKeyActionsSchema = z.enum([
@@ -339,15 +378,58 @@ export const resturaSchema = z
 		globalParams: z.array(z.string()),
 		roles: z.array(z.string()),
 		scopes: z.array(z.string()),
-		customTypes: z.array(z.string())
+		customTypes: z.array(z.string()),
+		extensions: z.array(z.string()).optional()
 	})
 	.strict();
 
 export type ResturaSchema = z.infer<typeof resturaSchema>;
 
+function warnIfIdentifierTooLong(kind: string, name: string, tableName: string): void {
+	const byteLength = Buffer.byteLength(name, 'utf8');
+	if (byteLength <= PG_MAX_IDENTIFIER) return;
+	logger.warn(
+		`${kind} "${name}" on table "${tableName}" is ${byteLength} bytes; PostgreSQL identifiers max out at ` +
+			`${PG_MAX_IDENTIFIER} bytes, so it will be created as "${pgTruncate(name)}". Shorten the name in the schema.`
+	);
+}
+
 export async function isSchemaValid(schemaToCheck: unknown): Promise<boolean> {
 	try {
-		resturaSchema.parse(schemaToCheck);
+		const parsed = resturaSchema.parse(schemaToCheck);
+		for (const table of parsed.database) {
+			warnIfIdentifierTooLong('Table', table.name, table.name);
+			for (const column of table.columns) {
+				warnIfIdentifierTooLong('Column', column.name, table.name);
+				if (column.isUnique) {
+					warnIfIdentifierTooLong(
+						'Auto-generated unique constraint',
+						`${table.name}_${column.name}_unique_index`,
+						table.name
+					);
+				}
+				if (column.type === 'ENUM' && column.value) {
+					warnIfIdentifierTooLong('Auto-generated check constraint', `${table.name}_${column.name}_check`, table.name);
+				}
+			}
+			for (const foreignKey of table.foreignKeys) {
+				warnIfIdentifierTooLong('Foreign key', foreignKey.name, table.name);
+			}
+			for (const check of table.checkConstraints) {
+				warnIfIdentifierTooLong('Check constraint', check.name, table.name);
+			}
+			for (const index of table.indexes) {
+				if (!index.isPrimaryKey) warnIfIdentifierTooLong('Index', index.name, table.name);
+				for (const column of index.columns) {
+					if (typeof column === 'string' && /\s/.test(column)) {
+						logger.warn(
+							`Index "${index.name}" on table "${table.name}" has free-form column string "${column}". ` +
+								`Use the object form instead, e.g. { "column": "name", "opclass": "gin_trgm_ops" } with "using" set on the index.`
+						);
+					}
+				}
+			}
+		}
 		return true;
 	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {

@@ -9,7 +9,7 @@ Restura automatically regenerates your database, types, and API whenever the sch
 
 ## Structure
 
-The schema has six top-level properties:
+The schema has six required top-level properties (plus optional `extensions`):
 
 ```json
 {
@@ -18,7 +18,8 @@ The schema has six top-level properties:
   "endpoints": [...],
   "globalParams": ["companyId", "userId"],
   "roles": ["admin", "user", "anonymous"],
-  "scopes": ["read:user", "write:user"]
+  "scopes": ["read:user", "write:user"],
+  "extensions": ["pg_trgm"]
 }
 ```
 
@@ -30,6 +31,7 @@ The schema has six top-level properties:
 | `globalParams` | User context values available in all endpoints         |
 | `roles`        | User roles for access control                          |
 | `scopes`       | Fine-grained permissions (OAuth-style)                 |
+| `extensions`   | Optional PostgreSQL extensions (e.g. `pg_trgm`). Emitted as `CREATE EXTENSION IF NOT EXISTS` before any table DDL in full-SQL generation, and in diffs when missing from the live database |
 
 ## Custom Types
 
@@ -122,11 +124,35 @@ An array of table definitions. Each table includes its columns, foreign keys, in
 	],
 	"indexes": [
 		{ "name": "PRIMARY", "columns": ["id"], "isPrimaryKey": true, "isUnique": true },
-		{ "name": "user_email_unique_index", "columns": ["email"], "isUnique": true }
+		{ "name": "user_email_unique_index", "columns": ["email"], "isUnique": true },
+		{
+			"name": "user_email_trgm_index",
+			"using": "gin",
+			"columns": [{ "column": "email", "opclass": "gin_trgm_ops" }],
+			"isUnique": false,
+			"isPrimaryKey": false,
+			"order": "ASC"
+		}
 	],
 	"checkConstraints": []
 }
 ```
+
+**Index Properties:**
+
+| Property       | Description                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------------------- |
+| `name`         | Index name in the database                                                                                      |
+| `columns`      | Array of entries: a plain column name string, `{ "column": "name", "opclass": "..." }`, or `{ "expression": "(\"col\"::text)", "opclass": "..." }` |
+| `using`        | Access method: `btree` (default), `gin`, `gist`, `brin`, or `hash`                                              |
+| `isUnique`     | Enforce uniqueness (btree only)                                                                                 |
+| `isPrimaryKey` | Marks the primary-key index                                                                                     |
+| `order`        | `ASC` or `DESC` — applies to btree only; ignored for other access methods                                       |
+| `where`        | Optional partial-index predicate                                                                                |
+
+Only specify `opclass` for non-default operator classes (e.g. `gin_trgm_ops`) — default opclasses are omitted from diff comparison automatically. Expression entries must match PostgreSQL's *per-column* canonical form — what `SELECT pg_get_indexdef(indexrelid, column_number, true)` prints — or the diff will flag them as changed. Careful: this differs from the full `indexdef` text; e.g. `indexdef` shows `(("orderNumber")::text)` but the per-column form is `("orderNumber"::text)` — write the latter. Non-btree methods usually require an extension — declare it in the root `extensions` array.
+
+Index, foreign-key, and check-constraint names are limited to PostgreSQL's 63-byte identifier maximum. Restura truncates over-long names consistently in generated SQL and diffs, and schema validation warns with the truncated form — but prefer hand-shortening the name (e.g. abbreviate the longest column part) so the schema matches what actually exists in the database.
 
 **Table Properties:**
 

@@ -1,7 +1,14 @@
 import getDiff from '@wmfs/pg-diff-sync';
 import pgInfo from '@wmfs/pg-info';
 import pg from 'pg';
-import { type ColumnData, type ResturaSchema } from '../schemas/resturaSchema.js';
+import {
+	indexColumnOpclass,
+	indexColumnText,
+	pgTruncate,
+	type ColumnData,
+	type IndexColumnData,
+	type ResturaSchema
+} from '../schemas/resturaSchema.js';
 import { DynamicObject, RequesterDetails } from '../types/customExpressTypes.js';
 import { PsqlPool } from './PsqlPool.js';
 import { escapeColumnName } from './PsqlUtils.js';
@@ -22,6 +29,20 @@ export function schemaToPsqlType(column: ColumnData): string {
 	if (column.type === 'DATETIME') return 'TIMESTAMPTZ';
 	if (column.type === 'MEDIUMINT') return 'INT';
 	return column.type;
+}
+
+/**
+ * Renders one index key: plain identifiers get quoted, expressions and legacy
+ * free-form strings are emitted verbatim (the author supplies any parens/quotes).
+ * ASC/DESC is btree-only — other access methods reject ordering options.
+ */
+export function buildIndexColumnSql(entry: IndexColumnData, method: string, order: string): string {
+	const text = indexColumnText(entry);
+	const opclass = indexColumnOpclass(entry);
+	let sql = /^[A-Za-z_][A-Za-z0-9_$]*$/.test(text) ? `"${text}"` : text;
+	if (opclass) sql += ` ${opclass}`;
+	if (method === 'btree') sql += ` ${order}`;
+	return sql;
 }
 
 export const OUTBOX_TABLE_NAME = 'dbEventOutbox';
@@ -250,6 +271,12 @@ export function generateDatabaseSchemaFromSchema(schema: ResturaSchema, options?
 	const indexes = [];
 	const triggers = generateNotifyTriggersSql(schema, options);
 
+	if (schema.extensions?.length) {
+		sqlStatements.push(
+			schema.extensions.map((extension) => `CREATE EXTENSION IF NOT EXISTS "${extension}";`).join('\n')
+		);
+	}
+
 	for (const table of schema.database) {
 		let sql = `CREATE TABLE "${table.name}"
 				   ( `;
@@ -274,7 +301,7 @@ export function generateDatabaseSchemaFromSchema(schema: ResturaSchema, options?
 				columnSql += ' PRIMARY KEY ';
 			}
 			if (column.isUnique) {
-				columnSql += ` CONSTRAINT "${table.name}_${column.name}_unique_index" UNIQUE `;
+				columnSql += ` CONSTRAINT "${pgTruncate(`${table.name}_${column.name}_unique_index`)}" UNIQUE `;
 			}
 			if (column.isNullable) columnSql += ' NULL';
 			else columnSql += ' NOT NULL';
@@ -290,8 +317,10 @@ export function generateDatabaseSchemaFromSchema(schema: ResturaSchema, options?
 				let unique = ' ';
 				if (index.isUnique) unique = 'UNIQUE ';
 
-				let indexSQL = `\tCREATE ${unique}INDEX "${index.name}" ON "${table.name}"`;
-				indexSQL += ` (${index.columns.map((item) => `"${item}" ${index.order}`).join(', ')})`;
+				const method = index.using ?? 'btree';
+				let indexSQL = `\tCREATE ${unique}INDEX "${pgTruncate(index.name)}" ON "${table.name}"`;
+				indexSQL += method === 'btree' ? '' : ` USING ${method}`;
+				indexSQL += ` (${index.columns.map((item) => buildIndexColumnSql(item, method, index.order)).join(', ')})`;
 				indexSQL += index.where ? ` WHERE ${index.where}` : '';
 				indexSQL += ';';
 				indexes.push(indexSQL);
@@ -307,7 +336,7 @@ export function generateDatabaseSchemaFromSchema(schema: ResturaSchema, options?
 		const sql = `ALTER TABLE "${table.name}" `;
 		const constraints: string[] = [];
 		for (const foreignKey of table.foreignKeys) {
-			let constraint = `\t ADD CONSTRAINT "${foreignKey.name}"
+			let constraint = `\t ADD CONSTRAINT "${pgTruncate(foreignKey.name)}"
         FOREIGN KEY ("${foreignKey.column}") REFERENCES "${foreignKey.refTable}" ("${foreignKey.refColumn}")`;
 			constraint += ` ON DELETE ${foreignKey.onDelete}`;
 			constraint += ` ON UPDATE ${foreignKey.onUpdate}`;
@@ -322,7 +351,7 @@ export function generateDatabaseSchemaFromSchema(schema: ResturaSchema, options?
 		const sql = `ALTER TABLE "${table.name}" `;
 		const constraints: string[] = [];
 		for (const check of table.checkConstraints) {
-			const constraint = `ADD CONSTRAINT "${check.name}" CHECK (${check.check})`;
+			const constraint = `ADD CONSTRAINT "${pgTruncate(check.name)}" CHECK (${check.check})`;
 			constraints.push(constraint);
 		}
 		sqlStatements.push(sql + constraints.join(',\n') + ';');
