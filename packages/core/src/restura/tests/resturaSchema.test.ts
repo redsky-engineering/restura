@@ -36,8 +36,6 @@ function primaryKeyIndex(tableName: string): IndexData {
 	return { name: `${tableName}_pkey`, columns: ['id'], isUnique: true, isPrimaryKey: true, order: 'ASC' };
 }
 
-// The definition table from issue #156: a per-store table whose (id, storeId) pair is unique so a
-// child row can carry a composite FK that pins both sides to the same store.
 function makeDefinitionTable(): TableData {
 	return makeTable('customerPropertyDefinition', {
 		columns: [makeColumn('id', { type: 'BIGSERIAL', isPrimary: true }), makeColumn('storeId')],
@@ -217,6 +215,26 @@ describe('isSchemaValid: foreign keys', () => {
 		expect(warnings).to.have.length(1);
 		expect(warnings[0]).to.contain('customerProperty_customerPropertyDefinitionId_fk');
 		expect(warnings[0]).to.contain('no unique constraint or index');
+	});
+
+	it('warns when the only matching unique index is partial', async () => {
+		const definitionTable = makeDefinitionTable();
+		definitionTable.indexes[1]!.where = '"deletedOn" IS NULL';
+		const schema = makeSchema([definitionTable, makeChildTable(makeCompositeForeignKey())]);
+
+		// PostgreSQL rejects a partial unique index as a foreign-key target.
+		expect(await isSchemaValid(schema)).to.equal(true);
+		expect(warnings).to.have.length(1);
+		expect(warnings[0]).to.contain('no unique constraint or index');
+	});
+
+	it('warns when the only matching unique index uses a non-btree method', async () => {
+		const definitionTable = makeDefinitionTable();
+		definitionTable.indexes[1]!.using = 'hash';
+		const schema = makeSchema([definitionTable, makeChildTable(makeCompositeForeignKey())]);
+
+		expect(await isSchemaValid(schema)).to.equal(true);
+		expect(warnings).to.have.length(1);
 	});
 
 	it('accepts a unique index whose column order differs from the referenced order', async () => {

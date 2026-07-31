@@ -179,16 +179,16 @@ Foreign keys enforce referential integrity between tables.
 
 ### Foreign Key Properties
 
-| Property        | Description                                                               |
-| --------------- | ------------------------------------------------------------------------- |
-| **Name**        | Auto-generated: `{table}_{column}_{refTable}_{refColumn}_fk`              |
-| **Column**      | The column in your table (must be BIGINT/BIGSERIAL)                       |
-| **Columns**     | Composite alternative to **Column**: the referencing columns, in order    |
-| **Ref Table**   | The table being referenced                                                |
-| **Ref Column**  | The column being referenced (typically `id`)                              |
-| **Ref Columns** | Composite alternative to **Ref Column**: the referenced columns, in order |
-| **On Delete**   | Action when the referenced row is deleted                                 |
-| **On Update**   | Action when the referenced row is updated                                 |
+| Property        | Description                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------------------- |
+| **Name**        | Required. The editor auto-generates `{table}_{column}_{refTable}_{refColumn}_fk` for single-column keys |
+| **Column**      | The column in your table (must be BIGINT/BIGSERIAL)                                                     |
+| **Columns**     | Composite alternative to **Column**: the referencing columns, in order                                  |
+| **Ref Table**   | The table being referenced                                                                              |
+| **Ref Column**  | The column being referenced (typically `id`)                                                            |
+| **Ref Columns** | Composite alternative to **Ref Column**: the referenced columns, in order                               |
+| **On Delete**   | Action when the referenced row is deleted                                                               |
+| **On Update**   | Action when the referenced row is updated                                                               |
 
 ### Composite Foreign Keys
 
@@ -207,9 +207,9 @@ The common use is same-tenant integrity when a tenant discriminator is denormali
 }
 ```
 
-The referenced table needs a unique constraint on exactly the referenced columns — here, an `indexes` entry on `customerPropertyDefinition` with `"columns": ["id", "storeId"]` and `"isUnique": true`. PostgreSQL rejects the foreign key without it, and schema validation warns when the schema doesn't declare one.
+The referenced table needs a unique constraint on exactly the referenced columns — here, an `indexes` entry on `customerPropertyDefinition` with `"columns": ["id", "storeId"]` and `"isUnique": true`. It must be non-partial (no `where`) and btree (the default `using`), since PostgreSQL rejects partial and non-btree unique indexes as foreign-key targets. Schema validation warns when the schema doesn't declare a qualifying index.
 
-Composite foreign keys are authored directly in `restura.schema.json`; the schema editor UI creates and edits single-column foreign keys only.
+Composite foreign keys are authored directly in `restura.schema.json` — the schema editor UI creates and edits single-column keys only. That also means composite keys need an explicit `name`: the auto-naming in the **Name** row above is the editor's convenience, nothing generates a name for a key written by hand, and the diff engine matches constraints by name.
 
 ---
 

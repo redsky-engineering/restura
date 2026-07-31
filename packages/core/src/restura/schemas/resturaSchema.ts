@@ -414,12 +414,14 @@ export const resturaSchema = z
 
 export type ResturaSchema = z.infer<typeof resturaSchema>;
 
-// PostgreSQL only accepts a foreign key whose referenced columns are covered by a unique
-// constraint or index on exactly that column set (order does not matter for the match).
 function hasUniqueConstraintFor(table: TableData, columns: string[]): boolean {
+	// PostgreSQL matches the referenced columns against a unique index as a set, so compare sorted.
 	const target = [...columns].sort().join(',');
 	for (const index of table.indexes) {
 		if (!index.isUnique && !index.isPrimaryKey) continue;
+		// Partial and non-btree unique indexes are not valid foreign-key targets.
+		if (index.where) continue;
+		if (index.using && index.using !== 'btree') continue;
 		const indexColumns = index.columns.map(indexColumnText);
 		if (indexColumns.some((column) => column === '')) continue;
 		if ([...indexColumns].sort().join(',') === target) return true;

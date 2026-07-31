@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { pgTruncate, type ResturaSchema } from '../schemas/resturaSchema.js';
-import { generateDatabaseSchemaFromSchema } from '../sql/psqlSchemaUtils.js';
+import { buildForeignKeyClause, generateDatabaseSchemaFromSchema } from '../sql/psqlSchemaUtils.js';
 
 function makeSchema(database: ResturaSchema['database'], extensions?: string[]): ResturaSchema {
 	return {
@@ -182,5 +182,32 @@ describe('generateDatabaseSchemaFromSchema: composite foreign keys', () => {
 		expect(sql).to.include(
 			'FOREIGN KEY ("storeId") REFERENCES "store" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION'
 		);
+	});
+});
+
+describe('buildForeignKeyClause: malformed column vectors', () => {
+	it('throws instead of emitting FOREIGN KEY () when no columns are declared', () => {
+		expect(() =>
+			buildForeignKeyClause({
+				name: 'broken_fk',
+				refTable: 'store',
+				refColumn: 'id',
+				onDelete: 'NO ACTION',
+				onUpdate: 'NO ACTION'
+			})
+		).to.throw('must declare an equal, non-zero number of columns and refColumns');
+	});
+
+	it('throws when the two column vectors differ in length', () => {
+		expect(() =>
+			buildForeignKeyClause({
+				name: 'broken_fk',
+				columns: ['storeId', 'definitionId'],
+				refTable: 'store',
+				refColumns: ['id'],
+				onDelete: 'NO ACTION',
+				onUpdate: 'NO ACTION'
+			})
+		).to.throw('must declare an equal, non-zero number of columns and refColumns');
 	});
 });

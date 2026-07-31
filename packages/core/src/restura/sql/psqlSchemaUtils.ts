@@ -43,17 +43,20 @@ export function buildIndexColumnSql(entry: IndexColumnData, method: string, orde
 	return sql;
 }
 
-// Foreign key columns pair positionally with the referenced columns, so both lists are
-// emitted in schema order: FOREIGN KEY ("a", "b") REFERENCES "t" ("c", "d").
 export function buildForeignKeyClause(foreignKey: ForeignKeyData): string {
-	const columns = foreignKeyColumns(foreignKey)
-		.map((column) => `"${column}"`)
-		.join(', ');
-	const refColumns = foreignKeyRefColumns(foreignKey)
-		.map((column) => `"${column}"`)
-		.join(', ');
+	const columns = foreignKeyColumns(foreignKey);
+	const refColumns = foreignKeyRefColumns(foreignKey);
+	// The Zod refinements enforce this, but a schema object built in TypeScript never goes
+	// through parse — fail loudly instead of emitting `FOREIGN KEY ()`.
+	if (columns.length === 0 || columns.length !== refColumns.length) {
+		throw new Error(
+			`Foreign key "${foreignKey.name}" must declare an equal, non-zero number of columns and refColumns`
+		);
+	}
+	const columnList = columns.map((column) => `"${column}"`).join(', ');
+	const refColumnList = refColumns.map((column) => `"${column}"`).join(', ');
 	return (
-		`FOREIGN KEY (${columns}) REFERENCES "${foreignKey.refTable}" (${refColumns})` +
+		`FOREIGN KEY (${columnList}) REFERENCES "${foreignKey.refTable}" (${refColumnList})` +
 		` ON DELETE ${foreignKey.onDelete} ON UPDATE ${foreignKey.onUpdate}`
 	);
 }
