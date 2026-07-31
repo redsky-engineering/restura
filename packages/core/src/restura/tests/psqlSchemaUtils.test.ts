@@ -102,7 +102,7 @@ describe('generateDatabaseSchemaFromSchema: 63-byte identifier truncation', () =
 		const sql = generateDatabaseSchemaFromSchema(makeSchema([customerProperty]));
 		expect(Buffer.byteLength(longIndexName, 'utf8')).to.be.greaterThan(63);
 		expect(sql).to.not.include(`"${longIndexName}"`);
-		expect(sql).to.include(`"${pgTruncate(longIndexName)}"`);
+		expect(sql).to.include('"customerProperty_storeCustomerId_customerPropertyDefinitionId_u"');
 	});
 
 	it('pgTruncate keeps 63-byte-or-shorter names untouched and cuts on a byte boundary', () => {

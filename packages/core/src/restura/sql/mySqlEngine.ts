@@ -51,7 +51,14 @@ class MySqlEngine extends SqlEngine {
 				sql += ', \n';
 			}
 			for (const index of table.indexes) {
-				// MySQL has no operator classes; object-form columns fall back to their bare name.
+				for (const item of index.columns) {
+					if (typeof item === 'object' && item.expression) {
+						throw new RsError(
+							'SCHEMA_ERROR',
+							`Index "${index.name}" on table "${table.name}" uses an expression column, which MySQL generation does not support.`
+						);
+					}
+				}
 				const columnNames = index.columns.map((item) => indexColumnText(item));
 				if (index.isPrimaryKey) {
 					sql += `\tPRIMARY KEY (\`${columnNames.join('`, `')}\`)`;

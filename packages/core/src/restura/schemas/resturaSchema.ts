@@ -303,7 +303,6 @@ export function indexColumnOpclass(entry: IndexColumnData): string | null {
 
 export const PG_MAX_IDENTIFIER = 63;
 
-/** Truncates an identifier to PostgreSQL's 63-byte limit without splitting a multi-byte character. */
 export function pgTruncate(name: string): string {
 	const buf = Buffer.from(name, 'utf8');
 	if (buf.length <= PG_MAX_IDENTIFIER) return name;

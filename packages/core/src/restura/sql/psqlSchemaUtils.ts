@@ -31,11 +31,6 @@ export function schemaToPsqlType(column: ColumnData): string {
 	return column.type;
 }
 
-/**
- * Renders one index key: plain identifiers get quoted, expressions and legacy
- * free-form strings are emitted verbatim (the author supplies any parens/quotes).
- * ASC/DESC is btree-only — other access methods reject ordering options.
- */
 export function buildIndexColumnSql(entry: IndexColumnData, method: string, order: string): string {
 	const text = indexColumnText(entry);
 	const opclass = indexColumnOpclass(entry);

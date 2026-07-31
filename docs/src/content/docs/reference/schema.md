@@ -123,8 +123,14 @@ An array of table definitions. Each table includes its columns, foreign keys, in
 		}
 	],
 	"indexes": [
-		{ "name": "PRIMARY", "columns": ["id"], "isPrimaryKey": true, "isUnique": true },
-		{ "name": "user_email_unique_index", "columns": ["email"], "isUnique": true },
+		{ "name": "PRIMARY", "columns": ["id"], "isPrimaryKey": true, "isUnique": true, "order": "ASC" },
+		{
+			"name": "user_email_unique_index",
+			"columns": ["email"],
+			"isUnique": true,
+			"isPrimaryKey": false,
+			"order": "ASC"
+		},
 		{
 			"name": "user_email_trgm_index",
 			"using": "gin",
@@ -151,6 +157,8 @@ An array of table definitions. Each table includes its columns, foreign keys, in
 | `where`        | Optional partial-index predicate                                                                                |
 
 Only specify `opclass` for non-default operator classes (e.g. `gin_trgm_ops`) — default opclasses are omitted from diff comparison automatically. Expression entries must match PostgreSQL's *per-column* canonical form — what `SELECT pg_get_indexdef(indexrelid, column_number, true)` prints — or the diff will flag them as changed. Careful: this differs from the full `indexdef` text; e.g. `indexdef` shows `(("orderNumber")::text)` but the per-column form is `("orderNumber"::text)` — write the latter. Non-btree methods usually require an extension — declare it in the root `extensions` array.
+
+Index introspection and diffing require PostgreSQL 11 or later (they read `pg_index.indnkeyatts`). Invalid indexes left behind by a failed `CREATE INDEX CONCURRENTLY` are detected and rebuilt by the diff.
 
 Index, foreign-key, and check-constraint names are limited to PostgreSQL's 63-byte identifier maximum. Restura truncates over-long names consistently in generated SQL and diffs, and schema validation warns with the truncated form — but prefer hand-shortening the name (e.g. abbreviate the longest column part) so the schema matches what actually exists in the database.
 

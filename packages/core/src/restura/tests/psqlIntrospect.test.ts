@@ -3860,6 +3860,7 @@ describe('introspectDatabase', () => {
 			using_method: 'btree',
 			indisunique: false,
 			indisprimary: false,
+			indisvalid: true,
 			position: 1,
 			column_or_expression: '"submittedById"',
 			opclass: 'int4_ops',
@@ -3873,6 +3874,7 @@ describe('introspectDatabase', () => {
 			using_method: 'btree',
 			indisunique: false,
 			indisprimary: false,
+			indisvalid: true,
 			position: 2,
 			column_or_expression: '"submittedAt"',
 			opclass: 'timestamptz_ops',
@@ -3963,6 +3965,7 @@ describe('introspectDatabase', () => {
 					using_method: 'gin',
 					indisunique: false,
 					indisprimary: false,
+					indisvalid: true,
 					position: 1,
 					column_or_expression: 'email',
 					opclass: 'gin_trgm_ops',
@@ -3976,6 +3979,7 @@ describe('introspectDatabase', () => {
 					using_method: 'gin',
 					indisunique: false,
 					indisprimary: false,
+					indisvalid: true,
 					position: 2,
 					column_or_expression: '(("orderNumber")::text)',
 					opclass: 'gin_trgm_ops',
@@ -4100,6 +4104,16 @@ describe('diffSchemaToDatabase: index methods and operator classes', () => {
 		const statements = diffSchemaToDatabase(makeSchema([schemaTable]), { tables: [liveTable] });
 		expect(statements).to.deep.equal([
 			'CREATE INDEX "storeCustomer_email_trgm_index" ON "storeCustomer" USING gin ((("orderNumber")::text) gin_trgm_ops);'
+		]);
+	});
+
+	it('forces DROP + CREATE for an invalid live index even when the signature matches', () => {
+		const liveTable = makeLiveGinTable();
+		liveTable.indexes[0] = { ...liveTable.indexes[0]!, isValid: false };
+		const statements = diffSchemaToDatabase(makeSchema([makeGinSchemaTable()]), { tables: [liveTable] });
+		expect(statements).to.deep.equal([
+			'DROP INDEX "storeCustomer_email_trgm_index";',
+			'CREATE INDEX "storeCustomer_email_trgm_index" ON "storeCustomer" USING gin ("email" gin_trgm_ops);'
 		]);
 	});
 

@@ -25,10 +25,9 @@ export interface DbIndex {
 	isUnique: boolean;
 	isPrimary: boolean;
 	columns: string[];
-	/** Access method (btree, gin, ...). Absent means btree. */
 	using?: string;
-	/** Per-position operator class aligned with `columns`; null for the method's default opclass. */
 	opclasses?: (string | null)[];
+	isValid?: boolean;
 	order: 'ASC' | 'DESC';
 	where: string | null;
 }
@@ -59,7 +58,6 @@ export interface DbTable {
 
 export interface DbSnapshot {
 	tables: DbTable[];
-	/** Installed extension names; absent when the snapshot predates extension introspection. */
 	extensions?: string[];
 }
 
@@ -141,6 +139,7 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 			using_method: string;
 			indisunique: boolean;
 			indisprimary: boolean;
+			indisvalid: boolean;
 			position: number;
 			column_or_expression: string;
 			opclass: string | null;
@@ -154,6 +153,7 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 				am.amname AS using_method,
 				x.indisunique,
 				x.indisprimary,
+				x.indisvalid,
 				col.n AS position,
 				pg_get_indexdef(x.indexrelid, col.n::int, true) AS column_or_expression,
 				opc.opcname AS opclass,
@@ -262,6 +262,7 @@ export async function introspectDatabase(pool: PsqlPool): Promise<DbSnapshot> {
 				tableName: row.tablename,
 				isUnique: row.indisunique,
 				isPrimary: row.indisprimary,
+				isValid: row.indisvalid,
 				using: row.using_method,
 				columns: [],
 				opclasses: [],
@@ -774,7 +775,10 @@ function liveIndexSignature(index: DbIndex): string {
 		text,
 		opclass: index.opclasses?.[position] ?? null
 	}));
-	return indexSignature(index.name, index.using, columns, index.isUnique, index.order, index.where);
+	const signature = indexSignature(index.name, index.using, columns, index.isUnique, index.order, index.where);
+	// An invalid index (e.g. a failed CREATE INDEX CONCURRENTLY) can never satisfy the
+	// schema, so poison its signature to force a DROP + CREATE.
+	return index.isValid === false ? `${signature}|invalid` : signature;
 }
 
 function isFkChanged(desired: ResturaSchema['database'][0], liveFk: DbForeignKey): boolean {
