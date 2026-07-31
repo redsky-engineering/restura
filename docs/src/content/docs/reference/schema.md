@@ -192,6 +192,8 @@ Use the singular `column`/`refColumn` form for ordinary single-column keys, or t
 
 Composite keys are the standard way to enforce same-tenant integrity when a tenant discriminator is denormalized onto child rows: pairing `storeId` with the reference column guarantees the child can never point at a parent belonging to another store.
 
+That guarantee depends on every referencing column being `"isNullable": false`. PostgreSQL's default `MATCH SIMPLE` semantics skip the constraint entirely for a row where **any** referencing column is NULL, so a nullable `storeId` would let a mismatched pair through unchecked.
+
 PostgreSQL only accepts a foreign key whose referenced columns are covered by a unique constraint or index on exactly that column set — declare one on the referenced table as an `indexes` entry with `"isUnique": true`. That index must also be non-partial (no `where`) and btree (the default `using`); PostgreSQL rejects partial and non-btree unique indexes as foreign-key targets. Schema validation warns when it can't find a qualifying one.
 
 `name` is required on every foreign key and Restura never generates it for composite keys — the `{table}_{column}_{refTable}_{refColumn}_fk` auto-naming is a convenience of the single-column editor UI. Pick an explicit, stable name, because the diff engine matches constraints by name: renaming one is a drop and re-add.

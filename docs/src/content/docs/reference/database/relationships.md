@@ -194,7 +194,7 @@ Foreign keys enforce referential integrity between tables.
 
 A foreign key can span multiple columns by using `columns` / `refColumns` instead of `column` / `refColumn`. Both lists must be the same length, and the columns pair up **positionally**.
 
-The common use is same-tenant integrity when a tenant discriminator is denormalized onto child rows — the composite key makes a cross-tenant pairing impossible:
+The common use is same-tenant integrity when a tenant discriminator is denormalized onto child rows — the composite key makes a cross-tenant pairing impossible, provided every referencing column is `"isNullable": false` (see the note below):
 
 ```json
 {
@@ -206,6 +206,8 @@ The common use is same-tenant integrity when a tenant discriminator is denormali
 	"onUpdate": "CASCADE"
 }
 ```
+
+Mark every referencing column `"isNullable": false`. Under PostgreSQL's default `MATCH SIMPLE` semantics a row where **any** referencing column is NULL skips the constraint check altogether, so a nullable `storeId` silently defeats the same-tenant guarantee.
 
 The referenced table needs a unique constraint on exactly the referenced columns — here, an `indexes` entry on `customerPropertyDefinition` with `"columns": ["id", "storeId"]` and `"isUnique": true`. It must be non-partial (no `where`) and btree (the default `using`), since PostgreSQL rejects partial and non-btree unique indexes as foreign-key targets. Schema validation warns when the schema doesn't declare a qualifying index.
 
