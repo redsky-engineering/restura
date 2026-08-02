@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { pgTruncate, type ResturaSchema } from '../schemas/resturaSchema.js';
-import { generateDatabaseSchemaFromSchema } from '../sql/psqlSchemaUtils.js';
+import { buildForeignKeyClause, generateDatabaseSchemaFromSchema } from '../sql/psqlSchemaUtils.js';
 
 function makeSchema(database: ResturaSchema['database'], extensions?: string[]): ResturaSchema {
 	return {
@@ -114,5 +114,100 @@ describe('generateDatabaseSchemaFromSchema: 63-byte identifier truncation', () =
 		const multiByte = 'é'.repeat(35);
 		expect(Buffer.byteLength(pgTruncate(multiByte), 'utf8')).to.be.at.most(63);
 		expect(pgTruncate(multiByte)).to.equal('é'.repeat(31));
+	});
+});
+
+describe('generateDatabaseSchemaFromSchema: composite foreign keys', () => {
+	const customerPropertyDefinition: ResturaSchema['database'][0] = {
+		name: 'customerPropertyDefinition',
+		columns: [
+			{ name: 'id', type: 'BIGSERIAL', isNullable: false, isPrimary: true, roles: [], scopes: [] },
+			{ name: 'storeId', type: 'BIGINT', isNullable: false, roles: [], scopes: [] }
+		],
+		indexes: [
+			{
+				name: 'customerPropertyDefinition_id_storeId_unique',
+				columns: ['id', 'storeId'],
+				isPrimaryKey: false,
+				isUnique: true,
+				order: 'ASC'
+			}
+		],
+		foreignKeys: [],
+		checkConstraints: [],
+		roles: [],
+		scopes: []
+	};
+
+	const customerProperty: ResturaSchema['database'][0] = {
+		name: 'customerProperty',
+		columns: [
+			{ name: 'id', type: 'BIGSERIAL', isNullable: false, isPrimary: true, roles: [], scopes: [] },
+			{ name: 'customerPropertyDefinitionId', type: 'BIGINT', isNullable: false, roles: [], scopes: [] },
+			{ name: 'storeId', type: 'BIGINT', isNullable: false, roles: [], scopes: [] }
+		],
+		indexes: [],
+		foreignKeys: [
+			{
+				name: 'customerProperty_customerPropertyDefinitionId_fk',
+				columns: ['customerPropertyDefinitionId', 'storeId'],
+				refTable: 'customerPropertyDefinition',
+				refColumns: ['id', 'storeId'],
+				onDelete: 'CASCADE',
+				onUpdate: 'CASCADE'
+			},
+			{
+				name: 'customerProperty_storeId_store_id_fk',
+				column: 'storeId',
+				refTable: 'store',
+				refColumn: 'id',
+				onDelete: 'NO ACTION',
+				onUpdate: 'NO ACTION'
+			}
+		],
+		checkConstraints: [],
+		roles: [],
+		scopes: []
+	};
+
+	it('emits both column lists in declaration order', () => {
+		const sql = generateDatabaseSchemaFromSchema(makeSchema([customerPropertyDefinition, customerProperty]));
+		expect(sql).to.include(
+			'FOREIGN KEY ("customerPropertyDefinitionId", "storeId") REFERENCES "customerPropertyDefinition" ("id", "storeId") ON DELETE CASCADE ON UPDATE CASCADE'
+		);
+	});
+
+	it('keeps the single-column scalar form unchanged', () => {
+		const sql = generateDatabaseSchemaFromSchema(makeSchema([customerPropertyDefinition, customerProperty]));
+		expect(sql).to.include(
+			'FOREIGN KEY ("storeId") REFERENCES "store" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION'
+		);
+	});
+});
+
+describe('buildForeignKeyClause: malformed column vectors', () => {
+	it('throws instead of emitting FOREIGN KEY () when no columns are declared', () => {
+		expect(() =>
+			buildForeignKeyClause({
+				name: 'broken_fk',
+				refTable: 'store',
+				refColumn: 'id',
+				onDelete: 'NO ACTION',
+				onUpdate: 'NO ACTION'
+			})
+		).to.throw('must declare an equal, non-zero number of columns and refColumns');
+	});
+
+	it('throws when the two column vectors differ in length', () => {
+		expect(() =>
+			buildForeignKeyClause({
+				name: 'broken_fk',
+				columns: ['storeId', 'definitionId'],
+				refTable: 'store',
+				refColumns: ['id'],
+				onDelete: 'NO ACTION',
+				onUpdate: 'NO ACTION'
+			})
+		).to.throw('must declare an equal, non-zero number of columns and refColumns');
 	});
 });

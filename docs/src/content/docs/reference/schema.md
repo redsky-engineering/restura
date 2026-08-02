@@ -23,14 +23,14 @@ The schema has six required top-level properties (plus optional `extensions`):
 }
 ```
 
-| Property       | Purpose                                                |
-| -------------- | ------------------------------------------------------ |
-| `customTypes`  | TypeScript interfaces for non-standard response shapes |
-| `database`     | Table definitions with columns, keys, and indexes      |
-| `endpoints`    | API route groups and their configurations              |
-| `globalParams` | User context values available in all endpoints         |
-| `roles`        | User roles for access control                          |
-| `scopes`       | Fine-grained permissions (OAuth-style)                 |
+| Property       | Purpose                                                                                                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `customTypes`  | TypeScript interfaces for non-standard response shapes                                                                                                                                     |
+| `database`     | Table definitions with columns, keys, and indexes                                                                                                                                          |
+| `endpoints`    | API route groups and their configurations                                                                                                                                                  |
+| `globalParams` | User context values available in all endpoints                                                                                                                                             |
+| `roles`        | User roles for access control                                                                                                                                                              |
+| `scopes`       | Fine-grained permissions (OAuth-style)                                                                                                                                                     |
 | `extensions`   | Optional PostgreSQL extensions (e.g. `pg_trgm`). Emitted as `CREATE EXTENSION IF NOT EXISTS` before any table DDL in full-SQL generation, and in diffs when missing from the live database |
 
 ## Custom Types
@@ -110,6 +110,11 @@ An array of table definitions. Each table includes its columns, foreign keys, in
 			"name": "companyId",
 			"type": "BIGINT",
 			"isNullable": false
+		},
+		{
+			"name": "departmentId",
+			"type": "BIGINT",
+			"isNullable": false
 		}
 	],
 	"foreignKeys": [
@@ -120,6 +125,14 @@ An array of table definitions. Each table includes its columns, foreign keys, in
 			"refColumn": "id",
 			"onDelete": "NO ACTION",
 			"onUpdate": "NO ACTION"
+		},
+		{
+			"name": "user_departmentId_companyId_fk",
+			"columns": ["departmentId", "companyId"],
+			"refTable": "department",
+			"refColumns": ["id", "companyId"],
+			"onDelete": "CASCADE",
+			"onUpdate": "CASCADE"
 		}
 	],
 	"indexes": [
@@ -146,21 +159,46 @@ An array of table definitions. Each table includes its columns, foreign keys, in
 
 **Index Properties:**
 
-| Property       | Description                                                                                                     |
-| -------------- | --------------------------------------------------------------------------------------------------------------- |
-| `name`         | Index name in the database                                                                                      |
+| Property       | Description                                                                                                                                        |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`         | Index name in the database                                                                                                                         |
 | `columns`      | Array of entries: a plain column name string, `{ "column": "name", "opclass": "..." }`, or `{ "expression": "(\"col\"::text)", "opclass": "..." }` |
-| `using`        | Access method: `btree` (default), `gin`, `gist`, `brin`, or `hash`                                              |
-| `isUnique`     | Enforce uniqueness (btree only)                                                                                 |
-| `isPrimaryKey` | Marks the primary-key index                                                                                     |
-| `order`        | `ASC` or `DESC` — applies to btree only; ignored for other access methods                                       |
-| `where`        | Optional partial-index predicate                                                                                |
+| `using`        | Access method: `btree` (default), `gin`, `gist`, `brin`, or `hash`                                                                                 |
+| `isUnique`     | Enforce uniqueness (btree only)                                                                                                                    |
+| `isPrimaryKey` | Marks the primary-key index                                                                                                                        |
+| `order`        | `ASC` or `DESC` — applies to btree only; ignored for other access methods                                                                          |
+| `where`        | Optional partial-index predicate                                                                                                                   |
 
-Only specify `opclass` for non-default operator classes (e.g. `gin_trgm_ops`) — default opclasses are omitted from diff comparison automatically. Expression entries must match PostgreSQL's *per-column* canonical form — what `SELECT pg_get_indexdef(indexrelid, column_number, true)` prints — or the diff will flag them as changed. Careful: this differs from the full `indexdef` text; e.g. `indexdef` shows `(("orderNumber")::text)` but the per-column form is `("orderNumber"::text)` — write the latter. Non-btree methods usually require an extension — declare it in the root `extensions` array.
+Only specify `opclass` for non-default operator classes (e.g. `gin_trgm_ops`) — default opclasses are omitted from diff comparison automatically. Expression entries must match PostgreSQL's _per-column_ canonical form — what `SELECT pg_get_indexdef(indexrelid, column_number, true)` prints — or the diff will flag them as changed. Careful: this differs from the full `indexdef` text; e.g. `indexdef` shows `(("orderNumber")::text)` but the per-column form is `("orderNumber"::text)` — write the latter. Non-btree methods usually require an extension — declare it in the root `extensions` array.
 
 Index introspection and diffing require PostgreSQL 11 or later (they read `pg_index.indnkeyatts`). Invalid indexes left behind by a failed `CREATE INDEX CONCURRENTLY` are detected and rebuilt by the diff.
 
 Index, foreign-key, and check-constraint names are limited to PostgreSQL's 63-byte identifier maximum. Restura truncates over-long names consistently in generated SQL and diffs, and schema validation warns with the truncated form — but prefer hand-shortening the name (e.g. abbreviate the longest column part) so the schema matches what actually exists in the database.
+
+**Foreign Key Properties:**
+
+| Property     | Description                                                                           |
+| ------------ | ------------------------------------------------------------------------------------- |
+| `name`       | Constraint name in the database                                                       |
+| `column`     | Single referencing column — mutually exclusive with `columns`                         |
+| `columns`    | Array of referencing columns for a composite key — mutually exclusive with `column`   |
+| `refTable`   | The table being referenced                                                            |
+| `refColumn`  | Single referenced column — mutually exclusive with `refColumns`                       |
+| `refColumns` | Array of referenced columns for a composite key — mutually exclusive with `refColumn` |
+| `onDelete`   | `NO ACTION`, `RESTRICT`, `CASCADE`, `SET NULL`, or `SET DEFAULT`                      |
+| `onUpdate`   | Same actions as `onDelete`                                                            |
+
+Use the singular `column`/`refColumn` form for ordinary single-column keys, or the plural `columns`/`refColumns` form for a composite key. Exactly one form per side, and both sides must list the same number of columns — the pairing is **positional**, so `"columns": ["a", "b"]` with `"refColumns": ["c", "d"]` emits `FOREIGN KEY ("a", "b") REFERENCES t ("c", "d")`. Reordering either list is a real change and the diff will drop and re-add the constraint.
+
+Composite keys are the standard way to enforce same-tenant integrity when a tenant discriminator is denormalized onto child rows: pairing `storeId` with the reference column guarantees the child can never point at a parent belonging to another store.
+
+That guarantee depends on every referencing column being `"isNullable": false`. PostgreSQL's default `MATCH SIMPLE` semantics skip the constraint entirely for a row where **any** referencing column is NULL, so a nullable `storeId` would let a mismatched pair through unchecked.
+
+PostgreSQL only accepts a foreign key whose referenced columns are covered by a unique constraint or index on exactly that column set — declare one on the referenced table as an `indexes` entry with `"isUnique": true`. That index must also be non-partial (no `where`) and btree (the default `using`); PostgreSQL rejects partial and non-btree unique indexes as foreign-key targets. Schema validation warns when it can't find a qualifying one.
+
+`name` is required on every foreign key and Restura never generates it for composite keys — the `{table}_{column}_{refTable}_{refColumn}_fk` auto-naming is a convenience of the single-column editor UI. Pick an explicit, stable name, because the diff engine matches constraints by name: renaming one is a drop and re-add.
+
+Composite foreign keys are authored in JSON. The schema editor UI creates and edits single-column foreign keys only; it leaves composite entries in the file untouched.
 
 **Table Properties:**
 

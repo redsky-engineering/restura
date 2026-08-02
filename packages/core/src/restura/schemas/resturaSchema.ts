@@ -324,15 +324,45 @@ export type ForeignKeyActions = z.infer<typeof foreignKeyActionsSchema>;
 const foreignKeyDataSchema = z
 	.object({
 		name: z.string(),
-		column: z.string(),
+		column: z.string().optional(),
+		columns: z.array(z.string()).optional(),
 		refTable: z.string(),
-		refColumn: z.string(),
+		refColumn: z.string().optional(),
+		refColumns: z.array(z.string()).optional(),
 		onDelete: foreignKeyActionsSchema,
 		onUpdate: foreignKeyActionsSchema
 	})
-	.strict();
+	.strict()
+	.refine((foreignKey) => (foreignKey.column === undefined) !== (foreignKey.columns === undefined), {
+		message: 'Foreign key must have exactly one of "column" or "columns"'
+	})
+	.refine((foreignKey) => (foreignKey.refColumn === undefined) !== (foreignKey.refColumns === undefined), {
+		message: 'Foreign key must have exactly one of "refColumn" or "refColumns"'
+	})
+	.refine(
+		(foreignKey) => {
+			const columns = foreignKey.columns ?? (foreignKey.column === undefined ? [] : [foreignKey.column]);
+			const refColumns =
+				foreignKey.refColumns ?? (foreignKey.refColumn === undefined ? [] : [foreignKey.refColumn]);
+			return columns.length >= 1 && columns.length === refColumns.length;
+		},
+		{
+			message:
+				'Foreign key columns and refColumns must be non-empty and the same length; the pairing is positional'
+		}
+	);
 
 export type ForeignKeyData = z.infer<typeof foreignKeyDataSchema>;
+
+export function foreignKeyColumns(foreignKey: ForeignKeyData): string[] {
+	if (foreignKey.columns) return foreignKey.columns;
+	return foreignKey.column === undefined ? [] : [foreignKey.column];
+}
+
+export function foreignKeyRefColumns(foreignKey: ForeignKeyData): string[] {
+	if (foreignKey.refColumns) return foreignKey.refColumns;
+	return foreignKey.refColumn === undefined ? [] : [foreignKey.refColumn];
+}
 
 const checkConstraintDataSchema = z
 	.object({
@@ -384,6 +414,22 @@ export const resturaSchema = z
 
 export type ResturaSchema = z.infer<typeof resturaSchema>;
 
+function hasUniqueConstraintFor(table: TableData, columns: string[]): boolean {
+	// PostgreSQL matches the referenced columns against a unique index as a set, so compare sorted.
+	const target = [...columns].sort().join(',');
+	for (const index of table.indexes) {
+		if (!index.isUnique && !index.isPrimaryKey) continue;
+		// Partial and non-btree unique indexes are not valid foreign-key targets.
+		if (index.where) continue;
+		if (index.using && index.using !== 'btree') continue;
+		const indexColumns = index.columns.map(indexColumnText);
+		if (indexColumns.some((column) => column === '')) continue;
+		if ([...indexColumns].sort().join(',') === target) return true;
+	}
+	// A single column marked isPrimary or isUnique carries an implicit unique index.
+	return table.columns.some((column) => (column.isPrimary || column.isUnique) && column.name === target);
+}
+
 function warnIfIdentifierTooLong(kind: string, name: string, tableName: string): void {
 	const byteLength = Buffer.byteLength(name, 'utf8');
 	if (byteLength <= PG_MAX_IDENTIFIER) return;
@@ -408,11 +454,26 @@ export async function isSchemaValid(schemaToCheck: unknown): Promise<boolean> {
 					);
 				}
 				if (column.type === 'ENUM' && column.value) {
-					warnIfIdentifierTooLong('Auto-generated check constraint', `${table.name}_${column.name}_check`, table.name);
+					warnIfIdentifierTooLong(
+						'Auto-generated check constraint',
+						`${table.name}_${column.name}_check`,
+						table.name
+					);
 				}
 			}
 			for (const foreignKey of table.foreignKeys) {
 				warnIfIdentifierTooLong('Foreign key', foreignKey.name, table.name);
+				const refTable = parsed.database.find((item) => item.name === foreignKey.refTable);
+				if (!refTable) continue;
+				const refColumns = foreignKeyRefColumns(foreignKey);
+				if (!hasUniqueConstraintFor(refTable, refColumns)) {
+					logger.warn(
+						`Foreign key "${foreignKey.name}" on table "${table.name}" references ` +
+							`"${foreignKey.refTable}" (${refColumns.join(', ')}), but no unique constraint or index on ` +
+							`those columns is declared on "${foreignKey.refTable}". PostgreSQL requires one for the ` +
+							`foreign key to be creatable — add an "indexes" entry with "isUnique": true.`
+					);
+				}
 			}
 			for (const check of table.checkConstraints) {
 				warnIfIdentifierTooLong('Check constraint', check.name, table.name);
