@@ -106,8 +106,9 @@ CREATE INDEX IF NOT EXISTS "${OUTBOX_TABLE_NAME}_processedOn_index" ON "${OUTBOX
 
 type NotifyConfig = ResturaSchema['database'][0]['notify'];
 
-// Sensitive-named columns throw unless '!'-prefixed to force-include; 'ALL' expands minus sensitive names
-function resolveNotifyColumns(tableName: string, notify: NotifyConfig, tableColumns?: string[]): string[] {
+// Sensitive-named columns throw unless '!'-prefixed to force-include; 'ALL' expands minus sensitive names.
+// Exported so type generation resolves the same column list the triggers are built from.
+export function resolveNotifyColumns(tableName: string, notify: NotifyConfig, tableColumns?: string[]): string[] {
 	if (!notify) return [];
 	let columns: string[];
 	if (notify === 'ALL') {
