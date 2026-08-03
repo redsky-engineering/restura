@@ -7,6 +7,7 @@
 	"scripts": {
 		"test": "echo \"Todo: add tests\"",
 		"dev": "pnpm -w build && tsc && node ./dist/app.js",
+		"build:incremental": "pnpm -w build && tsc",
 		"devTsx": "pnpm -w build && tsx ./src/app.ts",
 		"lint": "eslint src",
 		"startDevDockerDb": "docker compose -f docker-compose.local.yaml up -d"

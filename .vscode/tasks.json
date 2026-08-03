@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "build",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "Build TSC",
+			"detail": "Removes dist and builds again",
+			"path": "apps/restura-express"
+		},
+		{
+			"type": "npm",
+			"script": "build:incremental",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "Build TSC Incremental",
+			"detail": "Builds without removing dist, this makes it faster to run when you are making changes and debugging",
+			"path": "apps/restura-express"
+		}
+	]
+}

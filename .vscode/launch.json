@@ -12,10 +12,14 @@
 				"NODE_ENV": "development"
 			},
 			"sourceMaps": true,
-			"skipFiles": ["<node_internals>/**"],
+			"skipFiles": ["<node_internals>/**", "**/node_modules/**"],
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "neverOpen",
-			"outFiles": ["${workspaceFolder}/**/dist/**/*.js", "${workspaceFolder}/**/dist/**/*.mjs"]
+			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+			"preLaunchTask": "Build TSC Incremental",
+			"outFiles": ["${workspaceFolder}/**/dist/**/*.js", "${workspaceFolder}/**/dist/**/*.mjs"],
+			"restart": true,
+			"autoAttachChildProcesses": true
 		},
 		{
 			"name": "Debug Core Tests",
