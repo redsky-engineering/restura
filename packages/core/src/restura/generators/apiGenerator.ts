@@ -9,6 +9,7 @@ import type {
 	RouteData,
 	TableData
 } from '../schemas/resturaSchema.js';
+import { resolveNotifyColumns } from '../sql/psqlSchemaUtils.js';
 import { SqlUtils } from '../sql/SqlUtils.js';
 import ResponseValidator from '../validators/ResponseValidator.js';
 
@@ -220,30 +221,24 @@ function createNotificationTypes(databases: Array<TableData>): string {
 	let result = 'declare namespace NotificationTypes {';
 	for (const database of databases) {
 		if (!database.notify) continue;
-		if (database.notify === 'ALL') {
-			// We need to get all the columns from the database and create a type for each one.
-			result += `export type ${StringUtils.capitalizeFirst(database.name)} = Pick<Model.${StringUtils.capitalizeFirst(database.name)}, `;
-			const columnStrings: string[] = [];
-			for (const column of database.columns) {
-				columnStrings.push(`'${column.name}'`);
+		// Resolved through the same helper the triggers are built from, so the generated type
+		// always matches the payload: '!'-prefixes stripped, sensitive names excluded from 'ALL'.
+		const notifyColumns = resolveNotifyColumns(
+			database.name,
+			database.notify,
+			database.columns.map((column) => column.name)
+		);
+		const columnStrings: string[] = [];
+		for (const column of notifyColumns) {
+			if (!database.columns.some((c) => c.name === column)) {
+				logger.warn(`Notification: Could not find column: ${column} in table: ${database.name}`);
+				continue;
 			}
-			result += columnStrings.join(' | ');
-			result += `>;`;
-		} else {
-			// database.notify is an array of column names
-			result += `export type ${StringUtils.capitalizeFirst(database.name)} = Pick<Model.${StringUtils.capitalizeFirst(database.name)}, `;
-			const columnStrings: string[] = [];
-			for (const column of database.notify) {
-				const columnData = database.columns.find((c) => c.name === column);
-				if (!columnData) {
-					logger.warn(`Notification: Could not find column: ${column} in table: ${database.name}`);
-					continue;
-				}
-				columnStrings.push(`'${column}'`);
-			}
-			result += columnStrings.join(' | ');
-			result += `>;`;
+			columnStrings.push(`'${column}'`);
 		}
+		result += `export type ${StringUtils.capitalizeFirst(database.name)} = Pick<Model.${StringUtils.capitalizeFirst(database.name)}, `;
+		result += columnStrings.join(' | ');
+		result += `>;`;
 	}
 	result += `}`;
 	return result;
