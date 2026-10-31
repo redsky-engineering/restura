@@ -324,6 +324,22 @@ Paged endpoints automatically handle pagination, filtering, and sorting. The req
 
 The response includes pagination metadata alongside the data array.
 
+#### Filterable and sortable columns
+
+`filter` and `sortBy` may only reference columns the requester can read through the route's `response`. `sortBy` may also use a response property name. Any other column is rejected with `400 BAD_REQUEST`, and the error lists the allowed columns.
+
+To allow a column that the route doesn't return, list it in `filterableColumns` or `sortableColumns` as `table.column` or `alias.column`:
+
+```json
+{
+	"type": "PAGED",
+	"filterableColumns": ["user.companyId"],
+	"sortableColumns": ["user.createdOn"]
+}
+```
+
+Columns whose names look sensitive (matching `password`, `token`, `secret`, `credential`, `guid`, or ending in `key`) are refused even when the route returns or lists them. To allow one on purpose, prefix the entry with `!`, for example `"!user.passwordResetExpiresOn"`.
+
 ### Endpoint with Joins
 
 Joins let you include data from related tables. Each join needs an `alias` to reference in the response selectors. The `type` can be `INNER`, `LEFT`, or `RIGHT`.

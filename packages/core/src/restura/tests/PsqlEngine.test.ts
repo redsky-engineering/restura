@@ -1270,14 +1270,15 @@ EXECUTE FUNCTION notify_user_delete();
 			const orderBy = psqlEngine['generateOrderBy'](req, routeData);
 			expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "user"."firstName" ASC`);
 		});
-		it('should prevent sortBy sql injection', () => {
+		it('should reject a sortBy that is not an allowed column', () => {
 			const routeData = JSON.parse(JSON.stringify(patchUserRouteData));
 			const req = JSON.parse(JSON.stringify(basicAdminRequest));
 			routeData.type = 'PAGED';
 			req.data.sortBy = '; DROP SOME DB;';
 			req.data.sortOrder = 'DESC';
-			const orderBy = psqlEngine['generateOrderBy'](req, routeData);
-			expect(trimRedundantWhitespace(orderBy)).to.equal(`ORDER BY "; DROP SOME DB;" DESC`);
+			expect(() => psqlEngine['generateOrderBy'](req, routeData))
+				.to.throw(RsError)
+				.with.property('err', 'BAD_REQUEST');
 		});
 	});
 

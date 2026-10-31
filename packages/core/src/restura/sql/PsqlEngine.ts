@@ -20,6 +20,12 @@ import SqlEngine from './SqlEngine.js';
 import { EventDeliveryConfig, EventOutboxConsumer } from './eventOutbox.js';
 import filterPsqlParser from './filterPsqlParser.js';
 import {
+	assertFilterColumnsAllowed,
+	assertSortColumnAllowed,
+	buildPagedColumnAccess,
+	PagedColumnAccess
+} from './pagedColumnAccess.js';
+import {
 	diffDatabaseToSchema as diffDatabaseToSchemaUtil,
 	generateDatabaseSchemaFromSchema as generateDatabaseSchemaFromSchemaUtil,
 	SchemaGenerationOptions,
@@ -399,6 +405,8 @@ export class PsqlEngine extends SqlEngine {
 				selectColumns.push(item);
 		});
 		if (!selectColumns.length) throw new RsError('FORBIDDEN', `You do not have permission to access this data.`);
+		const pagedColumnAccess =
+			routeData.type === 'PAGED' ? buildPagedColumnAccess(routeData, selectColumns) : undefined;
 		let selectStatement = 'SELECT \n';
 		selectStatement += `\t${selectColumns
 			.map((item) => {
@@ -430,10 +438,10 @@ export class PsqlEngine extends SqlEngine {
 			sqlParams
 		);
 
-		sqlStatement += this.generateWhereClause(req, routeData.where, routeData, sqlParams);
+		sqlStatement += this.generateWhereClause(req, routeData.where, routeData, sqlParams, pagedColumnAccess);
 
 		let groupByOrderByStatement = this.generateGroupBy(routeData);
-		groupByOrderByStatement += this.generateOrderBy(req, routeData);
+		groupByOrderByStatement += this.generateOrderBy(req, routeData, pagedColumnAccess);
 
 		if (routeData.type === 'ONE') {
 			return this.psqlConnectionPool.queryOne(
@@ -633,7 +641,11 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		return groupBy;
 	}
 
-	protected generateOrderBy(req: RsRequest<unknown>, routeData: StandardRouteData): string {
+	protected generateOrderBy(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		pagedColumnAccess: PagedColumnAccess = buildPagedColumnAccess(routeData, routeData.response)
+	): string {
 		let orderBy = '';
 		const orderOptions: { [key: string]: string } = {
 			ASC: 'ASC',
@@ -641,6 +653,7 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		};
 		const data = req.data as PageQuery;
 		if (routeData.type === 'PAGED' && 'sortBy' in data) {
+			assertSortColumnAllowed(String(data.sortBy), pagedColumnAccess);
 			const sortOrder = orderOptions[data.sortOrder] || 'ASC';
 			orderBy = `ORDER BY ${escapeColumnName(data.sortBy)} ${sortOrder}\n`;
 		} else if (routeData.orderBy) {
@@ -654,7 +667,8 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		req: RsRequest<unknown>,
 		where: WhereData[],
 		routeData: StandardRouteData | CustomRouteData,
-		sqlParams: string[]
+		sqlParams: string[],
+		pagedColumnAccess?: PagedColumnAccess
 	): string {
 		let whereClause = '';
 		where.forEach((item, index) => {
@@ -718,6 +732,11 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 			});
 
 			const parseResult = filterPsqlParser.parse(statement);
+			assertFilterColumnsAllowed(
+				parseResult.referencedColumns,
+				pagedColumnAccess ??
+					buildPagedColumnAccess(routeData as StandardRouteData, (routeData as StandardRouteData).response)
+			);
 			if (parseResult.usedOldSyntax) {
 				logger.warn(
 					`Deprecated filter syntax detected in route "${routeData.name}" (${routeData.path}). Please migrate to the new filter syntax.`
