@@ -8,9 +8,7 @@ import { PsqlConnection } from './PsqlConnection.js';
 const { Pool } = pg;
 
 export interface PsqlPoolOptions {
-	/** Attempts for the startup connectivity check before the process exits. Default 5. */
 	connectAttempts?: number;
-	/** Delay before the first retry; doubles on each later retry. Default 1000. */
 	connectRetryDelayMs?: number;
 }
 
@@ -22,7 +20,6 @@ const systemUser: RequesterDetails = {
 	scopes: []
 };
 
-/** Connection settings for a dedicated client that must reach the same server the pool does. */
 export function connectionConfigFrom(poolConfig: PoolConfig): ClientConfig {
 	return {
 		host: poolConfig.host,
@@ -39,7 +36,6 @@ export function connectionConfigFrom(poolConfig: PoolConfig): ClientConfig {
 
 export class PsqlPool extends PsqlConnection {
 	public pool: PoolType;
-	/** Resolves once the startup connectivity check passes; rejects after the last failed attempt. */
 	public readonly ready: Promise<void>;
 
 	constructor(
