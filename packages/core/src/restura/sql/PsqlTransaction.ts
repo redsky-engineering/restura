@@ -1,6 +1,7 @@
 import { UUID } from 'crypto';
 import type { ClientConfig, Client as ClientType, QueryConfigValues, QueryResult, QueryResultRow } from 'pg';
 import pg from 'pg';
+import { logger } from '../../logger/logger.js';
 import { PsqlConnection } from './PsqlConnection.js';
 
 const { Client } = pg;
@@ -16,8 +17,14 @@ export class PsqlTransaction extends PsqlConnection {
 	) {
 		super(instanceId);
 		this.client = new Client(clientConfig);
+		// A dropped connection also rejects the pending query; without a listener the event would crash the process
+		this.client.on('error', (error) => {
+			logger.error(`PostgreSQL transaction connection lost: ${error.message}`);
+		});
 		this.connectPromise = this.client.connect();
 		this.beginTransactionPromise = this.beginTransaction();
+		// query() rethrows a failed connect or BEGIN; this keeps the same failure from also surfacing as an unhandled rejection
+		this.beginTransactionPromise.catch(() => undefined);
 	}
 	async close() {
 		if (this.client) {
