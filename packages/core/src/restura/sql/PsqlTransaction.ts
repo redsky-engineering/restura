@@ -8,7 +8,7 @@ const { Client } = pg;
 export class PsqlTransaction extends PsqlConnection {
 	public client: ClientType;
 	private beginTransactionPromise: Promise<QueryResult<QueryResultRow>>;
-	private connectPromise: Promise<void>;
+	private connectPromise: Promise<ClientType>;
 
 	constructor(
 		public clientConfig: ClientConfig,
