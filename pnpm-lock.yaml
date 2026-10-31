@@ -409,7 +409,7 @@ importers:
     packages/logger:
         dependencies:
             '@restura/core':
-                specifier: workspace:*
+                specifier: workspace:^
                 version: link:../core
             pino:
                 specifier: ^10.3.1
