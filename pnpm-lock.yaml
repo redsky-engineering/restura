@@ -296,7 +296,7 @@ importers:
                 specifier: ^0.2.6
                 version: 0.2.6
             '@wmfs/pg-diff-sync':
-                specifier: ^1.34.0
+                specifier: ^1.33.0
                 version: 1.34.0
             '@wmfs/pg-info':
                 specifier: ^1.21.1
