@@ -13,7 +13,7 @@ import {
 	type ResturaSchema
 } from '../schemas/resturaSchema.js';
 import { DynamicObject, RequesterDetails } from '../types/customExpressTypes.js';
-import { PsqlPool } from './PsqlPool.js';
+import { connectionConfigFrom, PsqlPool } from './PsqlPool.js';
 import { escapeColumnName } from './PsqlUtils.js';
 
 const { Client } = pg;
@@ -388,14 +388,10 @@ export async function getNewPublicSchemaAndScratchPool(targetPool: PsqlPool, scr
 	}
 
 	const scratchPool = new PsqlPool({
-		host: targetPool.poolConfig.host,
-		port: targetPool.poolConfig.port,
-		user: targetPool.poolConfig.user,
+		...connectionConfigFrom(targetPool.poolConfig),
 		database: scratchDbName,
-		password: targetPool.poolConfig.password,
 		max: targetPool.poolConfig.max,
-		idleTimeoutMillis: targetPool.poolConfig.idleTimeoutMillis,
-		connectionTimeoutMillis: targetPool.poolConfig.connectionTimeoutMillis
+		idleTimeoutMillis: targetPool.poolConfig.idleTimeoutMillis
 	});
 	await scratchPool.runQuery(`DROP SCHEMA public CASCADE;`, [], systemUser);
 	await scratchPool.runQuery(
@@ -434,13 +430,7 @@ export async function diffDatabaseToSchema(
 		const sqlFullStatement = generateDatabaseSchemaFromSchema(schema, options);
 		await scratchPool.runQuery(sqlFullStatement, [], systemUser);
 
-		const connectionConfig = {
-			host: targetPool.poolConfig.host,
-			port: targetPool.poolConfig.port,
-			user: targetPool.poolConfig.user,
-			password: targetPool.poolConfig.password,
-			ssl: targetPool.poolConfig.ssl
-		};
+		const connectionConfig = connectionConfigFrom(targetPool.poolConfig);
 		originalClient = new Client({ ...connectionConfig, database: targetPool.poolConfig.database });
 		scratchClient = new Client({ ...connectionConfig, database: scratchDbName });
 

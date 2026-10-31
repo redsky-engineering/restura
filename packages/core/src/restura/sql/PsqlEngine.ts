@@ -14,7 +14,7 @@ import {
 } from '../schemas/resturaSchema.js';
 import { DynamicObject, RsRequest } from '../types/customExpressTypes.js';
 import { PageQuery } from '../types/resturaTypes.js';
-import { PsqlPool } from './PsqlPool.js';
+import { connectionConfigFrom, PsqlPool } from './PsqlPool.js';
 import { escapeColumnName, insertObjectQuery, SQL, updateObjectQuery } from './PsqlUtils.js';
 import SqlEngine from './SqlEngine.js';
 import { EventDeliveryConfig, EventOutboxConsumer } from './eventOutbox.js';
@@ -179,15 +179,7 @@ export class PsqlEngine extends SqlEngine {
 	}
 
 	private async listenForDbTriggers() {
-		const client = new Client({
-			user: this.psqlConnectionPool.poolConfig.user,
-			host: this.psqlConnectionPool.poolConfig.host,
-			database: this.psqlConnectionPool.poolConfig.database,
-			password: this.psqlConnectionPool.poolConfig.password,
-			port: this.psqlConnectionPool.poolConfig.port,
-			connectionTimeoutMillis: this.psqlConnectionPool.poolConfig.connectionTimeoutMillis,
-			ssl: this.psqlConnectionPool.poolConfig.ssl
-		});
+		const client = new Client(connectionConfigFrom(this.psqlConnectionPool.poolConfig));
 		this.triggerClient = client;
 
 		// Attach before connect so errors during connection setup are never unhandled

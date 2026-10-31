@@ -1,7 +1,7 @@
 import { logger } from '../../logger/logger.js';
 import eventManager, { MutationType, QueryMetadata, TriggerResult } from '../eventManager.js';
 import { DynamicObject } from '../types/customExpressTypes.js';
-import { PsqlPool } from './PsqlPool.js';
+import { connectionConfigFrom, PsqlPool } from './PsqlPool.js';
 import { PsqlTransaction } from './PsqlTransaction.js';
 import { DEFAULT_OUTBOX_CHANNEL, OUTBOX_TABLE_NAME, systemUser } from './psqlSchemaUtils.js';
 
@@ -122,14 +122,7 @@ export class EventOutboxConsumer {
 	}
 
 	private async processBatch(): Promise<number> {
-		const transaction = new PsqlTransaction({
-			host: this.psqlConnectionPool.poolConfig.host,
-			port: this.psqlConnectionPool.poolConfig.port,
-			user: this.psqlConnectionPool.poolConfig.user,
-			password: this.psqlConnectionPool.poolConfig.password,
-			database: this.psqlConnectionPool.poolConfig.database,
-			connectionTimeoutMillis: this.psqlConnectionPool.poolConfig.connectionTimeoutMillis
-		});
+		const transaction = new PsqlTransaction(connectionConfigFrom(this.psqlConnectionPool.poolConfig));
 		try {
 			const rows = await transaction.runQuery<OutboxRow>(
 				`SELECT * FROM "${OUTBOX_TABLE_NAME}"
