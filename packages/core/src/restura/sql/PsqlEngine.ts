@@ -517,7 +517,7 @@ export class PsqlEngine extends SqlEngine {
 		// 	req.requesterDetails.role,
 		// 	sqlParams
 		// );
-		const pagedColumnAccess = this.getPagedColumnAccess(req, routeData, schema);
+		const pagedColumnAccess = this.getPagedWriteColumnAccess(req, routeData, schema);
 		const pageQuery = req.data as PageQuery;
 		// The response is read back after the write, so a bad sortBy must fail before anything changes
 		if (pagedColumnAccess && 'sortBy' in pageQuery)
@@ -578,7 +578,7 @@ export class PsqlEngine extends SqlEngine {
 			routeData.where,
 			routeData,
 			sqlParams,
-			this.getPagedColumnAccess(req, routeData, schema)
+			this.getPagedWriteColumnAccess(req, routeData, schema)
 		);
 		if (whereClause.replace(/\s/g, '') === '') {
 			throw new RsError('FORBIDDEN', 'Deletes need a where clause');
@@ -609,13 +609,16 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		);
 	}
 
-	protected getPagedColumnAccess(
+	protected getPagedWriteColumnAccess(
 		req: RsRequest<unknown>,
 		routeData: StandardRouteData,
 		schema: ResturaSchema
 	): PagedColumnAccess | undefined {
 		if (routeData.type !== 'PAGED') return undefined;
-		return buildPagedColumnAccess(routeData, this.getReadableResponse(req, routeData, schema));
+		return {
+			...buildPagedColumnAccess(routeData, this.getReadableResponse(req, routeData, schema)),
+			unqualifiedFilterTable: routeData.table
+		};
 	}
 
 	protected generateJoinStatements(

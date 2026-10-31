@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { RsError } from '../RsError.js';
 import type { StandardRouteData } from '../schemas/resturaSchema.js';
 import filterPsqlParser from '../sql/filterPsqlParser.js';
-import { buildPagedColumnAccess } from '../sql/pagedColumnAccess.js';
+import { assertFilterColumnsAllowed, buildPagedColumnAccess } from '../sql/pagedColumnAccess.js';
 import { PsqlEngine } from '../sql/PsqlEngine.js';
 import { PsqlPool } from '../sql/PsqlPool.js';
 import type { RsRequest } from '../types/customExpressTypes.js';
@@ -192,6 +192,17 @@ describe('PAGED filter and sort column allow-list', function () {
 			expectBadRequest(() => orderByFor('creator.email'), /Sorting by "creator\.email" is not allowed/);
 		});
 
+		it('should reject a response alias of a sensitive column unless it is opted in with !', () => {
+			const route = {
+				...pagedRoute,
+				response: [...pagedRoute.response, { name: 'hash', selector: 'creator.password' }]
+			};
+			expectBadRequest(() => orderByFor('hash', route), /Sorting by "hash" is not allowed/);
+			expect(orderByFor('hash', { ...route, sortableColumns: ['!creator.password'] })).to.equal(
+				`ORDER BY "hash" DESC\n`
+			);
+		});
+
 		it('should allow a column listed in sortableColumns', () => {
 			const route = { ...pagedRoute, sortableColumns: ['creator.email'] };
 			expect(orderByFor('creator.email', route)).to.equal(`ORDER BY "creator"."email" DESC\n`);
@@ -242,6 +253,15 @@ describe('PAGED filter and sort column allow-list', function () {
 			}
 			return undefined;
 		}
+
+		it('should resolve an unqualified write filter against the base table only', () => {
+			const access = {
+				...buildPagedColumnAccess(pagedRoute, pagedRoute.response),
+				unqualifiedFilterTable: 'order'
+			};
+			expect(() => assertFilterColumnsAllowed([['amountCents']], access)).to.not.throw();
+			expectBadRequest(() => assertFilterColumnsAllowed([['firstName']], access), /"firstName" is not allowed/);
+		});
 
 		it('should reject a disallowed sortBy on an update before writing', async () => {
 			const { engine, queries } = engineRecordingQueries();

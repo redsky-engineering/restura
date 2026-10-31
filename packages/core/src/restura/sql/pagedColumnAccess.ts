@@ -11,6 +11,8 @@ interface ColumnAllowList {
 export interface PagedColumnAccess {
 	filter: ColumnAllowList;
 	sort: ColumnAllowList;
+	// Writes run without joins, so Postgres resolves an unqualified column to the base table
+	unqualifiedFilterTable?: string;
 }
 
 export function buildPagedColumnAccess(
@@ -19,11 +21,18 @@ export function buildPagedColumnAccess(
 ): PagedColumnAccess {
 	const responseColumns = new Set<string>();
 	const responseNames = new Set<string>();
+	const sensitiveSortOptIns = new Set(
+		(routeData.sortableColumns ?? []).filter((entry) => entry.startsWith('!')).map((entry) => entry.slice(1))
+	);
 	for (const item of readableResponse) {
-		responseNames.add(item.name);
-		if (item.subquery || item.type || !item.selector) continue;
-		const columnKey = toColumnKey(item.selector, routeData.table);
+		const columnKey =
+			item.subquery || item.type || !item.selector ? undefined : toColumnKey(item.selector, routeData.table);
 		if (columnKey) responseColumns.add(columnKey);
+		const isSensitiveAlias =
+			columnKey !== undefined &&
+			isSensitiveColumnName(splitColumnKey(columnKey)[1]) &&
+			!sensitiveSortOptIns.has(columnKey);
+		if (!isSensitiveAlias) responseNames.add(item.name);
 	}
 	return {
 		filter: buildAllowList(responseColumns, new Set(), routeData.filterableColumns),
@@ -39,7 +48,7 @@ export function assertFilterColumnsAllowed(referencedColumns: string[][], access
 		checked.add(reference);
 		const isAllowed =
 			parts.length === 1
-				? isColumnAllowed(access.filter, undefined, parts[0])
+				? isColumnAllowed(access.filter, access.unqualifiedFilterTable, parts[0])
 				: isColumnAllowed(access.filter, parts[0], parts[1]);
 		if (!isAllowed) {
 			throw new RsError(
