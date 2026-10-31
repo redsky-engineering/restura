@@ -43,6 +43,12 @@ Operators are **case-insensitive**: `GT`, `Gt`, `gt` all work identically.
 
 <Aside type="note">Column paths cannot exceed 3 parts. `a.b.c.d` is rejected.</Aside>
 
+<Aside type="caution">
+	On `PAGED` routes a filter may only reference columns the route returns or lists in `filterableColumns`. For a JSON
+	path, the `table.column` part is what gets checked. See [Filterable and sortable
+	columns](/reference/schema/#filterable-and-sortable-columns).
+</Aside>
+
 ## Special Characters in Values
 
 ### Allowed Characters (No Escaping)

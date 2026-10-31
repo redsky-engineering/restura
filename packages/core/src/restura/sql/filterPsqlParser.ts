@@ -2,6 +2,11 @@ import format from 'pg-format';
 import compilePegParser from './compilePegParser.js';
 
 const initializers = `
+    // Every column path the filter references, as raw parts: [column], [table, column] or [table, column, jsonField].
+    // Collected while parsing (a discarded alternative can add extra entries, never drop one), so callers can check
+    // each referenced column against an allow-list before the SQL runs.
+    var referencedColumns = [];
+
     // Quotes a SQL identifier (column/table name) with double quotes, escaping any embedded quotes
     function quoteSqlIdentity(value) {
         return '"' + value.replace(/"/g, '""') + '"';
@@ -99,8 +104,8 @@ const entryGrammar = `
 }
 
 Start 
-    = sql:StartOld { return { sql: sql, usedOldSyntax: true }; }
-    / sql:StartNew { return { sql: sql, usedOldSyntax: false }; }
+    = sql:StartOld { return { sql: sql, usedOldSyntax: true, referencedColumns: referencedColumns }; }
+    / sql:StartNew { return { sql: sql, usedOldSyntax: false, referencedColumns: referencedColumns }; }
 `;
 
 const oldGrammar = `
@@ -136,6 +141,7 @@ OldColumn
         if (partsArray.length > 3) {
             throw new SyntaxError('Column path cannot have more than 3 parts (table.column.jsonField)');
         }
+        referencedColumns.push(partsArray.slice());
         
         if (partsArray.length === 1) {
             return quoteSqlIdentity(partsArray[0]);
@@ -224,6 +230,7 @@ Column
         if (partsArray.length > 3) {
             throw new SyntaxError('Column path cannot have more than 3 parts (table.column.jsonField)');
         }
+        referencedColumns.push(partsArray.slice());
         
         var sql;
         var isJsonField = false;
@@ -341,5 +348,13 @@ ValueWithPipesChar
 
 const fullGrammar = entryGrammar + oldGrammar + newGrammar;
 
-const filterPsqlParser = compilePegParser(fullGrammar, { format: 'pg-format' }, { 'pg-format': format });
+export interface FilterParseResult {
+	sql: string;
+	usedOldSyntax: boolean;
+	referencedColumns: string[][];
+}
+
+const filterPsqlParser = compilePegParser(fullGrammar, { format: 'pg-format' }, { 'pg-format': format }) as {
+	parse(input: string): FilterParseResult;
+};
 export default filterPsqlParser;

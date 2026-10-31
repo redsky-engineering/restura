@@ -20,6 +20,12 @@ import SqlEngine from './SqlEngine.js';
 import { EventDeliveryConfig, EventOutboxConsumer } from './eventOutbox.js';
 import filterPsqlParser from './filterPsqlParser.js';
 import {
+	assertFilterColumnsAllowed,
+	assertSortColumnAllowed,
+	buildPagedColumnAccess,
+	PagedColumnAccess
+} from './pagedColumnAccess.js';
+import {
 	diffDatabaseToSchema as diffDatabaseToSchemaUtil,
 	generateDatabaseSchemaFromSchema as generateDatabaseSchemaFromSchemaUtil,
 	SchemaGenerationOptions,
@@ -375,22 +381,10 @@ export class PsqlEngine extends SqlEngine {
 
 		let sqlStatement = '';
 
-		const selectColumns: ResponseData[] = [];
-		routeData.response.forEach((item) => {
-			// For a subquery, we will check the permission when generating the subquery statement, so pass it through
-			if (
-				item.subquery ||
-				this.canRequesterAccessColumn(
-					req.requesterDetails.role,
-					req.requesterDetails.scopes,
-					schema,
-					item,
-					routeData.joins
-				)
-			)
-				selectColumns.push(item);
-		});
+		const selectColumns = this.getReadableResponse(req, routeData, schema);
 		if (!selectColumns.length) throw new RsError('FORBIDDEN', `You do not have permission to access this data.`);
+		const pagedColumnAccess =
+			routeData.type === 'PAGED' ? buildPagedColumnAccess(routeData, selectColumns) : undefined;
 		let selectStatement = 'SELECT \n';
 		selectStatement += `\t${selectColumns
 			.map((item) => {
@@ -422,10 +416,10 @@ export class PsqlEngine extends SqlEngine {
 			sqlParams
 		);
 
-		sqlStatement += this.generateWhereClause(req, routeData.where, routeData, sqlParams);
+		sqlStatement += this.generateWhereClause(req, routeData.where, routeData, sqlParams, pagedColumnAccess);
 
 		let groupByOrderByStatement = this.generateGroupBy(routeData);
-		groupByOrderByStatement += this.generateOrderBy(req, routeData);
+		groupByOrderByStatement += this.generateOrderBy(req, routeData, pagedColumnAccess);
 
 		if (routeData.type === 'ONE') {
 			return this.psqlConnectionPool.queryOne(
@@ -515,7 +509,12 @@ export class PsqlEngine extends SqlEngine {
 		// 	req.requesterDetails.role,
 		// 	sqlParams
 		// );
-		let whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
+		const pagedColumnAccess = this.getPagedWriteColumnAccess(req, routeData, schema);
+		const pageQuery = req.data as PageQuery;
+		// The response is read back after the write, so a bad sortBy must fail before anything changes
+		if (pagedColumnAccess && 'sortBy' in pageQuery)
+			assertSortColumnAllowed(String(pageQuery.sortBy), pagedColumnAccess);
+		let whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams, pagedColumnAccess);
 		const originalWhereClause = whereClause;
 		const originalSqlParams = [...sqlParams];
 		if (baseSyncVersion) {
@@ -566,7 +565,13 @@ export class PsqlEngine extends SqlEngine {
 			schema,
 			sqlParams
 		);
-		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
+		const whereClause = this.generateWhereClause(
+			req,
+			routeData.where,
+			routeData,
+			sqlParams,
+			this.getPagedWriteColumnAccess(req, routeData, schema)
+		);
 		if (whereClause.replace(/\s/g, '') === '') {
 			throw new RsError('FORBIDDEN', 'Deletes need a where clause');
 		}
@@ -575,6 +580,37 @@ export class PsqlEngine extends SqlEngine {
 DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		await this.psqlConnectionPool.runQuery(deleteStatement, sqlParams, req.requesterDetails);
 		return true;
+	}
+
+	// Subqueries check their own column permissions when the nested select is built
+	protected getReadableResponse(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		schema: ResturaSchema
+	): ResponseData[] {
+		return routeData.response.filter(
+			(item) =>
+				item.subquery ||
+				this.canRequesterAccessColumn(
+					req.requesterDetails.role,
+					req.requesterDetails.scopes,
+					schema,
+					item,
+					routeData.joins
+				)
+		);
+	}
+
+	protected getPagedWriteColumnAccess(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		schema: ResturaSchema
+	): PagedColumnAccess | undefined {
+		if (routeData.type !== 'PAGED') return undefined;
+		return {
+			...buildPagedColumnAccess(routeData, this.getReadableResponse(req, routeData, schema)),
+			unqualifiedFilterTable: routeData.table
+		};
 	}
 
 	protected generateJoinStatements(
@@ -625,7 +661,11 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		return groupBy;
 	}
 
-	protected generateOrderBy(req: RsRequest<unknown>, routeData: StandardRouteData): string {
+	protected generateOrderBy(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		pagedColumnAccess: PagedColumnAccess = buildPagedColumnAccess(routeData, routeData.response)
+	): string {
 		let orderBy = '';
 		const orderOptions: { [key: string]: string } = {
 			ASC: 'ASC',
@@ -633,6 +673,7 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		};
 		const data = req.data as PageQuery;
 		if (routeData.type === 'PAGED' && 'sortBy' in data) {
+			assertSortColumnAllowed(String(data.sortBy), pagedColumnAccess);
 			const sortOrder = orderOptions[data.sortOrder] || 'ASC';
 			orderBy = `ORDER BY ${escapeColumnName(data.sortBy)} ${sortOrder}\n`;
 		} else if (routeData.orderBy) {
@@ -646,7 +687,8 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		req: RsRequest<unknown>,
 		where: WhereData[],
 		routeData: StandardRouteData | CustomRouteData,
-		sqlParams: string[]
+		sqlParams: string[],
+		pagedColumnAccess?: PagedColumnAccess
 	): string {
 		let whereClause = '';
 		where.forEach((item, index) => {
@@ -710,6 +752,11 @@ DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 			});
 
 			const parseResult = filterPsqlParser.parse(statement);
+			assertFilterColumnsAllowed(
+				parseResult.referencedColumns,
+				pagedColumnAccess ??
+					buildPagedColumnAccess(routeData as StandardRouteData, (routeData as StandardRouteData).response)
+			);
 			if (parseResult.usedOldSyntax) {
 				logger.warn(
 					`Deprecated filter syntax detected in route "${routeData.name}" (${routeData.path}). Please migrate to the new filter syntax.`
