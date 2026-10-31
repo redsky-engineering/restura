@@ -389,21 +389,7 @@ export class PsqlEngine extends SqlEngine {
 
 		let sqlStatement = '';
 
-		const selectColumns: ResponseData[] = [];
-		routeData.response.forEach((item) => {
-			// For a subquery, we will check the permission when generating the subquery statement, so pass it through
-			if (
-				item.subquery ||
-				this.canRequesterAccessColumn(
-					req.requesterDetails.role,
-					req.requesterDetails.scopes,
-					schema,
-					item,
-					routeData.joins
-				)
-			)
-				selectColumns.push(item);
-		});
+		const selectColumns = this.getReadableResponse(req, routeData, schema);
 		if (!selectColumns.length) throw new RsError('FORBIDDEN', `You do not have permission to access this data.`);
 		const pagedColumnAccess =
 			routeData.type === 'PAGED' ? buildPagedColumnAccess(routeData, selectColumns) : undefined;
@@ -531,7 +517,12 @@ export class PsqlEngine extends SqlEngine {
 		// 	req.requesterDetails.role,
 		// 	sqlParams
 		// );
-		let whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
+		const pagedColumnAccess = this.getPagedColumnAccess(req, routeData, schema);
+		const pageQuery = req.data as PageQuery;
+		// The response is read back after the write, so a bad sortBy must fail before anything changes
+		if (pagedColumnAccess && 'sortBy' in pageQuery)
+			assertSortColumnAllowed(String(pageQuery.sortBy), pagedColumnAccess);
+		let whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams, pagedColumnAccess);
 		const originalWhereClause = whereClause;
 		const originalSqlParams = [...sqlParams];
 		if (baseSyncVersion) {
@@ -582,7 +573,13 @@ export class PsqlEngine extends SqlEngine {
 			schema,
 			sqlParams
 		);
-		const whereClause = this.generateWhereClause(req, routeData.where, routeData, sqlParams);
+		const whereClause = this.generateWhereClause(
+			req,
+			routeData.where,
+			routeData,
+			sqlParams,
+			this.getPagedColumnAccess(req, routeData, schema)
+		);
 		if (whereClause.replace(/\s/g, '') === '') {
 			throw new RsError('FORBIDDEN', 'Deletes need a where clause');
 		}
@@ -591,6 +588,34 @@ export class PsqlEngine extends SqlEngine {
 DELETE FROM "${routeData.table}" ${joinStatement} ${whereClause}`;
 		await this.psqlConnectionPool.runQuery(deleteStatement, sqlParams, req.requesterDetails);
 		return true;
+	}
+
+	// Subqueries check their own column permissions when the nested select is built
+	protected getReadableResponse(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		schema: ResturaSchema
+	): ResponseData[] {
+		return routeData.response.filter(
+			(item) =>
+				item.subquery ||
+				this.canRequesterAccessColumn(
+					req.requesterDetails.role,
+					req.requesterDetails.scopes,
+					schema,
+					item,
+					routeData.joins
+				)
+		);
+	}
+
+	protected getPagedColumnAccess(
+		req: RsRequest<unknown>,
+		routeData: StandardRouteData,
+		schema: ResturaSchema
+	): PagedColumnAccess | undefined {
+		if (routeData.type !== 'PAGED') return undefined;
+		return buildPagedColumnAccess(routeData, this.getReadableResponse(req, routeData, schema));
 	}
 
 	protected generateJoinStatements(

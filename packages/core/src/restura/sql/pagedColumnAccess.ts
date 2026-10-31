@@ -2,12 +2,9 @@ import { RsError } from '../RsError.js';
 import type { ResponseData, StandardRouteData } from '../schemas/resturaSchema.js';
 import { isSensitiveColumnName } from './psqlSchemaUtils.js';
 
-/** Columns a PAGED request may reference, keyed as "qualifier.column" where qualifier is the table name or join alias. */
 interface ColumnAllowList {
 	columns: Set<string>;
-	/** Sensitive-named columns the route opted into with a "!" prefix. */
 	sensitiveOptIns: Set<string>;
-	/** Response property names, which ORDER BY may use as output aliases. */
 	responseNames: Set<string>;
 }
 
@@ -16,11 +13,6 @@ export interface PagedColumnAccess {
 	sort: ColumnAllowList;
 }
 
-/**
- * Filters and sorts on a PAGED route may only use the columns the requester can read through the route's response,
- * plus any the route lists in `filterableColumns` / `sortableColumns`. Sensitive-named columns are always refused unless
- * listed with a "!" prefix.
- */
 export function buildPagedColumnAccess(
 	routeData: StandardRouteData,
 	readableResponse: ResponseData[]

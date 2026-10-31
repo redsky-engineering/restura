@@ -128,7 +128,6 @@ const routeDataBaseSchema = z
 
 export type RouteDataBase = z.infer<typeof routeDataBaseSchema>;
 
-// "table.column" or "alias.column"; a leading "!" deliberately allows a sensitive-named column.
 const pagedColumnEntrySchema = z
 	.string()
 	.regex(
@@ -147,7 +146,6 @@ const standardRouteSchema = routeDataBaseSchema
 		response: z.array(responseDataSchema),
 		groupBy: groupBySchema.optional(),
 		orderBy: orderBySchema.optional(),
-		// PAGED only: columns the client may filter or sort on beyond the readable response properties
 		filterableColumns: z.array(pagedColumnEntrySchema).optional(),
 		sortableColumns: z.array(pagedColumnEntrySchema).optional()
 	})

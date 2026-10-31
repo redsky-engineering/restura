@@ -198,6 +198,98 @@ describe('PAGED filter and sort column allow-list', function () {
 		});
 	});
 
+	describe('PAGED writes', () => {
+		const adminOnlyAmountSchema = {
+			...sampleSchema,
+			database: sampleSchema.database.map((table) =>
+				table.name !== 'order'
+					? table
+					: {
+							...table,
+							columns: table.columns.map((column) =>
+								column.name === 'amountCents' ? { ...column, roles: ['admin'] } : column
+							)
+						}
+			)
+		};
+
+		function engineRecordingQueries(): { engine: PsqlEngine; queries: string[] } {
+			const queries: string[] = [];
+			const engine = Object.create(PsqlEngine.prototype) as PsqlEngine;
+			const recordQuery = async (query: string): Promise<unknown> => {
+				queries.push(query);
+				return [];
+			};
+			Object.assign(engine, { psqlConnectionPool: { queryOne: recordQuery, runQuery: recordQuery } });
+			return { engine, queries };
+		}
+
+		function writeRequest(role: string, data: Record<string, unknown>): RsRequest<unknown> {
+			const request = pagedRequest(data) as unknown as {
+				requesterDetails: { role: string };
+				body: Record<string, unknown>;
+			};
+			request.requesterDetails.role = role;
+			request.body = { amountCents: 1 };
+			return request as unknown as RsRequest<unknown>;
+		}
+
+		async function rejectionOf(write: Promise<unknown>): Promise<RsError | undefined> {
+			try {
+				await write;
+			} catch (error) {
+				return error as RsError;
+			}
+			return undefined;
+		}
+
+		it('should reject a disallowed sortBy on an update before writing', async () => {
+			const { engine, queries } = engineRecordingQueries();
+			const error = await rejectionOf(
+				engine['executeUpdateRequest'](
+					writeRequest('admin', { sortBy: 'creator.email' }),
+					{ ...pagedRoute, method: 'PATCH' },
+					sampleSchema
+				)
+			);
+			expect(error).to.be.instanceOf(RsError);
+			expect(error!.err).to.equal('BAD_REQUEST');
+			expect(queries).to.deep.equal([]);
+		});
+
+		it('should reject an update filter on a column the requester cannot read', async () => {
+			const { engine, queries } = engineRecordingQueries();
+			const error = await rejectionOf(
+				engine['executeUpdateRequest'](
+					writeRequest('user', { filter: '(order.amountCents,gt,0)' }),
+					{ ...pagedRoute, method: 'PATCH' },
+					adminOnlyAmountSchema
+				)
+			);
+			expect(error).to.be.instanceOf(RsError);
+			expect(error!.message).to.match(/"order\.amountCents" is not allowed/);
+			expect(queries).to.deep.equal([]);
+		});
+
+		it('should reject a delete filter on a column the requester cannot read', async () => {
+			const { engine, queries } = engineRecordingQueries();
+			const error = await rejectionOf(
+				engine['executeDeleteRequest'](
+					writeRequest('user', { filter: '(order.amountCents,gt,0)' }),
+					{
+						...pagedRoute,
+						method: 'DELETE',
+						where: [{ tableName: 'order', columnName: 'id', operator: '>', value: '0' }]
+					},
+					adminOnlyAmountSchema
+				)
+			);
+			expect(error).to.be.instanceOf(RsError);
+			expect(error!.message).to.match(/"order\.amountCents" is not allowed/);
+			expect(queries).to.deep.equal([]);
+		});
+	});
+
 	describe('executeGetRequest', () => {
 		const ordersWithCreator: StandardRouteData = {
 			...pagedRoute,
